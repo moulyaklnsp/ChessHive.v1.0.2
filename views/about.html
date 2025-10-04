@@ -111,7 +111,48 @@
 </head>
 <body>
     <!-- Header -->
-    <div id="header"></div>
+    <header class="main-header">
+    <div class="header-container">
+        <div class="logo-section">
+            <i class="fas fa-chess"></i>
+            <h1>Chess Hive</h1>
+        </div>
+        
+        <nav class="main-nav">
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/about" class="nav-link">
+                        <i class="fas fa-info-circle"></i>
+                        <span>About</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/login" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>Join Community</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/contactus" class="nav-link">
+                        <i class="fas fa-envelope"></i>
+                        <span>Contact Us</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+    </div>
+</header>
 
     <!-- Page Title -->
     <div class="secondary-header">About Chess Hive</div>
@@ -154,11 +195,11 @@
     <!-- <div id="footer"></div> -->
 
     <script>
-        // Load header
-        fetch("./partials/dashboards/login/header.html")
-          .then(res => res.text())
-          .then(data => { document.getElementById("header").innerHTML = data; })
-          .catch(err => console.error("Header load error:", err));
+        //Load header
+        // fetch("./partials/dashboards/login/header.html")
+        //   .then(res => res.text())
+        //   .then(data => { document.getElementById("header").innerHTML = data; })
+        //   .catch(err => console.error("Header load error:", err));
 
         // Load footer
         // fetch("./partials/dashboards/login/footer.html")
