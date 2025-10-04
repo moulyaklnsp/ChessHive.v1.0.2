@@ -60,7 +60,10 @@ app.use('/coordinator', isCoordinator, coordinatorRouter);
 app.use('/player', isPlayer, playerRouter.router);
 
 // Common Routes
-app.get('/', (req, res) => res.render('index', utils.getMessages(req)));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'index.html'));
+});
+                                                                                  
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 app.post('/login', async (req, res) => {
