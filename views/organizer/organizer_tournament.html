@@ -354,16 +354,8 @@
   <div class="container">
     <h2>Tournament Management</h2>
 
-    <% if (successMessage) { %>
-      <div class="message success">
-        <i class="fas fa-check-circle"></i> <%= successMessage %>
-      </div>
-    <% } %>
-    <% if (errorMessage) { %>
-      <div class="message error">
-        <i class="fas fa-exclamation-circle"></i> <%= errorMessage %>
-      </div>
-    <% } %>
+    <!-- Success / Error messages will be inserted dynamically -->
+    <div id="messageContainer"></div>
 
     <div class="table-div">
       <h3>Tournament Approval & Management</h3>
@@ -381,72 +373,17 @@
             <th><i class="fas fa-cogs"></i> Actions</th>
           </tr>
         </thead>
-        <tbody id="tournamentTable">
-          <% if (Array.isArray(tournaments) && tournaments.length > 0) { %>
-            <% tournaments.forEach((tournament, index) => { %>
-              <tr class="tournament-row" <%= index >= 5 ? 'style="display: none;"' : '' %>>
-                <td><%= tournament.name %></td>
-                <td><%= tournament.date.toLocaleDateString() %></td>
-                <td><%= tournament.location %></td>
-                <td>₹<%= tournament.entry_fee %></td>
-                <td><%= tournament.type %></td>
-                <td><%= tournament.added_by %></td>
-                <td>
-                  <% if (tournament.status === 'Approved') { %>
-                    <span class="status-badge status-active">
-                      <i class="fas fa-check-circle"></i> Approved
-                    </span>
-                    <div class="approved-by">by <%= tournament.approved_by %></div>
-                  <% } else { %>
-                    <span class="status-badge status-pending">
-                      <i class="fas fa-clock"></i> <%= tournament.status || 'Pending' %>
-                    </span>
-                  <% } %>
-                </td>
-                <td>
-                  <% if (!tournament.status || tournament.status === 'Pending') { %>
-                    <div class="action-buttons">
-                      <form action="/organizer/approve-tournament" method="POST" style="display:inline;">
-                        <input type="hidden" name="tournamentId" value="<%= tournament._id.toString() %>">
-                        <button type="submit" class="approve-btn">
-                          <i class="fas fa-check"></i> Approve
-                        </button>
-                      </form>
-                      <form action="/organizer/reject-tournament" method="POST" style="display:inline;">
-                        <input type="hidden" name="tournamentId" value="<%= tournament._id.toString() %>">
-                        <button type="submit" class="reject-btn">
-                          <i class="fas fa-times"></i> Reject
-                        </button>
-                      </form>
-                    </div>
-                  <% } else { %>
-                    <span><%= tournament.status %></span>
-                  <% } %>
-                </td>
-              </tr>
-            <% }); %>
-          <% } else { %>
-            <tr>
-              <td colspan="8" style="text-align: center; padding: 2rem;">
-                <i class="fas fa-info-circle"></i> No tournaments available for review.
-              </td>
-            </tr>
-          <% } %>
-        </tbody>
+        <tbody id="tournamentTable"></tbody>
       </table>
 
-      <% if (Array.isArray(tournaments) && tournaments.length > 0) { %>
-        <div class="more-container">
-          <% if (tournaments.length > 5) { %>
-            <a href="#" class="more" id="moreLink">
-              <i class="fas fa-chevron-down"></i> More
-            </a>
-          <% } %>
-          <a href="#" class="hide" id="hideLink" style="display: none;">
-            <i class="fas fa-chevron-up"></i> Hide
-          </a>
-        </div>
-      <% } %>
+      <div class="more-container">
+        <a href="#" class="more" id="moreLink" style="display:none;">
+          <i class="fas fa-chevron-down"></i> More
+        </a>
+        <a href="#" class="hide" id="hideLink" style="display:none;">
+          <i class="fas fa-chevron-up"></i> Hide
+        </a>
+      </div>
 
       <div class="back-container">
         <a href="/organizer/organizer_dashboard" class="back">
@@ -458,44 +395,128 @@
 
   <script src="/js/searchbar.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    async function loadTournaments() {
+      try {
+        const res = await fetch('/organizer/api/tournaments');
+        const data = await res.json();
+        renderTournaments(data.tournaments || []);
+      } catch (err) {
+        showMessage("Failed to load tournaments.", "error");
+      }
+    }
+
+    function showMessage(msg, type="success") {
+      const container = document.getElementById('messageContainer');
+      container.innerHTML = `
+        <div class="message ${type}">
+          <i class="fas ${type === "success" ? "fa-check-circle" : "fa-exclamation-circle"}"></i>
+          ${msg}
+        </div>
+      `;
+    }
+
+    function renderTournaments(tournaments) {
+      const table = document.getElementById('tournamentTable');
+      table.innerHTML = '';
+      if (!tournaments.length) {
+        table.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align:center; padding:2rem;">
+              <i class="fas fa-info-circle"></i> No tournaments available for review.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tournaments.forEach((t, index) => {
+        const row = document.createElement('tr');
+        row.className = 'tournament-row';
+        row.style.display = index < 5 ? '' : 'none';
+
+        row.innerHTML = `
+          <td>${t.name}</td>
+          <td>${new Date(t.date).toLocaleDateString()}</td>
+          <td>${t.location}</td>
+          <td>₹${t.entry_fee}</td>
+          <td>${t.type}</td>
+          <td>${t.added_by}</td>
+          <td>
+            ${
+              t.status === 'Approved'
+                ? `<span class="status-badge status-active"><i class="fas fa-check-circle"></i> Approved</span>
+                   <div class="approved-by">by ${t.approved_by || ''}</div>`
+                : `<span class="status-badge status-pending"><i class="fas fa-clock"></i> ${t.status || 'Pending'}</span>`
+            }
+          </td>
+          <td>
+            ${
+              !t.status || t.status === 'Pending'
+                ? `<div class="action-buttons">
+                    <button class="approve-btn" onclick="updateTournament('${t._id}', 'approve')">
+                      <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="reject-btn" onclick="updateTournament('${t._id}', 'reject')">
+                      <i class="fas fa-times"></i> Reject
+                    </button>
+                  </div>`
+                : `<span>${t.status}</span>`
+            }
+          </td>
+        `;
+        table.appendChild(row);
+      });
+
+      setupPagination();
+    }
+
+    function setupPagination() {
+      const rows = document.querySelectorAll('.tournament-row');
       const moreLink = document.getElementById('moreLink');
       const hideLink = document.getElementById('hideLink');
-      const tournamentRows = document.querySelectorAll('.tournament-row');
-      let visibleCount = 5; // Initial number of visible rows
+      let visibleCount = 5;
 
-      if (moreLink) {
-        moreLink.addEventListener('click', function(event) {
-          event.preventDefault();
-          // Show the next 5 rows
-          for (let i = visibleCount; i < Math.min(visibleCount + 5, tournamentRows.length); i++) {
-            tournamentRows[i].style.display = '';
-          }
-          visibleCount += 5;
+      moreLink.style.display = rows.length > 5 ? 'inline-flex' : 'none';
+      hideLink.style.display = 'none';
 
-          // Hide "More" link and show "Hide" link if no more rows to show
-          if (visibleCount >= tournamentRows.length) {
-            moreLink.style.display = 'none';
-          }
-          hideLink.style.display = 'inline-flex';
+      moreLink.onclick = (e) => {
+        e.preventDefault();
+        for (let i = visibleCount; i < Math.min(visibleCount + 5, rows.length); i++) {
+          rows[i].style.display = '';
+        }
+        visibleCount += 5;
+        if (visibleCount >= rows.length) moreLink.style.display = 'none';
+        hideLink.style.display = 'inline-flex';
+      };
+
+      hideLink.onclick = (e) => {
+        e.preventDefault();
+        for (let i = 5; i < rows.length; i++) rows[i].style.display = 'none';
+        visibleCount = 5;
+        moreLink.style.display = rows.length > 5 ? 'inline-flex' : 'none';
+        hideLink.style.display = 'none';
+      };
+    }
+
+    async function updateTournament(id, action) {
+      try {
+        const res = await fetch(`/organizer/api/tournaments/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tournamentId: id })
         });
+        const data = await res.json();
+        if (data.success) {
+          showMessage(`Tournament ${action}d successfully.`, "success");
+          loadTournaments();
+        } else {
+          showMessage(data.message || `Failed to ${action} tournament.`, "error");
+        }
+      } catch (err) {
+        showMessage(`Error: Could not ${action} tournament.`, "error");
       }
+    }
 
-      if (hideLink) {
-        hideLink.addEventListener('click', function(event) {
-          event.preventDefault();
-          // Hide all rows beyond the first 5
-          for (let i = 5; i < tournamentRows.length; i++) {
-            tournamentRows[i].style.display = 'none';
-          }
-          visibleCount = 5; // Reset to initial 5 rows
-
-          // Show "More" link and hide "Hide" link
-          moreLink.style.display = tournamentRows.length > 5 ? 'inline-flex' : 'none';
-          hideLink.style.display = 'none';
-        });
-      }
-    });
+    window.onload = loadTournaments;
   </script>
 </body>
 </html>

@@ -280,7 +280,7 @@
         <section id="overall-performance">
             <h2><i class="fas fa-chart-line"></i> Overall Performance</h2>
             <div class="table-div">
-                 <div class="searchBarContainer"></div>
+                <div class="searchBarContainer"></div>
                 <table id="performance-table">
                     <thead>
                         <tr>
@@ -292,18 +292,7 @@
                             <th><i class="fas fa-percentage"></i> Win Rate</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <% collegePerformance.forEach(record => { %>
-                            <tr>
-                                <td><%= record.college %></td>
-                                <td><%= record.tournaments %></td>
-                                <td><%= record.wins %></td>
-                                <td><%= record.losses %></td>
-                                <td><%= record.draws %></td>
-                                <td><%= ((record.wins / record.tournaments) * 100).toFixed(1) %>%</td>
-                            </tr>
-                        <% }); %>
-                    </tbody>
+                    <tbody id="performance-tbody"></tbody>
                 </table>
             </div>
         </section>
@@ -321,33 +310,13 @@
                         <th><i class="fas fa-calendar"></i> Date</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <% tournamentRecords.forEach(record => { %>
-                        <tr>
-                            <td><%= record.name %></td>
-                            <td><%= record.college %></td>
-                            <td><%= record.format %></td>
-                            <td><%= record.position %></td>
-                            <td><%= new Date(record.date).toLocaleDateString() %></td>
-                        </tr>
-                    <% }); %>
-                </tbody>
+                <tbody id="records-tbody"></tbody>
             </table>
         </section>
 
         <section id="top-colleges">
             <h2><i class="fas fa-crown"></i> Top 3 Colleges by Format</h2>
-            
-            <% ['classical', 'rapid', 'blitz'].forEach(format => { %>
-                <div class="format-section">
-                    <h2><%= format.charAt(0).toUpperCase() + format.slice(1) %></h2>
-                    <ol>
-                        <% topCollegesByFormat[format].forEach((college, index) => { %>
-                            <li class="<%= index < 3 ? 'top-three' : '' %>"><%= college %></li>
-                        <% }); %>
-                    </ol>
-                </div>
-            <% }); %>
+            <div id="top-colleges-container"></div>
         </section>
 
         <div class="back-container">
@@ -357,6 +326,69 @@
         </div>
     </div>
 
-    <script src="/js/searchbar.js"></script>  
+    <script>
+        // Fetch college stats API
+        fetch('/organizer/api/college-stats')
+            .then(res => res.json())
+            .then(data => {
+                // --- Overall Performance ---
+                const perfTbody = document.getElementById('performance-tbody');
+                perfTbody.innerHTML = '';
+                data.collegePerformance.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${record.college}</td>
+                        <td>${record.tournaments}</td>
+                        <td>${record.wins}</td>
+                        <td>${record.losses}</td>
+                        <td>${record.draws}</td>
+                        <td>${((record.wins / record.tournaments) * 100).toFixed(1)}%</td>
+                    `;
+                    perfTbody.appendChild(tr);
+                });
+
+                // --- Tournament Records ---
+                const recordsTbody = document.getElementById('records-tbody');
+                recordsTbody.innerHTML = '';
+                data.tournamentRecords.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${record.name}</td>
+                        <td>${record.college}</td>
+                        <td>${record.format}</td>
+                        <td>${record.position}</td>
+                        <td>${new Date(record.date).toLocaleDateString()}</td>
+                    `;
+                    recordsTbody.appendChild(tr);
+                });
+
+                // --- Top Colleges by Format ---
+                const topContainer = document.getElementById('top-colleges-container');
+                topContainer.innerHTML = '';
+                ['classical', 'rapid', 'blitz'].forEach(format => {
+                    const section = document.createElement('div');
+                    section.classList.add('format-section');
+
+                    const title = document.createElement('h2');
+                    title.textContent = format.charAt(0).toUpperCase() + format.slice(1);
+                    section.appendChild(title);
+
+                    const ol = document.createElement('ol');
+                    data.topCollegesByFormat[format].forEach((college, index) => {
+                        const li = document.createElement('li');
+                        li.textContent = college;
+                        if (index < 3) li.classList.add('top-three');
+                        ol.appendChild(li);
+                    });
+                    section.appendChild(ol);
+                    topContainer.appendChild(section);
+                });
+            })
+            .catch(err => console.error('Error fetching college stats:', err));
+    </script>
+
+    <script src="/js/searchbar.js"></script>
 </body>
+
+
 </html>

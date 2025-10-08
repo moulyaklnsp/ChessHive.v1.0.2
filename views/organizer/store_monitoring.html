@@ -354,151 +354,193 @@
         }
     </style>
 </head>
+
 <body>
-    <div class="container products">
-        <h2>Products Overview</h2>
-        
-        <div class="stats-summary">
-            <div class="stat-card">
-                <div class="stat-value">
-                    <i class="fas fa-box"></i>
-                    <%= typeof products !== "undefined" ? products.length : 0 %>
-                </div>
-                <div class="stat-label">Total Products</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">₹<%= 
-                    typeof products !== "undefined" ? 
-                    products.reduce((sum, product) => sum + parseFloat(product.price), 0).toFixed(2) : 
-                    "0.00" 
-                %></div>
-                <div class="stat-label">Total Inventory Value</div>
-            </div>
+  <div class="container products">
+    <h2>Products Overview</h2>
+    
+    <div class="stats-summary">
+      <div class="stat-card">
+        <div class="stat-value">
+          <i class="fas fa-box"></i> <span id="totalProducts">0</span>
         </div>
-
-        <div class="table-div">
-          <div class="searchBarContainer"></div>
-            <table>
-                <thead>
-                    <tr>
-                        <th><i class="fas fa-tag"></i> Product</th>
-                        <th><i class="fas fa-rupee-sign"></i> Price</th>
-                        <th><i class="fas fa-user"></i> Coordinator</th>
-                        <th><i class="fas fa-university"></i> College</th>
-                    </tr>
-                </thead>
-                <tbody id="productsTable">
-                    <% if (typeof products !== "undefined" && products.length > 0) { %>
-                        <% products.forEach((product, index) => { %>
-                            <tr class="product-row" <%= index >= 10 ? 'style="display: none;"' : '' %>>
-                                <td><%= product.name %></td>
-                                <td class="price">₹<%= product.price %></td>
-                                <td><%= product.coordinator || "N/A" %></td>
-                                <td><%= product.college || "N/A" %></td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="4" class="empty-message">
-                                <i class="fas fa-box-open"></i> No products available.
-                            </td>
-                        </tr>
-                    <% } %>
-                </tbody>
-            </table>
-
-            <% if (typeof products !== "undefined" && products.length > 0) { %>
-                <div class="pagination-container">
-                    <% if (products.length > 10) { %>
-                        <a href="#" class="next-btn" id="productsNextLink">
-                            <i class="fas fa-chevron-right"></i> Next
-                        </a>
-                    <% } %>
-                    <a href="#" class="prev-btn" id="productsPrevLink" style="display: none;">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                </div>
-            <% } %>
-        </div>
+        <div class="stat-label">Total Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">₹<span id="totalInventoryValue">0.00</span></div>
+        <div class="stat-label">Total Inventory Value</div>
+      </div>
     </div>
 
-    <div class="container sales">
-        <h2>Sales Report</h2>
-        
-        <div class="stats-summary">
-            <div class="stat-card">
-                <div class="stat-value">
-                    <i class="fas fa-shopping-cart"></i>
-                    <%= typeof sales !== "undefined" ? sales.length : 0 %>
-                </div>
-                <div class="stat-label">Total Sales</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">₹<%= 
-                    typeof sales !== "undefined" ? 
-                    sales.reduce((sum, sale) => sum + parseFloat(sale.price), 0).toFixed(2) : 
-                    "0.00" 
-                %></div>
-                <div class="stat-label">Total Revenue</div>
-            </div>
-        </div>
+    <div class="table-div">
+      <div class="searchBarContainer"></div>
+      <table>
+        <thead>
+          <tr>
+            <th><i class="fas fa-tag"></i> Product</th>
+            <th><i class="fas fa-rupee-sign"></i> Price</th>
+            <th><i class="fas fa-user"></i> Coordinator</th>
+            <th><i class="fas fa-university"></i> College</th>
+          </tr>
+        </thead>
+        <tbody id="productsTable"></tbody>
+      </table>
 
-        <div class="table-div">
-            <div class="searchBarContainer"></div>
-            <table>
-                <thead>
-                    <tr>
-                        <th><i class="fas fa-tag"></i> Product</th>
-                        <th><i class="fas fa-rupee-sign"></i> Price</th>
-                        <th><i class="fas fa-user"></i> Coordinator</th>
-                        <th><i class="fas fa-user-check"></i> Buyer</th>
-                        <th><i class="fas fa-university"></i> College</th>
-                        <th><i class="fas fa-calendar"></i> Date</th>
-                    </tr>
-                </thead>
-                <tbody id="salesTable">
-                    <% if (typeof sales !== "undefined" && sales.length > 0) { %>
-                        <% sales.forEach((sale, index) => { %>
-                            <tr class="sale-row" <%= index >= 10 ? 'style="display: none;"' : '' %>>
-                                <td><%= sale.product %></td>
-                                <td class="price">₹<%= sale.price %></td>
-                                <td><%= sale.coordinator || "N/A" %></td>
-                                <td><%= sale.buyer || "N/A" %></td>
-                                <td><%= sale.college || "N/A" %></td>
-                                <td><%= new Date(sale.purchase_date).toLocaleDateString() %></td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="6" class="empty-message">
-                                <i class="fas fa-shopping-cart"></i> No sales recorded.
-                            </td>
-                        </tr>
-                    <% } %>
-                </tbody>
-            </table>
+      <div class="pagination-container">
+        <a href="#" class="next-btn" id="productsNextLink" style="display:none;">
+          <i class="fas fa-chevron-right"></i> Next
+        </a>
+        <a href="#" class="prev-btn" id="productsPrevLink" style="display:none;">
+          <i class="fas fa-chevron-left"></i> Previous
+        </a>
+      </div>
+    </div>
+  </div>
 
-            <% if (typeof sales !== "undefined" && sales.length > 0) { %>
-                <div class="pagination-container">
-                    <% if (sales.length > 10) { %>
-                        <a href="#" class="next-btn" id="salesNextLink">
-                            <i class="fas fa-chevron-right"></i> Next
-                        </a>
-                    <% } %>
-                    <a href="#" class="prev-btn" id="salesPrevLink" style="display: none;">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                </div>
-            <% } %>
+  <div class="container sales">
+    <h2>Sales Report</h2>
+    
+    <div class="stats-summary">
+      <div class="stat-card">
+        <div class="stat-value">
+          <i class="fas fa-shopping-cart"></i> <span id="totalSales">0</span>
         </div>
-
-        <div class="back-container">
-            <a href="/organizer/organizer_dashboard" class="back">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
-        </div>
+        <div class="stat-label">Total Sales</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">₹<span id="totalRevenue">0.00</span></div>
+        <div class="stat-label">Total Revenue</div>
+      </div>
     </div>
 
-     <script src="/js/searchbar.js"></script>
+    <div class="table-div">
+      <div class="searchBarContainer"></div>
+      <table>
+        <thead>
+          <tr>
+            <th><i class="fas fa-tag"></i> Product</th>
+            <th><i class="fas fa-rupee-sign"></i> Price</th>
+            <th><i class="fas fa-user"></i> Coordinator</th>
+            <th><i class="fas fa-user-check"></i> Buyer</th>
+            <th><i class="fas fa-university"></i> College</th>
+            <th><i class="fas fa-calendar"></i> Date</th>
+          </tr>
+        </thead>
+        <tbody id="salesTable"></tbody>
+      </table>
+
+      <div class="pagination-container">
+        <a href="#" class="next-btn" id="salesNextLink" style="display:none;">
+          <i class="fas fa-chevron-right"></i> Next
+        </a>
+        <a href="#" class="prev-btn" id="salesPrevLink" style="display:none;">
+          <i class="fas fa-chevron-left"></i> Previous
+        </a>
+      </div>
+    </div>
+
+    <div class="back-container">
+      <a href="/organizer/organizer_dashboard" class="back">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <script src="/js/searchbar.js"></script>
+  <script>
+    let productsPage = 0, salesPage = 0;
+    const perPage = 10;
+
+    async function loadStoreData() {
+      try {
+        const res = await fetch('/organizer/api/store');
+        const data = await res.json();
+        
+        renderProducts(data.products || []);
+        renderSales(data.sales || []);
+      } catch (err) {
+        console.error("Error loading store data:", err);
+      }
+    }
+
+    function renderProducts(products) {
+      const table = document.getElementById('productsTable');
+      table.innerHTML = '';
+
+      // stats
+      document.getElementById('totalProducts').textContent = products.length;
+      const totalValue = products.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
+      document.getElementById('totalInventoryValue').textContent = totalValue.toFixed(2);
+
+      if (!products.length) {
+        table.innerHTML = `
+          <tr><td colspan="4" class="empty-message">
+            <i class="fas fa-box-open"></i> No products available.
+          </td></tr>`;
+        return;
+      }
+
+      const start = productsPage * perPage;
+      const slice = products.slice(start, start + perPage);
+
+      slice.forEach(p => {
+        const row = document.createElement('tr');
+        row.className = 'product-row';
+        row.innerHTML = `
+          <td>${p.name}</td>
+          <td class="price">₹${p.price}</td>
+          <td>${p.coordinator || "N/A"}</td>
+          <td>${p.college || "N/A"}</td>`;
+        table.appendChild(row);
+      });
+
+      document.getElementById('productsPrevLink').style.display = productsPage > 0 ? 'inline-flex' : 'none';
+      document.getElementById('productsNextLink').style.display = (start + perPage < products.length) ? 'inline-flex' : 'none';
+    }
+
+    function renderSales(sales) {
+      const table = document.getElementById('salesTable');
+      table.innerHTML = '';
+
+      // stats
+      document.getElementById('totalSales').textContent = sales.length;
+      const revenue = sales.reduce((sum, s) => sum + parseFloat(s.price || 0), 0);
+      document.getElementById('totalRevenue').textContent = revenue.toFixed(2);
+
+      if (!sales.length) {
+        table.innerHTML = `
+          <tr><td colspan="6" class="empty-message">
+            <i class="fas fa-shopping-cart"></i> No sales recorded.
+          </td></tr>`;
+        return;
+      }
+
+      const start = salesPage * perPage;
+      const slice = sales.slice(start, start + perPage);
+
+      slice.forEach(s => {
+        const row = document.createElement('tr');
+        row.className = 'sale-row';
+        row.innerHTML = `
+          <td>${s.product}</td>
+          <td class="price">₹${s.price}</td>
+          <td>${s.coordinator || "N/A"}</td>
+          <td>${s.buyer || "N/A"}</td>
+          <td>${s.college || "N/A"}</td>
+          <td>${new Date(s.purchase_date).toLocaleDateString()}</td>`;
+        table.appendChild(row);
+      });
+
+      document.getElementById('salesPrevLink').style.display = salesPage > 0 ? 'inline-flex' : 'none';
+      document.getElementById('salesNextLink').style.display = (start + perPage < sales.length) ? 'inline-flex' : 'none';
+    }
+
+    document.getElementById('productsNextLink').onclick = (e) => { e.preventDefault(); productsPage++; loadStoreData(); };
+    document.getElementById('productsPrevLink').onclick = (e) => { e.preventDefault(); productsPage--; loadStoreData(); };
+    document.getElementById('salesNextLink').onclick = (e) => { e.preventDefault(); salesPage++; loadStoreData(); };
+    document.getElementById('salesPrevLink').onclick = (e) => { e.preventDefault(); salesPage--; loadStoreData(); };
+
+    window.onload = loadStoreData;
+  </script>
 </body>
 </html>

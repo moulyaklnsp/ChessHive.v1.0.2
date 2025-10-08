@@ -365,7 +365,7 @@
         <h2>Schedule a Meeting</h2>
         
         <div class="form-container">
-            <form action="/meetings/schedule" method="POST">
+            <form id="meetingForm">
                 <div class="input-group">
                     <label><i class="fas fa-heading"></i> Meeting Title</label>
                     <input type="text" name="title" placeholder="Enter meeting title" required>
@@ -394,7 +394,7 @@
 
         <div class="table-div">
             <h3>Organized Meetings</h3>
-           <div class="searchBarContainer"></div>
+            <div class="searchBarContainer"></div>
             <table>
                 <thead>
                     <tr>
@@ -405,43 +405,20 @@
                     </tr>
                 </thead>
                 <tbody id="organizedMeetingsTable">
-                    <% if (typeof organizermeetings !== "undefined" && organizermeetings.length > 0) { %>
-                        <% organizermeetings.forEach((meeting, index) => { %>
-                            <tr class="organized-meeting-row" <%= index >= 5 ? 'style="display: none;"' : '' %>>
-                                <td><%= meeting.title %></td>
-                                <td><%= new Date(meeting.date).toLocaleDateString() %></td>
-                                <td><%= meeting.time %></td>
-                                <td>
-                                    <a href="<%= meeting.link %>" target="_blank" class="join-link">
-                                        <i class="fas fa-video"></i> Join
-                                    </a>
-                                </td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="4" class="empty-message">
-                                <i class="fas fa-info-circle"></i> No meetings scheduled.
-                            </td>
-                        </tr>
-                    <% } %>
+                    <!-- Filled dynamically -->
                 </tbody>
             </table>
+            <div class="more-container">
+                <a href="#" class="more" id="organizedMoreLink" style="display:none;">
+                    <i class="fas fa-chevron-down"></i> More
+                </a>
+                <a href="#" class="hide" id="organizedHideLink" style="display:none;">
+                    <i class="fas fa-chevron-up"></i> Hide
+                </a>
+            </div>
 
-            <% if (typeof organizermeetings !== "undefined" && organizermeetings.length > 0) { %>
-                <div class="more-container">
-                    <% if (organizermeetings.length > 5) { %>
-                        <a href="#" class="more" id="organizedMoreLink">
-                            <i class="fas fa-chevron-down"></i> More
-                        </a>
-                    <% } %>
-                    <a href="#" class="hide" id="organizedHideLink" style="display: none;">
-                        <i class="fas fa-chevron-up"></i> Hide
-                    </a>
-                </div>
-            <% } %>
-
-       <div class="searchBarContainer"></div>
+            <h3>Upcoming Meetings</h3>
+            <div class="searchBarContainer"></div>
             <table>
                 <thead>
                     <tr>
@@ -452,41 +429,17 @@
                     </tr>
                 </thead>
                 <tbody id="upcomingMeetingsTable">
-                    <% if (typeof upcomingMeetings !== "undefined" && upcomingMeetings.length > 0) { %>
-                        <% upcomingMeetings.forEach((meeting, index) => { %>
-                            <tr class="upcoming-meeting-row" <%= index >= 5 ? 'style="display: none;"' : '' %>>
-                                <td><%= meeting.title %></td>
-                                <td><%= new Date(meeting.date).toLocaleDateString() %></td>
-                                <td><%= meeting.time %></td>
-                                <td>
-                                    <a href="<%= meeting.link %>" target="_blank" class="join-link">
-                                        <i class="fas fa-video"></i> Join
-                                    </a>
-                                </td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="4" class="empty-message">
-                                <i class="fas fa-info-circle"></i> No upcoming meetings.
-                            </td>
-                        </tr>
-                    <% } %>
+                    <!-- Filled dynamically -->
                 </tbody>
             </table>
-
-            <% if (typeof upcomingMeetings !== "undefined" && upcomingMeetings.length > 0) { %>
-                <div class="more-container">
-                    <% if (upcomingMeetings.length > 5) { %>
-                        <a href="#" class="more" id="upcomingMoreLink">
-                            <i class="fas fa-chevron-down"></i> More
-                        </a>
-                    <% } %>
-                    <a href="#" class="hide" id="upcomingHideLink" style="display: none;">
-                        <i class="fas fa-chevron-up"></i> Hide
-                    </a>
-                </div>
-            <% } %>
+            <div class="more-container">
+                <a href="#" class="more" id="upcomingMoreLink" style="display:none;">
+                    <i class="fas fa-chevron-down"></i> More
+                </a>
+                <a href="#" class="hide" id="upcomingHideLink" style="display:none;">
+                    <i class="fas fa-chevron-up"></i> Hide
+                </a>
+            </div>
 
             <div class="back-container">
                 <a href="/organizer/organizer_dashboard" class="back">
@@ -495,6 +448,102 @@
             </div>
         </div>
     </div>
- <script src="/js/searchbar.js"></script>
+
+    <script src="/js/searchbar.js"></script>
+    <script>
+      // Submit new meeting via API
+      document.getElementById('meetingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const body = Object.fromEntries(formData.entries());
+        console.log('Scheduling meeting with data:', body);
+        try {
+          const res = await fetch('/organizer/api/meetings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert('Meeting scheduled successfully!');
+            loadMeetings(); // reload tables
+            e.target.reset();
+          }
+        } catch (err) {
+          console.error('Error scheduling meeting:', err);
+        }
+      });
+
+      // Load meetings (organized & upcoming)
+      async function loadMeetings() {
+        try {
+          // Organized
+          const orgRes = await fetch('/organizer/api/meetings/organized');
+          const organized = await orgRes.json();
+          renderMeetings(organized, 'organizedMeetingsTable', 'organizedMoreLink', 'organizedHideLink');
+
+          // Upcoming
+          const upRes = await fetch('/organizer/api/meetings/upcoming');
+          const upcoming = await upRes.json();
+          renderMeetings(upcoming, 'upcomingMeetingsTable', 'upcomingMoreLink', 'upcomingHideLink');
+
+        } catch (err) {
+          console.error('Error loading meetings:', err);
+        }
+      }
+
+      // Render meetings table
+      function renderMeetings(meetings, tableId, moreId, hideId) {
+        const table = document.getElementById(tableId);
+        table.innerHTML = '';
+        if (!meetings || meetings.length === 0) {
+          table.innerHTML = `<tr><td colspan="4" class="empty-message">
+            <i class="fas fa-info-circle"></i> No metings available.
+          </td></tr>`;
+          return;
+        }
+
+        meetings.forEach((meeting, index) => {
+          const row = document.createElement('tr');
+          if (index >= 5) row.style.display = 'none';
+          row.innerHTML = `
+            <td>${meeting.title}</td>
+            <td>${new Date(meeting.date).toLocaleDateString()}</td>
+            <td>${meeting.time}</td>
+            <td>
+              <a href="${meeting.link}" target="_blank" class="join-link">
+                <i class="fas fa-video"></i> Join
+              </a>
+            </td>
+          `;
+          table.appendChild(row);
+        });
+        const moreBtn = document.getElementById(moreId);
+        const hideBtn = document.getElementById(hideId);
+
+        if (meetings.length > 5) {
+          moreBtn.style.display = 'inline-flex';
+          hideBtn.style.display = 'none';
+          moreBtn.onclick = (e) => {
+            e.preventDefault();
+            table.querySelectorAll('tr').forEach(tr => tr.style.display = '');
+            moreBtn.style.display = 'none';
+            hideBtn.style.display = 'inline-flex';
+          };
+          hideBtn.onclick = (e) => {
+            e.preventDefault();
+            table.querySelectorAll('tr').forEach((tr, idx) => {
+              if (idx >= 5) tr.style.display = 'none';
+            });
+            moreBtn.style.display = 'inline-flex';
+            hideBtn.style.display = 'none';
+          };
+        } else {
+          moreBtn.style.display = 'none';
+          hideBtn.style.display = 'none';
+        }
+      }
+      loadMeetings();
+    </script>
 </body>
 </html>

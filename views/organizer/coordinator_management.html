@@ -326,9 +326,8 @@
   <div class="container">
     <h2>Coordinator Management</h2>
 
-   
     <div class="table-div">
- <div class="searchBarContainer"></div>
+      <div class="searchBarContainer"></div>
       <table>
         <thead>
           <tr>
@@ -339,43 +338,18 @@
           </tr>
         </thead>
         <tbody id="coordinatorTable">
-          <% if (typeof coordinators !== "undefined" && coordinators.length > 0) { %>
-            <% coordinators.forEach((coordinator, index) => { %>
-              <tr class="coordinator-row" <%= index >= 5 ? 'style="display: none;"' : '' %>>
-                <td><%= coordinator.name %></td>
-                <td><%= coordinator.email %></td>
-                <td><%= coordinator.college %></td>
-                <td>
-                  <div class="action-buttons">
-                    <button CUPdated artifact with attribute selection and targeted search functionality onclick="removeCoordinator('<%= coordinator.email %>', this)">
-                      <i class="fas fa-user-minus"></i> Remove
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            <% }); %>
-          <% } else { %>
-            <tr>
-              <td colspan="4" class="empty-message">
-                <i class="fas fa-info-circle"></i> No coordinators available.
-              </td>
-            </tr>
-          <% } %>
+          <!-- Coordinators will be loaded dynamically -->
         </tbody>
       </table>
 
-      <% if (typeof coordinators !== "undefined" && coordinators.length > 0) { %>
-        <div class="more-container">
-          <% if (coordinators.length > 5) { %>
-            <a href="#" class="more" id="moreLink">
-              <i class="fas fa-chevron-down"></i> More
-            </a>
-          <% } %>
-          <a href="#" class="hide" id="hideLink" style="display: none;">
-            <i class="fas fa-chevron-up"></i> Hide
-          </a>
-        </div>
-      <% } %>
+      <div class="more-container">
+        <a href="#" class="more" id="moreLink" style="display:none;">
+          <i class="fas fa-chevron-down"></i> More
+        </a>
+        <a href="#" class="hide" id="hideLink" style="display:none;">
+          <i class="fas fa-chevron-up"></i> Hide
+        </a>
+      </div>
 
       <!-- Back Button -->
       <div class="back-container">
@@ -386,8 +360,98 @@
     </div>
   </div>
 
-  <!-- JavaScript for Search, More, and Hide Functionality -->
-   <script src="/js/searchbar.js"></script> 
-  <script src="/js/coordinator_management.js"></script>
+  <script src="/js/searchbar.js"></script> 
+  <script>
+    async function loadCoordinators() {
+      try {
+        const res = await fetch('/organizer/api/coordinators');
+        const coordinators = await res.json();
+        renderCoordinators(coordinators);
+      } catch (err) {
+        console.error('Error loading coordinators:', err);
+      }
+    }
+
+    function renderCoordinators(coordinators) {
+      const table = document.getElementById('coordinatorTable');
+      table.innerHTML = '';
+
+      if (!coordinators || coordinators.length === 0) {
+        table.innerHTML = `
+          <tr>
+            <td colspan="4" class="empty-message">
+              <i class="fas fa-info-circle"></i> No coordinators available.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      coordinators.forEach((coordinator, index) => {
+        const row = document.createElement('tr');
+        if (index >= 5) row.style.display = 'none';
+        row.className = 'coordinator-row';
+        row.innerHTML = `
+          <td>${coordinator.name}</td>
+          <td>${coordinator.email}</td>
+          <td>${coordinator.college}</td>
+          <td>
+            <div class="action-buttons">
+              <button onclick="removeCoordinator('${coordinator.email}', this)">
+                <i class="fas fa-user-minus"></i> Remove
+              </button>
+            </div>
+          </td>
+        `;
+        table.appendChild(row);
+      });
+
+      // More/Hide toggle
+      const moreBtn = document.getElementById('moreLink');
+      const hideBtn = document.getElementById('hideLink');
+      if (coordinators.length > 5) {
+        moreBtn.style.display = 'inline-flex';
+        hideBtn.style.display = 'none';
+
+        moreBtn.onclick = (e) => {
+          e.preventDefault();
+          table.querySelectorAll('.coordinator-row').forEach(row => row.style.display = '');
+          moreBtn.style.display = 'none';
+          hideBtn.style.display = 'inline-flex';
+        };
+
+        hideBtn.onclick = (e) => {
+          e.preventDefault();
+          table.querySelectorAll('.coordinator-row').forEach((row, idx) => {
+            if (idx >= 5) row.style.display = 'none';
+          });
+          moreBtn.style.display = 'inline-flex';
+          hideBtn.style.display = 'none';
+        };
+      } else {
+        moreBtn.style.display = 'none';
+        hideBtn.style.display = 'none';
+      }
+    }
+
+    async function removeCoordinator(email, btn) {
+      if (!confirm(`Are you sure you want to remove coordinator ${email}?`)) return;
+      try {
+        const res = await fetch(`/organizer/api/coordinators/${encodeURIComponent(email)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          btn.closest('tr').remove();
+        } else {
+          alert('Failed to remove coordinator.');
+        }
+      } catch (err) {
+        console.error('Error removing coordinator:', err);
+      }
+    }
+
+    // Initial load
+    loadCoordinators();
+  </script>
 </body>
 </html>

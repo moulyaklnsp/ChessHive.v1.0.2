@@ -149,18 +149,18 @@
             <div class="profile-info">
                 <div class="info-item">
                     <i class="fas fa-user"></i>
-                    <span class="info-label">Name:</span>
-                    <span class="info-value"><%= organizer.name %></span>
+                    <span class="info-label">Name: kmjhgfd</span>
+                    <span class="info-value" id="organizerName"></span>
                 </div>
                 <div class="info-item">
                     <i class="fas fa-envelope"></i>
                     <span class="info-label">Email:</span>
-                    <span class="info-value"><%= organizer.email %></span>
+                    <span class="info-value" id="organizerEmail"></span>
                 </div>
                 <div class="info-item">
                     <i class="fas fa-university"></i>
-                    <span class="info-label">College:</span>
-                    <span class="info-value"><%= organizer.college %></span>
+                    <span class="info-label">Collkege:</span>
+                    <span class="info-value" id="organizerCollege"></span>
                 </div>
             </div>
         </div>
@@ -171,5 +171,21 @@
             </a>
         </div>
     </div>
+
+    <script>
+      // Fetch organizer profile data from API and inject into DOM
+      fetch('/organizer/api/profile')
+        .then(res => res.json())
+        .then(data => {
+            console.log('Fetched profile data:', data);
+          document.getElementById('organizerName').textContent = data.name || 'N/A';
+          document.getElementById('organizerEmail').textContent = data.email || 'N/A';
+          document.getElementById('organizerCollege').textContent = data.college || 'N/A';
+
+        })
+        .catch(err => {
+          console.error('Error fetching pronbfile:', err);
+        });
+    </script>
 </body>
 </html>
