@@ -215,35 +215,20 @@
 </head>
 <body>
     <div class="container">
-        <h2>Player Statistics</h2>
+        <h2>Player Sta--tistics</h2>
 
-        <div class="stats-summary">
-            <div class="stat-card">
-                <div class="stat-value">
-                    <%= players.length %>
-                </div>
-                <div class="stat-label">Total Players</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">
-                    <%= players.reduce((sum, p) => sum + p.gamesPlayed, 0) %>
-                </div>
-                <div class="stat-label">Total Games</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">
-                    <%= Math.round(players.reduce((sum, p) => sum + p.rating, 0) / players.length) %>
-                </div>
-                <div class="stat-label">Average Rating</div>
-            </div>
+        <div class="stats-summary" id="statsSummary">
+            <!-- Dynamic summary cards will be inserted here -->
         </div>
 
         <div class="table-div">
-            <div class="searchBarContainer"></div>
+            <div class="searchBarContainer">
+                <input type="text" id="playerSearch" placeholder="Search by player name...">
+            </div>
             <table id="playerStatsTable">
                 <thead>
                     <tr>
-                        <th><i class="fas fa-user"></i> Player Name</th>
+                        <th><i class="fas fa-user"></i> Player Nam//e</th>
                         <th><i class="fas fa-chess"></i> Games Played</th>
                         <th><i class="fas fa-trophy"></i> Wins</th>
                         <th><i class="fas fa-times"></i> Losses</th>
@@ -251,25 +236,8 @@
                         <th><i class="fas fa-star"></i> Rating</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <% if (typeof players !== "undefined" && players.length > 0 ) { %>
-                        <% players.forEach(player => { %>
-                            <tr>
-                                <td><%= player.name %></td>
-                                <td><%= player.gamesPlayed %></td>
-                                <td><%= player.wins %></td>
-                                <td><%= player.losses %></td>
-                                <td><%= player.draws %></td>
-                                <td class="rating-cell"><%= player.rating %></td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="6" style="text-align: center;">
-                                <i class="fas fa-info-circle"></i> No player statistics available.
-                            </td>
-                        </tr>
-                    <% } %>
+                <tbody id="playerStatsBody">
+                    <!-- Rows will be populated dynamically -->
                 </tbody>
             </table>
 
@@ -280,6 +248,74 @@
             </div>
         </div>
     </div>
-    <script src="/js/searchbar.js"></script>
+
+    <script>
+        // ===============================
+        // Client-side Player Statistics JS
+        // ===============================
+        const players = []; // Will be fetched from API
+        const statsSummary = document.getElementById('statsSummary');
+        const playerStatsBody = document.getElementById('playerStatsBody');
+        const playerSearch = document.getElementById('playerSearch');
+
+        async function fetchPlayers() {
+            try {
+                const res = await fetch('/coordinator/api/player-stats'); // API endpoint
+                const data = await res.json();
+                players.push(...(data.players || []));  // Extract players array safely
+                renderStats();
+                renderTable(players);
+            } catch (err) {
+                console.error(err);
+                playerStatsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">Error fetching player data</td></tr>`;
+            }
+        }
+
+        function renderStats() {
+            const totalPlayers = players.length;
+            const totalGames = players.reduce((sum, p) => sum + p.gamesPlayed, 0);
+            const avgRating = totalPlayers ? Math.round(players.reduce((sum, p) => sum + p.rating, 0) / totalPlayers) : 0;
+
+            statsSummary.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalPlayers}</div>
+                    <div class="stat-label">Total Players</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${totalGames}</div>
+                    <div class="stat-label">Total Games</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${avgRating}</div>
+                    <div class="stat-label">Average Rating</div>
+                </div>
+            `;
+        }
+
+        function renderTable(data) {
+            if (!data.length) {
+                playerStatsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;"><i class="fas fa-info-circle"></i> No player statistics available.</td></tr>`;
+                return;
+            }
+            playerStatsBody.innerHTML = data.map(player => `
+                <tr>
+                    <td>${player.name}</td>
+                    <td>${player.gamesPlayed}</td>
+                    <td>${player.wins}</td>
+                    <td>${player.losses}</td>
+                    <td>${player.draws}</td>
+                    <td class="rating-cell">${player.rating}</td>
+                </tr>
+            `).join('');
+        }
+
+        playerSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = players.filter(p => p.name.toLowerCase().includes(query));
+            renderTable(filtered);
+        });
+
+        document.addEventListener('DOMContentLoaded', fetchPlayers);
+    </script>
 </body>
 </html>

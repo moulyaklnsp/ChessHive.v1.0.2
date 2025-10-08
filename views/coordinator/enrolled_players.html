@@ -201,101 +201,116 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <% if (typeof tournamentName !== 'undefined') { %>
-            <div class="searchBarContainer" ></div>
-            <h2>Enrolled Players for <%= tournamentName %></h2>
+<div class="container">
+    <h2 id="tournamentTitle">Enrolled Players</h2>
 
-            <% if (tournamentType === 'Individual') { %>
-                <h3>Individual Players</h3>
-                <% if (individualPlayers && individualPlayers.length > 0) { %>
-                    <div class="individualPlayers-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Username</th>
-                                    <th>College</th>
-                                    <th>Gender</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% individualPlayers.forEach(player => { %>
-                                    <tr>
-                                        <td><%= player.username %></td>
-                                        <td><%= player.college %></td>
-                                        <td><%= player.gender %></td>
-                                    </tr>
-                                <% }); %>
-                            </tbody>
-                        </table>
-                    </div>
-                <% } else { %>
-                    <p>No individual players enrolled in this tournament yet.</p>
-                <% } %>
-            <% } %>
-
-            <% if (tournamentType === 'Team') { %>
-                <h3>Team Enrollments</h3>
-                <% if (teamEnrollments && teamEnrollments.length > 0) { %>
-                    <div class="teamPlayers-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Captain</th>
-                                    <th>Player 1</th>
-                                    <th>Player 2</th>
-                                    <th>Player 3</th>
-                                    <th>Approval Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% teamEnrollments.forEach(team => { %>
-                                    <tr>
-                                        <td><%= team.captain_name %></td>
-                                        <td>
-                                            <%= team.player1_name %>
-                                            <span class="<%= team.player1_approved ? 'approved' : 'pending' %>">
-                                                (<%= team.player1_approved ? 'Approved' : 'Pending' %>)
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <%= team.player2_name %>
-                                            <span class="<%= team.player2_approved ? 'approved' : 'pending' %>">
-                                                (<%= team.player2_approved ? 'Approved' : 'Pending' %>)
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <%= team.player3_name %>
-                                            <span class="<%= team.player3_approved ? 'approved' : 'pending' %>">
-                                                (<%= team.player3_approved ? 'Approved' : 'Pending' %>)
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <% if (team.player1_approved && team.player2_approved && team.player3_approved) { %>
-                                                <span class="approved">Fully Approved</span>
-                                            <% } else { %>
-                                                <span class="pending">Pending</span>
-                                            <% } %>
-                                        </td>
-                                    </tr>
-                                <% }); %>
-                            </tbody>
-                        </table>
-                    </div>
-                <% } else { %>
-                    <p>No teams enrolled in this tournament yet.</p>
-                <% } %>
-            <% } %>
-        <% } else { %>
-            <p>No players available.</p>
-        <% } %>
-
-        <div class="navigation">
-            <a href="/coordinator/tournament_management" class="nav-link">
-                <i class="fas fa-users"></i> Back to tournaments
-            </a>
+    <div id="individualPlayersSection" style="display:none;">
+        <h3>Individual Players</h3>
+        <div class="individualPlayers-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>College</th>
+                        <th>Gender</th>
+                    </tr>
+                </thead>
+                <tbody id="individualPlayersTable"></tbody>
+            </table>
         </div>
     </div>
-    <script src="/js/searchbar.js"></script>  
+
+    <div id="teamPlayersSection" style="display:none;">
+        <h3>Team Enrollments</h3>
+        <div class="teamPlayers-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Captain</th>
+                        <th>Player 1</th>
+                        <th>Player 2</th>
+                        <th>Player 3</th>
+                        <th>Approval Status</th>
+                    </tr>
+                </thead>
+                <tbody id="teamPlayersTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <a href="/coordinator/tournament_management" class="nav-link">
+            <i class="fas fa-users"></i> Back to tournaments
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // Extract tournamentId from URL query parameter (e.g., /coordinator/enrolled_players?tournament_id=123 -> '123')
+    const urlParams = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('tournament_id');
+    
+    if (!tournamentId) {
+        console.error('No valid tournament ID found in URL');
+        document.querySelector('.container').insertAdjacentHTML('beforeend', '<p>Error: Invalid tournament ID in URL.</p>');
+        return;
+    }
+    
+    const tournamentTitleEl = document.getElementById('tournamentTitle');
+    const individualSection = document.getElementById('individualPlayersSection');
+    const teamSection = document.getElementById('teamPlayersSection');
+    const individualTable = document.getElementById('individualPlayersTable');
+    const teamTable = document.getElementById('teamPlayersTable');
+
+    try {
+        const res = await fetch(`/coordinator/api/enrolled-players?tournament_id=${tournamentId}`);
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+
+        tournamentTitleEl.textContent = `Enrolled Players for ${data.tournamentName}`;
+
+        // Individual Players
+        if (data.tournamentType === 'Individual' && data.individualPlayers.length > 0) {
+            individualSection.style.display = '';
+            data.individualPlayers.forEach(player => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${player.username}</td>
+                    <td>${player.college}</td>
+                    <td>${player.gender}</td>
+                `;
+                individualTable.appendChild(tr);
+            });
+        }
+
+        // Team Players
+        if (data.tournamentType === 'Team' && data.teamEnrollments.length > 0) {
+            teamSection.style.display = '';
+            data.teamEnrollments.forEach(team => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${team.captain_name}</td>
+                    <td>${team.player1_name} <span class="${team.player1_approved ? 'approved' : 'pending'}">(${team.player1_approved ? 'Approved' : 'Pending'})</span></td>
+                    <td>${team.player2_name} <span class="${team.player2_approved ? 'approved' : 'pending'}">(${team.player2_approved ? 'Approved' : 'Pending'})</span></td>
+                    <td>${team.player3_name} <span class="${team.player3_approved ? 'approved' : 'pending'}">(${team.player3_approved ? 'Approved' : 'Pending'})</span></td>
+                    <td>${team.player1_approved && team.player2_approved && team.player3_approved ? '<span class="approved">Fully Approved</span>' : '<span class="pending">Pending</span>'}</td>
+                `;
+                teamTable.appendChild(tr);
+            });
+        }
+
+        if (!individualSection.style.display && !teamSection.style.display) {
+            document.querySelector('.container').insertAdjacentHTML('beforeend', '<p>No players enrolled yet.</p>');
+        }
+    } catch (err) {
+        console.error(err);
+        document.querySelector('.container').insertAdjacentHTML('beforeend', '<p>Failed to load enrolled players.</p>');
+    }
+});
+</script>
+<script src="/js/searchbar.js"></script>  
 </body>
 </html>

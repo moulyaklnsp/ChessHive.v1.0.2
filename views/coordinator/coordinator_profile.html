@@ -150,21 +150,21 @@
             <div class="profile-info">
                 <div class="info-item">
                     <div class="info-label">
-                        <i class="fas fa-user"></i> Name:
+                        <i class="fas fa-user"></i> Name---:
                     </div>
-                    <div class="info-value"><%= coordinator.name %></div>
+                    <div class="info-value" id="coordinatorName">Loading...</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">
                         <i class="fas fa-envelope"></i> Email:
                     </div>
-                    <div class="info-value"><%= coordinator.email %></div>
+                    <div class="info-value" id="coordinatorEmail">Loading...</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">
                         <i class="fas fa-university"></i> College:
                     </div>
-                    <div class="info-value"><%= coordinator.college %></div>
+                    <div class="info-value" id="coordinatorCollege">Loading...</div>
                 </div>
             </div>
 
@@ -175,5 +175,38 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // ================================
+        // 🧠 Load Coordinator Profile (Client-side)
+        // ================================
+        async function loadCoordinatorProfile() {
+            try {
+                // 🔹 API: GET /coordinator/api/profile
+                // Expected response: { name, email, college }
+                const res = await fetch('/coordinator/api/profile');
+                const data = await res.json();
+
+                document.getElementById('coordinatorName').textContent = data.name || 'N/A';
+                document.getElementById('coordinatorEmail').textContent = data.email || 'N/A';
+                document.getElementById('coordinatorCollege').textContent = data.college || 'N/A';
+            } catch (err) {
+                console.error('Error loading profile:', err);
+                document.getElementById('coordinatorName').textContent = 'Error';
+                document.getElementById('coordinatorEmail').textContent = 'Error';
+                document.getElementById('coordinatorCollege').textContent = 'Error';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadCoordinatorProfile);
+
+        // ================================
+        // 📋 API required in coordinator_app.js:
+        // ================================
+        // GET /coordinator/api/profile
+        // Returns JSON: { name, email, college }
+        // ================================
+    </script>
 </body>
 </html>

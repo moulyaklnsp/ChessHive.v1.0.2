@@ -195,128 +195,107 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Pairings & Results</h1>
+<div class="container">
+    <h1>Pairings & Results</h1>
 
-        <% if (allRounds.length === 0) { %>
-            <p>No pairings available.</p>
-        <% } else { %>
-            <% allRounds.forEach(roundData => { %>
-                <div class="pairings-container">
-                    <h2>Round <%= roundData.round %></h2>
-                    <table>
-                        <tr>
-                            <th>Player 1</th>
-                            <th>Player 2</th>
-                            <th>Result</th>
-                        </tr>
-                        <% roundData.pairings.forEach(pair => { %>
-                            <tr>
-                                <td><%= pair.player1.username %> (Score: <%= pair.player1.score %>)</td>
-                                <td><%= pair.player2 ? pair.player2.username : 'BYE' %></td>
-                                <td><%= pair.result %></td>
-                            </tr>
-                        <% }); %>
-                    </table>
-                    
-                    <% if (roundData.byePlayer) { %>
-                        <p><strong>BYE:</strong> <%= roundData.byePlayer.username %> (Score: <%= roundData.byePlayer.score %>)</p>
-                    <% } %>
-                </div>
-            <% }); %>
-        <% } %>
+    <div id="pairingsContainer"></div>
 
-        <div id="data-container" data-rounds='<%- JSON.stringify(allRounds || []) %>'></div>
-
-        <div class="tree-container">
-            <h2>Tournament Progression</h2>
-            <svg id="tournament-tree"></svg>
-        </div>
+    <div class="tree-container">
+        <h2>Tournament Progression</h2>
+        <svg id="tournament-tree"></svg>
     </div>
-    <div class="navigation">
-        <a href="/coordinator/tournament_management" class="nav-link">
-            <i class="fas fa-users"></i> Back to Tournaments
-        </a>
-    </div>
+</div>
 
-    <script>
-        // Safely retrieve and parse allRounds data from hidden div
-        let allRounds;
-        try {
-            const dataContainer = document.getElementById('data-container');
-            const roundsData = dataContainer ? dataContainer.getAttribute('data-rounds') : '[]';
-            allRounds = JSON.parse(roundsData);
-            if (!Array.isArray(allRounds)) {
-                throw new Error("allRounds is not an array");
-            }
-        } catch (e) {
-            console.error("Error parsing allRounds:", e);
-            allRounds = [];
+<div class="navigation">
+    <a href="/coordinator/tournament_management" class="nav-link">
+        <i class="fas fa-users"></i> Back to Tournaments
+    </a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const pairingsContainer = document.getElementById('pairingsContainer');
+
+    // Extract tournamentId and rounds from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('tournament_id');
+    const rounds = urlParams.get('rounds') || '5';
+
+    if (!tournamentId) {
+        pairingsContainer.innerHTML = '<p>Error: Tournament ID is required.</p>';
+        return;
+    }
+
+    try {
+        // Fetch all rounds data from backend API
+        const res = await fetch(`/coordinator/api/pairings?tournament_id=${tournamentId}&rounds=${rounds}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        const allRounds = data.allRounds;
+
+        if (!allRounds || allRounds.length === 0) {
+            pairingsContainer.innerHTML = '<p>No pairings available.</p>';
+            return;
         }
 
-        // Extract player usernames from allRounds
-        let players = [];
-        allRounds.forEach(round => {
-            if (round && round.pairings) {
-                round.pairings.forEach(pair => {
-                    if (pair && pair.player1 && pair.player1.username && !players.includes(pair.player1.username)) {
-                        players.push(pair.player1.username);
-                    }
-                    if (pair && pair.player2 && pair.player2.username && !players.includes(pair.player2.username)) {
-                        players.push(pair.player2.username);
-                    }
-                });
-            }
-            if (round && round.byePlayer && round.byePlayer.username && !players.includes(round.byePlayer.username)) {
-                players.push(round.byePlayer.username);
-            }
+        // Render pairings tables
+        allRounds.forEach(roundData => {
+            const roundDiv = document.createElement('div');
+            roundDiv.className = 'pairings-container';
+            roundDiv.innerHTML = `
+                <h2>Round ${roundData.round}</h2>
+                <table>
+                    <tr>
+                        <th>Player 1</th>
+                        <th>Player 2</th>
+                        <th>Result</th>
+                    </tr>
+                    ${roundData.pairings.map(pair => `
+                        <tr>
+                            <td>${pair.player1.username} <span class="score">(Score: ${pair.player1.score})</span></td>
+                            <td>${pair.player2.username} <span class="score">(Score: ${pair.player2.score})</span></td>
+                            <td>${pair.result}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                ${roundData.byePlayer ? `<p class="bye"><strong>BYE:</strong> ${roundData.byePlayer.username} <span class="score">(Score: ${roundData.byePlayer.score})</span></p>` : ''}
+            `;
+            pairingsContainer.appendChild(roundDiv);
         });
 
-        // Determine number of slots (round up to next power of 2 if odd)
-        const playerCount = players.length || 2; // Fallback to 2 if no players
-        const isOdd = playerCount % 2 !== 0;
-        const slots = isOdd ? Math.pow(2, Math.ceil(Math.log2(playerCount))) : playerCount;
-        
-        // Fill slots with players and BYE as needed
-        while (players.length < slots) {
-            players.push("BYE");
-        }
-        players = players.slice(0, slots);
+        // Extract unique player usernames for tree
+        let players = [];
+        allRounds.forEach(round => {
+            round.pairings.forEach(pair => {
+                if (!players.includes(pair.player1.username)) players.push(pair.player1.username);
+                if (!players.includes(pair.player2.username)) players.push(pair.player2.username);
+            });
+            if (round.byePlayer && !players.includes(round.byePlayer.username)) players.push(round.byePlayer.username);
+        });
 
-        // Build tree data for D3.js
-        const treeData = {
-            name: "Winner",
-            children: []
-        };
+        // Create tournament tree (simplified bracket for visualization)
+        const playerCount = players.length || 2;
+        const slots = Math.pow(2, Math.ceil(Math.log2(playerCount)));
+        while (players.length < slots) players.push("BYE");
 
-        // Create first round matches
+        const treeData = { name: "Champion", children: [] };
         const firstRound = [];
         for (let i = 0; i < slots; i += 2) {
-            if (i + 1 < slots) {
-                firstRound.push({
-                    name: `Match ${i / 2 + 1}`,
-                    children: [
-                        { name: players[i] },
-                        { name: players[i + 1] }
-                    ]
-                });
-            } else {
-                firstRound.push({
-                    name: players[i]
-                });
-            }
+            firstRound.push({
+                name: `R1-M${i/2 + 1}`,
+                children: [{ name: players[i] }, { name: players[i+1] }]
+            });
         }
 
-        // Create subsequent rounds
         let currentRound = firstRound;
-        let roundIndex = 1;
+        let roundIndex = 2;
         while (currentRound.length > 1) {
             const nextRound = [];
             for (let i = 0; i < currentRound.length; i += 2) {
                 if (i + 1 < currentRound.length) {
-                    nextRound.push({
-                        name: `Round ${roundIndex}-${i / 2 + 1}`,
-                        children: [currentRound[i], currentRound[i + 1]]
+                    nextRound.push({ 
+                        name: `R${roundIndex}-M${i/2 + 1}`, 
+                        children: [currentRound[i], currentRound[i+1]] 
                     });
                 } else {
                     nextRound.push(currentRound[i]);
@@ -325,53 +304,34 @@
             currentRound = nextRound;
             roundIndex++;
         }
+        treeData.children = currentRound;
 
-        // Set the top-level children
-        if (currentRound.length === 1) {
-            treeData.children = currentRound[0].children || [currentRound[0]];
-        } else {
-            treeData.children = currentRound;
-        }
-
-        // Log tree data for debugging
-        console.log("Tree Data:", JSON.stringify(treeData, null, 2));
-
-        // D3.js code to create the tournament tree
+        // Render D3 tree
         const svg = d3.select("#tournament-tree");
-        const width = 900;
-        const height = Math.max(300, slots * 50); // Adjust height based on slots
-        svg.attr("viewBox", [0, 0, width, height]);
-
-        // Create a tree layout
+        const width = 900, height = Math.max(300, slots * 50);
+        svg.attr("viewBox", `0 0 ${width} ${height}`);
         const treeLayout = d3.tree().size([height - 100, width - 200]);
         const root = d3.hierarchy(treeData);
         treeLayout(root);
 
-        // Create links (edges)
         svg.append("g")
-            .attr("class", "link")
-            .attr("transform", "translate(100, 50)")
-            .selectAll(".link")
+            .attr("transform", "translate(100,50)")
+            .selectAll("path")
             .data(root.links())
             .enter()
             .append("path")
             .attr("class", "link")
-            .attr("d", d3.linkHorizontal()
-                .x(d => d.y)
-                .y(d => d.x));
+            .attr("d", d3.linkHorizontal().x(d => d.y).y(d => d.x));
 
-        // Create nodes
         const nodes = svg.append("g")
-            .attr("class", "node")
-            .attr("transform", "translate(100, 50)")
-            .selectAll(".node")
+            .attr("transform", "translate(100,50)")
+            .selectAll("g")
             .data(root.descendants())
             .enter()
             .append("g")
             .attr("class", "node")
             .attr("transform", d => `translate(${d.y},${d.x})`);
 
-        // Add rectangles for nodes
         nodes.append("rect")
             .attr("x", -50)
             .attr("y", -15)
@@ -380,10 +340,15 @@
             .attr("rx", 5)
             .attr("ry", 5);
 
-        // Add text labels
         nodes.append("text")
             .attr("y", 0)
-            .text(d => d.data.name.length > 12 ? d.data.name.substring(0, 10) + "..." : d.data.name);
-    </script>
+            .text(d => d.data.name.length > 12 ? d.data.name.substring(0,10) + "..." : d.data.name);
+
+    } catch (err) {
+        console.error(err);
+        pairingsContainer.innerHTML = '<p>Failed to load pairings.</p>';
+    }
+});
+</script>
 </body>
 </html>

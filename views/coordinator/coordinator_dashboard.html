@@ -233,6 +233,7 @@
         }
     </style>
 </head>
+
 <body>
     <button class="menu-btn" id="menuBtn" style="display: none;">
         <i class="fas fa-bars"></i>
@@ -261,41 +262,36 @@
     </div>
     
     <div class="content">
+        <!-- Replaced EJS name variable with dynamic placeholder -->
         <h1 class="greeting">
-            Welcome, <%= typeof coordinatorName !== "undefined" ? coordinatorName : "Coordinator" %>!
+            Welcome, <span id="coordinatorName">Coordinator</span>!
         </h1>
 
         <div class="form-container">
-            <h2>Upcoming Meetings (Next 3 Days)</h2>
-            <% if (typeof meetings !== "undefined" && meetings.length > 0) { %>
-                <ul id="meetingsList">
-                    <% meetings.forEach((meeting, index) => { %>
-                        <li class="meeting-row" <%= index >= 5 ? 'style="display: none;"' : '' %>>
-                            <strong><%= meeting.title %></strong> - 
-                            <%= new Date(meeting.date).toLocaleDateString() %> at <%= meeting.time %> 
-                            <a href="<%= meeting.link %>" target="_blank" class="join-link">
-                                <i class="fas fa-video"></i> Join
-                            </a>
-                        </li>
-                    <% }) %>
-                </ul>
-                <% if (meetings.length > 5) { %>
-                    <div class="more-container">
-                        <a href="#" class="more" id="meetingsMoreLink">
-                            <i class="fas fa-chevron-down"></i> More
-                        </a>
-                        <a href="#" class="hide" id="meetingsHideLink" style="display: none;">
-                            <i class="fas fa-chevron-up"></i> Hide
-                        </a>
-                    </div>
-                <% } %>
-            <% } else { %>
-                <p>No upcoming meetings.</p>
-            <% } %>
+            <h2>Upcoming Meetings (Next 3 ==Days)</h2>
+
+            <!-- Meetings list dynamically inserted here -->
+            <ul id="meetingsList"></ul>
+
+            <!-- More/Hide buttons will appear dynamically -->
+            <div class="more-container" id="meetingsControls" style="display: none;">
+                <a href="#" class="more" id="meetingsMoreLink">
+                    <i class="fas fa-chevron-down"></i> More
+                </a>
+                <a href="#" class="hide" id="meetingsHideLink" style="display: none;">
+                    <i class="fas fa-chevron-up"></i> Hide
+                </a>
+            </div>
+
+            <!-- Fallback message -->
+            <p id="noMeetingsMsg" style="display: none;">No upcoming meetings.</p>
         </div>
     </div>
     
     <script>
+        // ================================
+        // ⚙️ Responsive Sidebar Controls
+        // ================================
         function isMobile() { return window.innerWidth <= 768; }
         function updateMenuButtonVisibility() {
             const menuBtn = document.getElementById("menuBtn");
@@ -313,89 +309,114 @@
             sidebar.style.left = sidebar.style.left === "0px" ? "-100%" : "0px";
         }
         function handleLogout() { window.location.href = '/login'; }
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-                this.style.opacity = '0.7';
-                window.location.href = this.getAttribute('href');
-            });
-        });
+
         document.getElementById("menuBtn").addEventListener("click", toggleSidebar);
-
-        // Meetings pagination
-        document.addEventListener('DOMContentLoaded', () => {
-            const meetingsConfig = {
-                listId: 'meetingsList',
-                rowClass: 'meeting-row',
-                moreLinkId: 'meetingsMoreLink',
-                hideLinkId: 'meetingsHideLink',
-                visibleRows: 5,
-                rowsPerPage: 5
-            };
-
-            const list = document.getElementById(meetingsConfig.listId);
-            const moreLink = document.getElementById(meetingsConfig.moreLinkId);
-            const hideLink = document.getElementById(meetingsConfig.hideLinkId);
-            let visibleRows = meetingsConfig.visibleRows;
-            const rowsPerPage = meetingsConfig.rowsPerPage;
-
-            // Ensure only first 5 meetings are visible initially
-            const allRows = list ? list.querySelectorAll(`.${meetingsConfig.rowClass}`) : [];
-            allRows.forEach((row, index) => {
-                row.style.display = index < visibleRows ? '' : 'none';
-            });
-
-            // Store original rows
-            const originalRows = Array.from(allRows).map(row => row.cloneNode(true));
-
-            // Function to update link visibility
-            const updateLinkVisibility = () => {
-                if (moreLink) {
-                    moreLink.style.display = visibleRows < originalRows.length ? '' : 'none';
-                }
-                if (hideLink) {
-                    hideLink.style.display = visibleRows > 5 ? '' : 'none';
-                }
-            };
-
-            // Initial link visibility
-            updateLinkVisibility();
-
-            // More link functionality
-            if (moreLink) {
-                moreLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    
-                    // Show next set of rows
-                    const rows = list.querySelectorAll(`.${meetingsConfig.rowClass}`);
-                    for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, rows.length); i++) {
-                        rows[i].style.display = '';
-                    }
-                    
-                    visibleRows += rowsPerPage;
-                    updateLinkVisibility();
-                });
-            }
-
-            // Hide link functionality
-            if (hideLink) {
-                hideLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    
-                    // Hide the last set of rows
-                    const rows = list.querySelectorAll(`.${meetingsConfig.rowClass}`);
-                    const newVisibleRows = Math.max(5, visibleRows - rowsPerPage);
-                    for (let i = newVisibleRows; i < rows.length; i++) {
-                        rows[i].style.display = 'none';
-                    }
-                    
-                    visibleRows = newVisibleRows;
-                    updateLinkVisibility();
-                });
-            }
-        });
-
         window.addEventListener("load", updateMenuButtonVisibility);
         window.addEventListener("resize", updateMenuButtonVisibility);
+
+        // ================================
+        // 🧠 Coordinator Dashboard Loader
+        // ================================
+        async function loadCoordinatorDashboard() {
+            try {
+                // 🔹 API #1: GET Coordinator name
+                const nameRes = await fetch('/coordinator/api/name');
+                const nameData = await nameRes.json();
+                document.getElementById("coordinatorName").textContent = nameData.name || "Coordinator";
+
+                // 🔹 API #2: GET Upcoming meetings
+                const meetingRes = await fetch('/coordinator/api/meetings/upcoming');
+                const meetingData = await meetingRes.json();
+                const meetingsList = document.getElementById("meetingsList");
+                const noMeetingsMsg = document.getElementById("noMeetingsMsg");
+                const controls = document.getElementById("meetingsControls");
+
+                meetingsList.innerHTML = '';
+                if (meetingData && meetingData.length > 0) {
+                    noMeetingsMsg.style.display = 'none';
+                    controls.style.display = meetingData.length > 5 ? 'flex' : 'none';
+
+                    meetingData.forEach((meeting, index) => {
+                        const li = document.createElement('li');
+                        li.className = 'meeting-row';
+                        li.style.display = index < 5 ? '' : 'none';
+                        li.innerHTML = `
+                            <strong>${meeting.title}</strong> - 
+                            ${new Date(meeting.date).toLocaleDateString()} at ${meeting.time}
+                            <a href="${meeting.link}" target="_blank" class="join-link">
+                                <i class="fas fa-video"></i> Join
+                            </a>`;
+                        meetingsList.appendChild(li);
+                    });
+
+                    setupMeetingsPagination();
+                } else {
+                    noMeetingsMsg.style.display = 'block';
+                    controls.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Error loading dashboard data:', err);
+                document.getElementById("noMeetingsMsg").textContent = "Error loading data.";
+                document.getElementById("noMeetingsMsg").style.display = 'block';
+            }
+        }
+
+        // ================================
+        // 📜 Pagination Logic (Client-side)
+        // ================================
+        function setupMeetingsPagination() {
+            const meetingsList = document.getElementById('meetingsList');
+            const moreLink = document.getElementById('meetingsMoreLink');
+            const hideLink = document.getElementById('meetingsHideLink');
+            const allRows = meetingsList.querySelectorAll('.meeting-row');
+            let visibleRows = 5;
+            const rowsPerPage = 5;
+
+            const updateLinkVisibility = () => {
+                moreLink.style.display = visibleRows < allRows.length ? '' : 'none';
+                hideLink.style.display = visibleRows > 5 ? '' : 'none';
+            };
+
+            updateLinkVisibility();
+
+            moreLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, allRows.length); i++) {
+                    allRows[i].style.display = '';
+                }
+                visibleRows += rowsPerPage;
+                updateLinkVisibility();
+            });
+
+            hideLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newVisibleRows = Math.max(5, visibleRows - rowsPerPage);
+                for (let i = newVisibleRows; i < allRows.length; i++) {
+                    allRows[i].style.display = 'none';
+                }
+                visibleRows = newVisibleRows;
+                updateLinkVisibility();
+            });
+        }
+
+        // ================================
+        // 🚀 Initialize Dashboard
+        // ================================
+        document.addEventListener("DOMContentLoaded", loadCoordinatorDashboard);
+
+        // ================================
+        // 📋 APIs required in coordinator_app.js:
+        // ================================
+        // 1️⃣  GET /coordinator/api/name
+        //     → Returns { name: "Coordinator Name" }
+        //
+        // 2️⃣  GET /coordinator/api/meetings/upcoming
+        //     → Returns [{ title, date, time, link }, ...]
+        //
+        // These endpoints will query MongoDB and respond with JSON.
+        // No rendering logic should exist in these routes.
+        // Only JSON data will be returned to the client.
+        // ================================
     </script>
 </body>
 </html>
