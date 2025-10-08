@@ -59,8 +59,11 @@ app.use('/organizer', isOrganizer, organizerRouter);
 app.use('/coordinator', isCoordinator, coordinatorRouter);
 app.use('/player', isPlayer, playerRouter.router);
 
-// Common Routes
-app.get('/', (req, res) => res.render('index', utils.getMessages(req)));
+// nk i have change this route to serve index.html directly
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'index.html'));
+});
+
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 app.post('/login', async (req, res) => {
@@ -177,16 +180,50 @@ app.delete('/tournaments/remove/:tournamentId', isCoordinator, async (req, res) 
   }
 });
 
+
+// this is the catch-all route to render any page dynamically but we can send the data or file at a time so i made two routes one for page and other for the data 
+// wherever  page getting fetched from here get the the data in the same page via route
+
+
+
+// old one 
+
+// app.get('/:page', (req, res) => {
+//   const { page } = req.params;
+//   try {
+//     const messages = utils.getMessages(req);
+//     res.render(page, { ...messages, deletedUserId: req.query.deletedUserId || null });
+//   } catch (err) {
+//     console.error('Page render error:', err);
+//     res.status(404).send(`Page not found: ${page}`);
+//   }
+// });
+
+
+
+
 app.get('/:page', (req, res) => {
+
   const { page } = req.params;
-  try {
-    const messages = utils.getMessages(req);
-    res.render(page, { ...messages, deletedUserId: req.query.deletedUserId || null });
-  } catch (err) {
-    console.error('Page render error:', err);
-    res.status(404).send(`Page not found: ${page}`);
-  }
+  const k =`${page}.html`
+  console.log('Requested page:', k);
+  const filePath = path.join(__dirname, 'views', k);
+  res.sendFile(filePath, (err) => {
+    if (err) res.status(404).send(`Page not found: ${page}`);
+  });
 });
+
+// API route to get dynamic data
+app.get('/api/:pageData', (req, res) => {
+  const messages = utils.getMessages(req);
+  res.json({
+    ...messages,
+    deletedUserId: req.query.deletedUserId || null
+  });
+});
+
+
+
 
 app.use((req, res) => res.status(404).redirect('/?error-message=Page not found'));
 
