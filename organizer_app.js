@@ -3,51 +3,323 @@ const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const moment = require('moment');
 const utils = require('./utils');
+const { ObjectId } = require('mongodb');
+const path = require('path');
 
-router.get('/:subpage?', async (req, res) => {
-  const subpage = req.params.subpage || 'organizer_dashboard';
+router.use(express.json());
 
-  const db = await connectDB();
-  if (subpage === 'organizer_dashboard') {
+router.get('/api/dashboard', async (req, res) => {
+  try {
+    const db = await connectDB();
+    
+    // Get organizer name
+    const organizer = await db.collection('users').findOne({ 
+      email: req.session.userEmail,
+      role: 'organizer' 
+    });
+    
+    // Get upcoming meetings (next 3 days)
     const threeDaysLater = moment().add(3, 'days').toDate();
-    const meetings = await db.collection('meetingsdb').find({ date: { $lte: threeDaysLater } }).toArray();
-    console.log('Organizer dashboard loaded:', { meetingCount: meetings.length });
-    utils.renderDashboard('organizer/organizer_dashboard', req, res, { meetings });
-  } else if (subpage === 'organizer_tournament') {
-    const tournaments = await db.collection('tournaments').find().toArray();
-    console.log('Organizer tournaments loaded:', { tournamentCount: tournaments.length });
-    utils.renderDashboard('organizer/organizer_tournament', req, res, { tournaments: tournaments || [] });
-  } else if (subpage === 'coordinator_management') {
-    const coordinators = await db.collection('users').find({ role: 'coordinator', isDeleted: 0 }).project({ name: 1, email: 1, college: 1 }).toArray();
-    console.log('Coordinator management loaded:', { coordinatorCount: coordinators.length });
-    utils.renderDashboard('organizer/coordinator_management', req, res, { coordinators });
-  } else if (subpage === 'store_monitoring') {
-    const products = await db.collection('products').find().toArray();
-    const sales = await db.collection('sales').aggregate([
-      { $lookup: { from: 'products', localField: 'product_id', foreignField: '_id', as: 'product' } },
-      { $unwind: '$product' },
-      { $project: { product: '$product.name', price: 1, coordinator: '$product.coordinator', college: 1, buyer: 1, purchase_date: 1 } }
-    ]).toArray();
-    console.log('Store monitoring loaded:', { productCount: products.length, saleCount: sales.length });
-    utils.renderDashboard('organizer/store_monitoring', req, res, { products, sales });
-  } else if (subpage === 'meetings') {
-    const yetToHost = await db.collection('meetingsdb').find({ role: 'organizer' }).sort({ date: 1, time: 1 }).toArray();
-    const upcoming = await db.collection('meetingsdb').find({ name: { $ne: req.session.username } }).sort({ date: 1, time: 1 }).toArray();
-    console.log('Organizer meetings loaded:', { yetToHostCount: yetToHost.length, upcomingCount: upcoming.length });
-    utils.renderDashboard('organizer/meetings', req, res, { organizermeetings: yetToHost, upcomingMeetings: upcoming });
-  } else if (subpage === 'organizer_profile') {
-    if (!req.session.userEmail) {
-      console.log('Organizer profile failed: User not logged in');
-      return res.redirect("/?error-message=Please log in");
-    }
-    const organizer = await db.collection('users').findOne({ email: req.session.userEmail, role: 'organizer' });
+    const today = new Date();
+    
+    const meetings = await db.collection('meetingsdb')
+      .find({ 
+        date: { 
+          $gte: today,
+          $lte: threeDaysLater 
+        }
+      })
+      .sort({ date: 1, time: 1 })
+      .toArray();
+
+    res.json({
+      organizerName: organizer?.name || 'Organizer',
+      meetings: meetings || []
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+router.get('/api/profile', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const organizer = await db.collection('users').findOne({ 
+      email: req.session.userEmail,
+      role: 'organizer' 
+    });
+
     if (!organizer) {
-      console.log('Organizer profile failed: Organizer not found:', req.session.userEmail);
-      return res.redirect("/organizer/organizer_dashboard?error-message=Organizer not found");
+      return res.status(404).json({ error: 'Organizer not found' });
     }
-    console.log('Organizer profile loaded for:', organizer.email);
-    utils.renderDashboard('organizer/organizer_profile', req, res, { organizer });
-  } else if (subpage === 'college_stats') {
+
+    res.json({
+      name: organizer.name,
+      email: organizer.email,
+      college: organizer.college || 'N/A'
+    });
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Coordinators API
+router.get('/api/coordinators', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const coordinators = await db.collection('users')
+      .find({ 
+        role: 'coordinator',
+        isDeleted: { $ne: 1 }
+      })
+      .project({ 
+        name: 1, 
+        email: 1, 
+        college: 1 
+      })
+      .toArray();
+
+    console.log('Fetched coordinators:', coordinators.length);
+    res.json(coordinators);
+  } catch (error) {
+    console.error('Error fetching coordinators:', error);
+    res.status(500).json({ error: 'Failed to fetch coordinators' });
+  }
+});
+
+// Remove coordinator API
+router.delete('/api/coordinators/:email', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const email = decodeURIComponent(req.params.email);
+    
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'coordinator' },
+      { $set: { isDeleted: 1 } }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log('Coordinator removed:', email);
+      res.json({ success: true, message: 'Coordinator removed successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Coordinator not found' });
+    }
+  } catch (error) {
+    console.error('Error removing coordinator:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove coordinator' });
+  }
+});
+
+// Tournaments API
+router.get('/api/tournaments', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const tournaments = await db.collection('tournaments')
+      .find({})
+      .sort({ date: -1 })
+      .toArray();
+
+    res.json({ tournaments: tournaments || [] });
+  } catch (error) {
+    console.error('Error fetching tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch tournaments' });
+  }
+});
+
+// Approve tournament API
+router.post('/api/tournaments/approve', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const { tournamentId } = req.body;
+    
+    const result = await db.collection('tournaments').updateOne(
+      { _id: new ObjectId(tournamentId) },
+      { 
+        $set: { 
+          status: 'Approved',
+          approved_by: req.session.username || req.session.userEmail,
+          approved_date: new Date()
+        }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log('Tournament approved:', tournamentId);
+      res.json({ success: true, message: 'Tournament approved successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+  } catch (error) {
+    console.error('Error approving tournament:', error);
+    res.status(500).json({ success: false, error: 'Failed to approve tournament' });
+  }
+});
+
+// Reject tournament API
+router.post('/api/tournaments/reject', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const { tournamentId } = req.body;
+    
+    const result = await db.collection('tournaments').updateOne(
+      { _id: new ObjectId(tournamentId) },
+      { 
+        $set: { 
+          status: 'Rejected',
+          rejected_by: req.session.username || req.session.userEmail,
+          rejected_date: new Date()
+        }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log('Tournament rejected:', tournamentId);
+      res.json({ success: true, message: 'Tournament rejected successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+  } catch (error) {
+    console.error('Error rejecting tournament:', error);
+    res.status(500).json({ success: false, error: 'Failed to reject tournament' });
+  }
+});
+
+// Store monitoring API
+router.get('/api/store', async (req, res) => {
+  try {
+    const db = await connectDB();
+    
+    // Get all products
+    const products = await db.collection('products')
+      .find({})
+      .toArray();
+    
+    // Get all sales with product details
+    const sales = await db.collection('sales').aggregate([
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'product_id',
+          foreignField: '_id',
+          as: 'productInfo'
+        }
+      },
+      { $unwind: '$productInfo' },
+      {
+        $project: {
+          product: '$productInfo.name',
+          price: 1,
+          coordinator: '$productInfo.coordinator',
+          college: '$productInfo.college',
+          buyer: 1,
+          purchase_date: 1
+        }
+      },
+      { $sort: { purchase_date: -1 } }
+    ]).toArray();
+
+    res.json({ 
+      products: products || [],
+      sales: sales || []
+    });
+  } catch (error) {
+    console.error('Error fetching store data:', error);
+    res.status(500).json({ error: 'Failed to fetch store data' });
+  }
+});
+
+// Schedule new meeting API
+router.post('/api/meetings', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const { title, date, time, link } = req.body;
+console.log('Request body:', req.body);
+
+    // Validate required fields
+    if (!title || !date || !time || !link) {
+      return res.status(409).json({ success: false, message: 'All fields are required' });
+    }
+
+    // Ensure user session exists
+    const userName = req.session.username || req.session.userEmail;
+    if (!userName) {
+      return res.status(401).json({ success: false, message: 'User not logged in' });
+    }
+
+    // Construct meeting object
+    const meeting = {
+      title: title.toString(),
+      date: new Date(date),
+      time: time.toString(),   // ensure string
+      link: link.toString(),
+      role: 'organizer',
+      name: userName.toString()
+    };
+
+    console.log('Meeting to insert:', meeting); 
+
+    // Insert into DB
+    const result = await db.collection('meetingsdb').insertOne(meeting);
+
+    if (result.insertedId) {
+      console.log('Meeting scheduled:', title);
+      return res.json({ success: true, message: 'Meeting scheduled successfully' });
+    } else {
+      return res.status(500).json({ success: false, message: 'Failed to schedule meeting' });
+    }
+  } catch (error) {
+    console.error('Error scheduling meeting:', error);
+    return res.status(500).json({ success: false, error: 'Failed to schedule meeting' });
+  }
+});
+
+
+// Get organized meetings API
+router.get('/api/meetings/organized', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const meetings = await db.collection('meetingsdb')
+      .find({ 
+        role: 'organizer',
+        name: req.session.username || req.session.userEmail 
+      })
+      .sort({ date: 1, time: 1 })
+      .toArray();
+    
+    res.json(meetings);
+  } catch (error) {
+    console.error('Error fetching organized meetings:', error);
+    res.status(500).json({ error: 'Failed to fetch organized meetings' });
+  }
+});
+
+// Get upcoming meetings API
+router.get('/api/meetings/upcoming', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const today = new Date();
+    
+    const meetings = await db.collection('meetingsdb')
+      .find({ 
+        date: { $gte: today },
+        name: { $ne: req.session.username || req.session.userEmail }
+      })
+      .sort({ date: 1, time: 1 })
+      .toArray();
+    
+    res.json(meetings);
+  } catch (error) {
+    console.error('Error fetching upcoming meetings:', error);
+    res.status(500).json({ error: 'Failed to fetch upcoming meetings' });
+  }
+});
+
+// College stats API
+router.get('/api/college-stats', async (req, res) => {
+  try {
+    // For now returning static data, but this should be calculated from actual tournament results
     const data = {
       collegePerformance: [
         { college: "IIIT Hyderabad", tournaments: 10, wins: 6, losses: 3, draws: 1 },
@@ -68,11 +340,76 @@ router.get('/:subpage?', async (req, res) => {
         blitz: ["IIIT Gwalior", "IIIT Kottayam", "IIIT Hyderabad"] 
       }
     };
-    console.log('College stats loaded (static data)');
-    utils.renderDashboard('organizer/college_stats', req, res, data);
-  } else {
-    console.log('Organizer subpage not found:', subpage);
-    res.redirect('/organizer/organizer_dashboard?error-message=Page not found');
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching college stats:', error);
+    res.status(500).json({ error: 'Failed to fetch college stats' });
+  }
+});
+
+// ==================== PAGE RENDERING ROUTES ====================
+// IMPORTANT: This wildcard route must come LAST after all API routes
+
+// Helper function to safely send organizer HTML files
+function sendOrganizerPage(res, filename) {
+  const filePath = path.join(__dirname, 'views', 'organizer', `${filename}.html`);
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error sending HTML file:', filePath, err);
+      res.status(err.status || 500).send('Error loading page');
+    }
+  });
+}
+
+// Organizer page route
+router.get('/:subpage?', async (req, res) => {
+  const subpage = req.params.subpage || 'organizer_dashboard';
+
+  // Check if user is logged in and is an organizer
+  if (!req.session.userEmail || req.session.userRole !== 'organizer') {
+    console.log('Access denied: User not logged in or not an organizer');
+    return res.redirect("/?error-message=Please log in as an organizer");
+  }
+
+  try {
+    switch(subpage) {
+      case 'organizer_dashboard':
+        sendOrganizerPage(res, 'organizer_dashboard');
+        break;
+
+      case 'organizer_tournament':
+        sendOrganizerPage(res, 'organizer_tournament');
+        break;
+
+      case 'coordinator_management':
+        sendOrganizerPage(res, 'coordinator_management');
+        break;
+
+      case 'store_monitoring':
+        sendOrganizerPage(res, 'store_monitoring');
+        break;
+
+      case 'meetings':
+        sendOrganizerPage(res, 'meetings');
+        break;
+
+      case 'organizer_profile':
+        sendOrganizerPage(res, 'organizer_profile');
+        break;
+
+      case 'college_stats':
+        sendOrganizerPage(res, 'college_stats');
+        break;
+
+      default:
+        console.log('Organizer subpage not found:', subpage);
+        return res.redirect('/organizer/organizer_dashboard?error-message=Page not found');
+    }
+  } catch (error) {
+    console.error('Error loading organizer page:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
