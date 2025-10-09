@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Organizer Management - ChessHive</title>
+    <title>Coordinator Management - ChessHive</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -39,15 +39,22 @@
             margin-bottom: 2rem;
             text-align: center;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
         }
 
-        h2::after {
-            content: '';
-            display: block;
-            width: 100px;
-            height: 3px;
-            background-color: var(--sea-green);
-            margin: 1rem auto;
+        h2::before {
+            content: '♟️';
+            font-size: 2rem;
+        }
+
+        .management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
         }
 
         .table-div {
@@ -67,9 +74,10 @@
         th {
             background-color: var(--sea-green);
             color: var(--cream);
-            padding: 1rem;
+            padding: 1.2rem;
             text-align: left;
             font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
         }
 
         td {
@@ -81,62 +89,10 @@
             background-color: rgba(135, 206, 235, 0.1);
         }
 
-        /* Action Buttons */
-        button {
-            background-color: var(--sky-blue);
-            color: var(--sea-green);
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Cinzel', serif;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background-color: #6CB4D1;
-            transform: translateY(-2px);
-        }
-
-        .remove-btn {
-            background-color: #ff6b6b;
-            color: white;
-        }
-
-        .remove-btn:hover {
-            background-color: #ff5252;
-        }
-
-        /* Back Button */
-        .back-container {
-            margin-top: 2rem;
-            text-align: right;
-        }
-
-        .back {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background-color: var(--sea-green);
-            color: var(--cream);
-            text-decoration: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-family: 'Cinzel', serif;
-            font-weight: bold;
-        }
-
-        .back:hover {
-            background-color: #236B43;
-            transform: translateY(-2px);
-        }
-
-        /* Search and Filter Section */
+        /* Controls Section */
         .controls {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             margin-bottom: 2rem;
             gap: 1rem;
@@ -199,13 +155,61 @@
             box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
         }
 
+        /* Action Buttons */
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background-color: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Back Button */
+        .back-container {
+            margin-top: 2rem;
+            text-align: right;
+        }
+
+        .back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--sea-green);
+            color: var(--cream);
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+        }
+
+        .back:hover {
+            background-color: #236B43;
+            transform: translateY(-2px);
+        }
+
         .empty-message {
             text-align: center;
             padding: 2rem;
             color: var(--sea-green);
             font-style: italic;
         }
-.searchBarContainer {
+
+        .searchBarContainer {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -247,10 +251,11 @@
   border-color: #007bff;
 }
 
-        /* Responsive Design */
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
+                align-items: stretch;
             }
 
             .search-box {
@@ -264,48 +269,35 @@
             .back-container {
                 text-align: center;
             }
+
+
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Organizer Management</h2>
+        <h2>Coordinator Management</h2>
         
         <div class="table-div">
-           <div class="searchBarContainer"></div>
+            <div class="searchBarContainer"></div>
             <table>
                 <thead>
                     <tr>
                         <th><i class="fas fa-user"></i> Name</th>
                         <th><i class="fas fa-envelope"></i> Email</th>
-                        <th><i class="fas fa-university"></i> College</th>
+                        <th><i class="fas fa-university"></i> Assigned College</th>
                         <th><i class="fas fa-cog"></i> Actions</th>
                     </tr>
                 </thead>
-                <tbody id="organizerTable">
-                    <% if (typeof organizers !== "undefined" && organizers.length > 0) { %>
-                        <% organizers.forEach(organizer => { %>
-                            <tr class="organizer-row">
-                                <td><%= organizer.name %></td>
-                                <td><%= organizer.email %></td>
-                                <td><%= organizer.college %></td>
-                                <td>
-                                    <button class="remove-btn" onclick="removeOrganizer('<%= organizer.email %>', this)">
-                                        <i class="fas fa-user-minus"></i> Remove
-                                    </button>
-                                </td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        <tr>
-                            <td colspan="4" class="empty-message">
-                                <i class="fas fa-info-circle"></i> No organizers available.
-                            </td>
-                        </tr>
-                    <% } %>
+                <tbody id="coordinatorTable">
+                    <tr>
+                        <td colspan="4" class="empty-message">
+                            <i class="fas fa-info-circle"></i> Loading coordinators...
+                        </td>
+                    </tr>
                 </tbody>
             </table>
-            </div>
+
             <div class="back-container">
                 <a href="/admin/admin_dashboard" class="back">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
@@ -313,7 +305,63 @@
             </div>
         </div>
     </div>
-    <script src="/js/organizer_management.js"></script>
-     <script src="/js/searchbar.js"></script>
+
+    <script src="/js/searchbar.js"></script>
+    <script>
+        async function fetchCoordinators() {
+            const tbody = document.getElementById('coordinatorTable');
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Loading coordinators...</td></tr>';
+
+            try {
+                const res = await fetch('/admin/api/coordinators'); // API endpoint returning JSON
+                const coordinators = await res.json();
+
+                if (!coordinators.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No coordinators available.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                coordinators.forEach(coordinator => {
+                    const tr = document.createElement('tr');
+                    tr.classList.add('coordinator-row');
+                    tr.innerHTML = `
+                        <td>${coordinator.name}</td>
+                        <td>${coordinator.email}</td>
+                        <td>${coordinator.college}</td>
+                        <td>
+                            <button onclick="removeCoordinator('${coordinator.email}', this)">
+                                <i class="fas fa-user-minus"></i> Remove
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-exclamation-triangle"></i> Failed to load coordinators.</td></tr>';
+            }
+        }
+
+        async function removeCoordinator(email, button) {
+            if (!confirm(`Are you sure you want to remove ${email}?`)) return;
+            try {
+                const res = await fetch(`/admin/api/coordinators/${email}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    button.closest('tr').remove();
+                    alert('Coordinator removed successfully.');
+                } else {
+                    alert('Failed to remove coordinator.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error removing coordinator.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchCoordinators);
+    </script>
 </body>
 </html>

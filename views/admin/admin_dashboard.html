@@ -294,9 +294,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2><i class="fas fa-chess"></i> ChessHive</h2>
-            <% if (typeof adminName !== "undefined") { %>
-                <p>Welcome, <%= adminName %>!</p>
-            <% } %>
+            <p id="adminGreeting">Welcome, Admin!</p>
         </div>
     
         <div class="nav-section">
@@ -328,47 +326,25 @@
     </div>
     
     <div class="content">
-        <h1 class="greeting">
-            Welcome, <%= typeof adminName !== "undefined" ? adminName : "Admin" %>!
-        </h1>
+        <h1 class="greeting" id="dashboardGreeting">Welcome, Admin!</h1>
  
         <div class="form-container">
             <h2>Contact Messages</h2>
-            <% if (typeof contactMessages !== 'undefined' && contactMessages.length > 0) { %>
-                <div class="row-counter" id="messagesCounter">0/10</div>
-                <ul id="messagesList">
-                    <% contactMessages.forEach((message, index) => { %>
-                        <li class="message-row" <%= index >= 10 ? 'style="display: none;"' : '' %>>
-                            <strong>Name:</strong> <span class="person-name"><%= message.name %></span><br>
-                            <strong>Message:</strong> <%= message.message %><br>
-                        </li>
-                    <% }); %>
-                </ul>
-                <% if (contactMessages.length > 0) { %>
-                    <div class="pagination-container">
-                        <% if (contactMessages.length > 10) { %>
-                            <a href="#" class="next-btn" id="messagesNextLink">
-                                <i class="fas fa-chevron-right"></i> Next
-                            </a>
-                        <% } %>
-                        <a href="#" class="prev-btn" id="messagesPrevLink" style="display: none;">
-                            <i class="fas fa-chevron-left"></i> Previous
-                        </a>
-                    </div>
-                <% } %>
-            <% } else { %>
-                <p>No messages available.</p>
-            <% } %>
+            <div class="row-counter" id="messagesCounter">0/10</div>
+            <ul id="messagesList"></ul>
+            <div class="pagination-container">
+                <a href="#" class="next-btn" id="messagesNextLink"> <i class="fas fa-chevron-right"></i> Next </a>
+                <a href="#" class="prev-btn" id="messagesPrevLink" style="display: none;"> <i class="fas fa-chevron-left"></i> Previous </a>
+            </div>
         </div>
     </div>
     
     <script>
-        // Check if the device is mobile
+        // --- DOM Helpers ---
         function isMobile() {
             return window.innerWidth <= 768;
         }
 
-        // Show/hide menu button based on screen size
         function updateMenuButtonVisibility() {
             const menuBtn = document.getElementById("menuBtn");
             const sidebar = document.getElementById("sidebar");
@@ -382,23 +358,16 @@
             }
         }
 
-        // Toggle sidebar function (only used on mobile)
         function toggleSidebar() {
             const sidebar = document.getElementById("sidebar");
-            
-            if (sidebar.style.left === "0px") {
-                sidebar.style.left = "-100%";
-            } else {
-                sidebar.style.left = "0px";
-            }
+            sidebar.style.left = sidebar.style.left === "0px" ? "-100%" : "0px";
         }
-    
-        // Logout function
+
         function handleLogout() {
             window.location.href = '/login';
         }
-    
-        // Add click event listeners to all nav items
+
+        document.getElementById("menuBtn").addEventListener("click", toggleSidebar);
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function(e) {
                 this.style.opacity = '0.7';
@@ -406,84 +375,79 @@
             });
         });
 
-        // Add event listener for menu button
-        document.getElementById("menuBtn").addEventListener("click", toggleSidebar);
+        // --- Fetch and render admin data ---
+        async function fetchAdminData() {
+            try {
+                const response = await fetch('/admin/api/dashboard'); // Your API to get admin info & messages
+                const data = await response.json();
+                
+                // Set admin greeting
+                const greeting = document.getElementById('adminGreeting');
+                const dashboardGreeting = document.getElementById('dashboardGreeting');
+                if (greeting) greeting.textContent = `Welcome, ${data.adminName}!`;
+                if (dashboardGreeting) dashboardGreeting.textContent = `Welcome, ${data.adminName}!`;
 
-        // Messages pagination
-        document.addEventListener('DOMContentLoaded', () => {
-            const messagesConfig = {
-                listId: 'messagesList',
-                rowClass: 'message-row',
-                nextLinkId: 'messagesNextLink',
-                prevLinkId: 'messagesPrevLink',
-                counterId: 'messagesCounter',
-                visibleRows: 10,
-                rowsPerPage: 10
-            };
+                // Render contact messages
+                renderMessages(data.contactMessages || []);
+            } catch (err) {
+                console.error('Error fetching admin data:', err);
+            }
+        }
 
-            const list = document.getElementById(messagesConfig.listId);
-            const nextLink = document.getElementById(messagesConfig.nextLinkId);
-            const prevLink = document.getElementById(messagesConfig.prevLinkId);
-            const counter = document.getElementById(messagesConfig.counterId);
-            let visibleRows = messagesConfig.visibleRows;
-            const rowsPerPage = messagesConfig.rowsPerPage;
+        function renderMessages(messages) {
+            const list = document.getElementById('messagesList');
+            const counter = document.getElementById('messagesCounter');
+            const nextLink = document.getElementById('messagesNextLink');
+            const prevLink = document.getElementById('messagesPrevLink');
 
-            // Ensure only first 10 messages are visible initially
-            const allRows = list ? list.querySelectorAll(`.${messagesConfig.rowClass}`) : [];
-            allRows.forEach((row, index) => {
-                row.style.display = index < visibleRows ? '' : 'none';
+            list.innerHTML = ''; // Clear existing
+
+            messages.forEach((message, index) => {
+                const li = document.createElement('li');
+                li.className = 'message-row';
+                li.style.display = index < 10 ? '' : 'none';
+                li.innerHTML = `<strong>Name:</strong> <span class="person-name">${message.name}</span><br>
+                                <strong>Message:</strong> ${message.message}<br>`;
+                list.appendChild(li);
             });
 
-            // Store original rows
-            const originalRows = Array.from(allRows).map(row => row.cloneNode(true));
+            let visibleRows = 10;
+            const rowsPerPage = 10;
+            const allRows = list.querySelectorAll('.message-row');
 
-            // Function to update counter and link visibility
             const updateDisplay = () => {
-                const visibleCount = Math.min(visibleRows, originalRows.length);
-                if (counter) {
-                    counter.textContent = `${visibleCount}/10`;
-                }
-                if (nextLink) {
-                    nextLink.style.display = visibleRows < originalRows.length ? '' : 'none';
-                }
-                if (prevLink) {
-                    prevLink.style.display = visibleRows > rowsPerPage ? '' : 'none';
-                }
+                counter.textContent = `${Math.min(visibleRows, allRows.length)}/10`;
+                nextLink.style.display = visibleRows < allRows.length ? '' : 'none';
+                prevLink.style.display = visibleRows > rowsPerPage ? '' : 'none';
             };
 
-            // Initial display update
+            nextLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, allRows.length); i++) {
+                    allRows[i].style.display = '';
+                }
+                visibleRows += rowsPerPage;
+                updateDisplay();
+            });
+
+            prevLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newVisible = Math.max(rowsPerPage, visibleRows - rowsPerPage);
+                for (let i = newVisible; i < allRows.length; i++) {
+                    allRows[i].style.display = 'none';
+                }
+                visibleRows = newVisible;
+                updateDisplay();
+            });
+
             updateDisplay();
+        }
 
-            // Next link functionality
-            if (nextLink) {
-                nextLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const rows = list.querySelectorAll(`.${messagesConfig.rowClass}`);
-                    for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, rows.length); i++) {
-                        rows[i].style.display = '';
-                    }
-                    visibleRows += rowsPerPage;
-                    updateDisplay();
-                });
-            }
-
-            // Previous link functionality
-            if (prevLink) {
-                prevLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const rows = list.querySelectorAll(`.${messagesConfig.rowClass}`);
-                    const newVisibleRows = Math.max(rowsPerPage, visibleRows - rowsPerPage);
-                    for (let i = newVisibleRows; i < rows.length; i++) {
-                        rows[i].style.display = 'none';
-                    }
-                    visibleRows = newVisibleRows;
-                    updateDisplay();
-                });
-            }
+        // Load on page ready
+        window.addEventListener("load", () => {
+            updateMenuButtonVisibility();
+            fetchAdminData();
         });
-
-        // Run on page load and resize
-        window.addEventListener("load", updateMenuButtonVisibility);
         window.addEventListener("resize", updateMenuButtonVisibility);
     </script>
 </body>

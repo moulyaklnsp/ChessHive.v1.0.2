@@ -337,70 +337,42 @@
     <div class="container">
         <h2>Tournament Oversight</h2>
 
-        <% if (successMessage) { %>
-            <div class="message success">
-                <i class="fas fa-check-circle"></i> <%= successMessage %>
-            </div>
-        <% } %>
-        <% if (errorMessage) { %>
-            <div class="message error">
-                <i class="fas fa-exclamation-circle"></i> <%= errorMessage %>
-            </div>
-        <% } %>
+        <div id="tournamentMessages"></div>
 
         <div class="table-div">
             <h4><i class="fas fa-chess-board"></i> Tournament Overview</h4>
             
             <div id="adminTournamentTable">
-                <% if (typeof tournaments !== 'undefined' && Array.isArray(tournaments) && tournaments.length > 0) { %>
-                    <div class="row-counter" id="tournamentsCounter"><%= Math.min(tournaments.length, 5) %> / <%= tournaments.length %></div>
-                    <div class="searchBarContainer"></div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th><i class="fas fa-trophy"></i> Name</th>
-                                <th><i class="far fa-calendar"></i> Date</th>
-                                <th><i class="fas fa-map-marker-alt"></i> Location</th>
-                                <th><i class="fas fa-rupee-sign"></i> Entry Fee</th>
-                                <th><i class="fas fa-chess"></i> Type</th>
-                                <th><i class="fas fa-info-circle"></i> Status</th>
-                                <th><i class="fas fa-users"></i> Players</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tournamentsTable">
-                            <% tournaments.forEach((tournament, index) => { %>
-                                <tr class="tournament-row" <%= index >= 5 ? 'style="display: none;"' : '' %>>
-                                    <td><%= tournament.name %></td>
-                                    <td><%= tournament.date %></td>
-                                    <td><%= tournament.location %></td>
-                                    <td>₹<%= tournament.entry_fee %></td>
-                                    <td><%= tournament.type %></td>
-                                    <td>
-                                        <span class="status-badge <%= tournament.status.toLowerCase() === 'running' ? 'status-active' : 'status-pending' %>">
-                                            <%= tournament.status %>
-                                        </span>
-                                    </td>
-                                    <td><%= tournament.player_count %></td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
-                    </table>
-                    <div class="more-container">
-                        <% if (tournaments.length > 5) { %>
-                            <a href="#" class="more" id="tournamentsMoreLink">
-                                <i class="fas fa-chevron-down"></i> More
-                            </a>
-                        <% } %>
-                        <a href="#" class="hide" id="tournamentsHideLink" style="display: none;">
-                            <i class="fas fa-chevron-up"></i> Hide
-                        </a>
-                    </div>
-                <% } else { %>
-                    <div class="row-counter" id="tournamentsCounter">0 / 0</div>
-                    <div class="empty-message">
-                        <i class="fas fa-info-circle"></i> No approved tournaments available.
-                    </div>
-                <% } %>
+                <div class="row-counter" id="tournamentsCounter">0 / 0</div>
+                <div class="searchBarContainer"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-trophy"></i> Name</th>
+                            <th><i class="far fa-calendar"></i> Date</th>
+                            <th><i class="fas fa-map-marker-alt"></i> Location</th>
+                            <th><i class="fas fa-rupee-sign"></i> Entry Fee</th>
+                            <th><i class="fas fa-chess"></i> Type</th>
+                            <th><i class="fas fa-info-circle"></i> Status</th>
+                            <th><i class="fas fa-users"></i> Players</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tournamentsTable">
+                        <tr>
+                            <td colspan="7" class="empty-message">
+                                <i class="fas fa-info-circle"></i> Loading tournaments...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="more-container">
+                    <a href="#" class="more" id="tournamentsMoreLink" style="display:none;">
+                        <i class="fas fa-chevron-down"></i> More
+                    </a>
+                    <a href="#" class="hide" id="tournamentsHideLink" style="display:none;">
+                        <i class="fas fa-chevron-up"></i> Hide
+                    </a>
+                </div>
             </div>
 
             <div class="back-container">
@@ -413,60 +385,86 @@
 
     <script src="/js/searchbar.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        async function fetchTournaments() {
+            const tbody = document.getElementById('tournamentsTable');
+            const counter = document.getElementById('tournamentsCounter');
             const moreLink = document.getElementById('tournamentsMoreLink');
             const hideLink = document.getElementById('tournamentsHideLink');
-            const rows = document.querySelectorAll('.tournament-row');
-            const rowCounter = document.getElementById('tournamentsCounter');
-            let visibleRows = 5; // Initial number of visible rows
-            const rowsPerPage = 5;
-            const totalRows = rows.length;
 
-            // Initialize visibility
-            rows.forEach((row, index) => {
-                row.style.display = index < visibleRows ? '' : 'none';
-            });
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-message"><i class="fas fa-info-circle"></i> Loading tournaments...</td></tr>';
 
-            // Update row counter and link visibility
-            const updateDisplay = () => {
-                if (rowCounter) {
-                    rowCounter.textContent = `${Math.min(visibleRows, totalRows)} / ${totalRows}`;
-                }
-                if (moreLink) {
-                    moreLink.style.display = visibleRows < totalRows ? 'inline-flex' : 'none';
-                }
-                if (hideLink) {
-                    hideLink.style.display = visibleRows > 5 ? 'inline-flex' : 'none';
-                }
-            };
-            updateDisplay();
+            try {
+                const response = await fetch('/admin/api/tournaments');
+                const data = await response.json();
+                const tournaments = Array.isArray(data.tournaments) ? data.tournaments : [];
+    console.log('Tournaments array:', tournaments); // Log the tournaments array
 
-            // More link functionality
-            if (moreLink) {
-                moreLink.addEventListener('click', (e) => {
+                if (!tournaments.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-message"><i class="fas fa-info-circle"></i> No approved tournaments available.</td></tr>';
+                    counter.textContent = '0 / 0';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                tournaments.forEach((tournament, index) => {
+                    const tr = document.createElement('tr');
+                    tr.classList.add('tournament-row');
+                    if (index >= 5) tr.style.display = 'none';
+
+                    tr.innerHTML = `
+                        <td>${tournament.name}</td>
+                        <td>${tournament.date}</td>
+                        <td>${tournament.location}</td>
+                        <td>₹${tournament.entry_fee}</td>
+                        <td>${tournament.type}</td>
+                        <td>
+                            <span class="status-badge ${tournament.status.toLowerCase() === 'running' ? 'status-active' : 'status-pending'}">
+                                ${tournament.status}
+                            </span>
+                        </td>
+                        <td>${tournament.player_count}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                counter.textContent = `${Math.min(5, tournaments.length)} / ${tournaments.length}`;
+                moreLink.style.display = tournaments.length > 5 ? 'inline-flex' : 'none';
+                hideLink.style.display = 'none';
+
+                // More/Hide functionality
+                let visibleRows = 5;
+                const rowsPerPage = 5;
+                const rows = document.querySelectorAll('.tournament-row');
+
+                moreLink.onclick = e => {
                     e.preventDefault();
-                    // Show next 5 rows
-                    for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, totalRows); i++) {
+                    for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, rows.length); i++) {
                         rows[i].style.display = '';
                     }
                     visibleRows += rowsPerPage;
-                    updateDisplay();
-                });
-            }
+                    counter.textContent = `${Math.min(visibleRows, rows.length)} / ${rows.length}`;
+                    moreLink.style.display = visibleRows < rows.length ? 'inline-flex' : 'none';
+                    hideLink.style.display = visibleRows > 5 ? 'inline-flex' : 'none';
+                };
 
-            // Hide link functionality
-            if (hideLink) {
-                hideLink.addEventListener('click', (e) => {
+                hideLink.onclick = e => {
                     e.preventDefault();
-                    // Revert to first 5 rows
                     rows.forEach((row, index) => {
                         row.style.display = index < 5 ? '' : 'none';
                     });
                     visibleRows = 5;
-                    updateDisplay();
-                });
+                    counter.textContent = `5 / ${rows.length}`;
+                    moreLink.style.display = rows.length > 5 ? 'inline-flex' : 'none';
+                    hideLink.style.display = 'none';
+                };
+
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-message"><i class="fas fa-exclamation-triangle"></i> Failed to load tournaments.</td></tr>';
             }
-        });
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchTournaments);
     </script>
 </body>
 </html>
