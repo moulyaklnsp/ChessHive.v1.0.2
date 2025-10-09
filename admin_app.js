@@ -3,236 +3,311 @@ const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const moment = require('moment');
 const utils = require('./utils');
+const path = require('path'); 
+const { ObjectId } = require('mongodb');
 
-router.get('/:subpage?', async (req, res) => {
-  const subpage = req.params.subpage || 'admin_dashboard';
-  const adminName = req.session.username || "Admin";
+router.use(express.json());
 
-  const db = await connectDB();
-  if (subpage === 'admin_dashboard') {
+// ==================== API ROUTES ====================
+
+// Admin dashboard API
+router.get('/api/dashboard', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const adminName = req.session.username || 'Admin';
     const threeDaysLater = moment().add(3, 'days').toDate();
-    const meetings = await db.collection('meetingsdb').find({ role: 'admin', date: { $lte: threeDaysLater } }).toArray();
-    const contactMessages = await db.collection('contact').find().sort({ submission_date: -1 }).toArray();
-    console.log('Admin dashboard loaded:', { meetingsCount: meetings.length, messagesCount: contactMessages.length });
-    utils.renderDashboard('admin/admin_dashboard', req, res, { adminName, meetings, contactMessages });
-  } else if (subpage === 'admin_tournament_management') {
-    const tournaments = await db.collection('tournaments').aggregate([
+
+    const meetings = await db.collection('meetingsdb')
+      .find({ role: 'admin', date: { $lte: threeDaysLater } })
+      .sort({ date: 1, time: 1 })
+      .toArray();
+
+    const contactMessages = await db.collection('contact')
+      .find()
+      .sort({ submission_date: -1 })
+      .toArray();
+
+    res.json({
+      adminName,
+      meetings: meetings || [],
+      contactMessages: contactMessages || []
+    });
+  } catch (error) {
+    console.error('Error fetching admin dashboard data:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+// // Admin profile API
+// router.get('/api/profile', async (req, res) => {
+//   try {
+//     if (!req.session.userEmail) return res.status(401).json({ error: 'Not logged in' });
+
+//     const db = await connectDB();
+//     const admin = await db.collection('users').findOne({ email: req.session.userEmail, role: 'admin' });
+
+//     if (!admin) return res.status(404).json({ error: 'Admin not found' });
+
+//     res.json({
+//       name: admin.name,
+//       email: admin.email,
+//       role: admin.role
+//     });
+//   } catch (error) {
+//     console.error('Error fetching admin profile:', error);
+//     res.status(500).json({ error: 'Failed to fetch profile' });
+//   }
+// });
+
+// Tournaments API (for admin to view all)
+router.get('/api/tournaments', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const tournaments = await db.collection('tournaments')
+      .find({ status: { $ne: 'Removed' } })  // Exclude removed
+      .sort({ date: -1 })
+      .toArray();
+
+    res.json({ tournaments });
+  } catch (error) {
+    console.error('Error fetching tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch tournaments' });
+  }
+});
+
+// Remove Tournament API (for admin)
+router.delete('/api/tournaments/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('tournaments').updateOne(
+      { _id: new ObjectId(id), status: { $ne: 'Removed' } },
+      { $set: { status: 'Removed', removed_date: new Date(), removed_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Tournament removed successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Tournament not found' });
+    }
+  } catch (error) {
+    console.error('Error removing tournament:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove tournament' });
+  }
+});
+
+// Coordinators API
+router.get('/api/coordinators', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const coordinators = await db.collection('users')
+      .find({ role: 'coordinator', isDeleted: { $ne: 1 } })
+      .project({ name: 1, email: 1, college: 1 })
+      .toArray();
+
+    res.json(coordinators);
+  } catch (error) {
+    console.error('Error fetching coordinators:', error);
+    res.status(500).json({ error: 'Failed to fetch coordinators' });
+  }
+});
+
+// Remove Coordinator API
+router.delete('/api/coordinators/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'coordinator', isDeleted: { $ne: 1 } },
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Coordinator removed successfully' });
+    } else {
+      res.status(404).json({ error: 'Coordinator not found' });
+    }
+  } catch (error) {
+    console.error('Error removing coordinator:', error);
+    res.status(500).json({ error: 'Failed to remove coordinator' });
+  }
+});
+
+// Organizers API
+router.get('/api/organizers', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const organizers = await db.collection('users')
+      .find({ role: 'organizer', isDeleted: { $ne: 1 } })
+      .project({ name: 1, email: 1, college: 1 })
+      .toArray();
+
+    res.json(organizers);
+  } catch (error) {
+    console.error('Error fetching organizers:', error);
+    res.status(500).json({ error: 'Failed to fetch organizers' });
+  }
+});
+
+// Remove Organizer API
+router.delete('/api/organizers/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'organizer', isDeleted: { $ne: 1 } },
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Organizer removed successfully' });
+    } else {
+      res.status(404).json({ error: 'Organizer not found' });
+    }
+  } catch (error) {
+    console.error('Error removing organizer:', error);
+    res.status(500).json({ error: 'Failed to remove organizer' });
+  }
+});
+
+// Payments API
+router.get('/api/payments', async (req, res) => {
+  try {
+    const db = await connectDB();
+
+    const players = await db.collection('subscriptionstable').aggregate([
+      { $lookup: { from: 'users', localField: 'username', foreignField: 'email', as: 'user' } },
+      { $unwind: '$user' },
+      { $match: { 'user.isDeleted': 0 } },
+      { $project: { name: '$user.name', plan: 1, start_date: 1 } }
+    ]).toArray();
+
+    const sales = await db.collection('sales').aggregate([
+      { $lookup: { from: 'products', localField: 'product_id', foreignField: '_id', as: 'product' } },
+      { $unwind: '$product' },
+      { $project: { product: '$product.name', price: 1, coordinator: '$product.coordinator', college: 1, buyer: 1, purchase_date: 1 } }
+    ]).toArray();
+
+    const tournamentSales = await db.collection('tournaments').aggregate([
       {
-        $match: {
-          status: "Approved" // Filters for tournaments with status "approved"
-        }
+        $lookup: { from: 'tournament_players', localField: '_id', foreignField: 'tournament_id', as: 'individual_enrollments' }
       },
       {
-        $lookup: {
-          from: 'tournament_players',
-          localField: '_id',
-          foreignField: 'tournament_id',
-          as: 'players'
-        }
-      },
-      {
-        $lookup: {
-          from: 'enrolledtournaments_team',
-          localField: '_id',
-          foreignField: 'tournament_id',
-          as: 'enrolledTeams'
-        }
+        $lookup: { from: 'enrolledtournaments_team', localField: '_id', foreignField: 'tournament_id', as: 'team_enrollments' }
       },
       {
         $project: {
           name: 1,
-          date: 1,
-          location: 1,
           entry_fee: 1,
           type: 1,
-          status: 1, // Preserve the original status (e.g., "approved")
-          current_state: { // New field for date-based status
-            $cond: {
-              if: { $lt: ['$date', new Date()] },
-              then: 'Completed',
-              else: {
-                $cond: {
-                  if: { $eq: ['$date', new Date()] },
-                  then: 'Running',
-                  else: 'Yet to Start'
-                }
-              }
-            }
-          },
-          player_count: {
-            $cond: {
-              if: { $eq: ['$type', 'Individual'] },
-              then: { $size: { $ifNull: ['$players', []] } },
-              else: {
-                $multiply: [
-                  4,
-                  {
-                    $size: {
-                      $filter: {
-                        input: { $ifNull: ['$enrolledTeams', []] },
-                        as: 'team',
-                        cond: { $eq: ['$$team.approved', 1] }
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-          }
+          date: 1,
+          individual_enrollments: { $size: '$individual_enrollments' },
+          team_enrollments: { $size: { $filter: { input: '$team_enrollments', as: 'team', cond: { $eq: ['$$team.approved', 1] } } } }
         }
-      }
-    ]).toArray();    
-    console.log('Tournament management loaded:', { tournamentCount: tournaments.length });
-    utils.renderDashboard('admin/admin_tournament_management', req, res, { tournaments: tournaments || [] });
-  } else if (subpage === 'organizer_management') {
-    const organizers = await db.collection('users').find({ role: 'organizer', isDeleted: 0 }).project({ name: 1, email: 1, college: 1 }).toArray();
-    console.log('Organizer management loaded:', { organizerCount: organizers.length });
-    utils.renderDashboard('admin/organizer_management', req, res, { organizers });
-  } else if (subpage === 'coordinator_management') {
-    const coordinators = await db.collection('users').find({ role: 'coordinator', isDeleted: 0 }).project({ name: 1, email: 1, college: 1 }).toArray();
-    console.log('Coordinator management loaded:', { coordinatorCount: coordinators.length });
-    utils.renderDashboard('admin/coordinator_management', req, res, { coordinators });
-  } else if (subpage === 'admin_meetings') {
-    const adminmeetings = await db.collection('meetingsdb').find({ role: 'admin' }).sort({ date: 1, time: 1 }).toArray();
-    console.log('Admin meetings loaded:', { meetingCount: adminmeetings.length });
-    utils.renderDashboard('admin/admin_meetings', req, res, { adminmeetings });
-  }else if (subpage === 'payments') {
-    // Fetch subscription data
-    const players = await db.collection('subscriptionstable').aggregate([
-        { $lookup: { from: 'users', localField: 'username', foreignField: 'email', as: 'user' } },
-        { $unwind: '$user' },
-        { $match: { 'user.isDeleted': 0 } },
-        { $project: { name: '$user.name', plan: 1, start_date: 1 } }
+      },
+      {
+        $facet: {
+          individual: [
+            { $match: { type: 'Individual', individual_enrollments: { $gt: 0 } } },
+            { $project: { name: 1, entry_fee: 1, type: 1, total_enrollments: '$individual_enrollments', revenue: { $multiply: ['$entry_fee', '$individual_enrollments'] }, enrollment_date: '$date' } }
+          ],
+          team: [
+            { $match: { type: 'Team', team_enrollments: { $gt: 0 } } },
+            { $unwind: '$team_enrollments' },
+            { $match: { 'team_enrollments.approved': 1 } },
+            {
+              $group: {
+                _id: '$_id',
+                name: { $first: '$name' },
+                entry_fee: { $first: '$entry_fee' },
+                type: { $first: '$type' },
+                total_enrollments: { $sum: 1 },
+                enrollment_dates: { $push: '$team_enrollments.enrollment_date' }
+              }
+            },
+            { $project: { name: 1, entry_fee: 1, type: 1, total_enrollments: 1, revenue: { $multiply: ['$entry_fee', '$total_enrollments'] }, enrollment_date: { $arrayElemAt: ['$enrollment_dates', 0] } } }
+          ]
+        }
+      },
+      { $project: { combined: { $concatArrays: ['$individual', '$team'] } } },
+      { $unwind: '$combined' },
+      { $replaceRoot: { newRoot: '$combined' } },
+      { $sort: { enrollment_date: -1 } }
     ]).toArray();
 
-    // Fetch product sales data
-    const sales = await db.collection('sales').aggregate([
-        { $lookup: { from: 'products', localField: 'product_id', foreignField: '_id', as: 'product' } },
-        { $unwind: '$product' },
-        { $project: { product: '$product.name', price: 1, coordinator: '$product.coordinator', college: 1, buyer: 1, purchase_date: 1 } }
-    ]).toArray();
+    res.json({ players, sales, tournamentSales });
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ error: 'Failed to fetch payments data' });
+  }
+});
 
-    // Fetch tournament sales data (individual and team enrollments)
-    const tournamentSales = await db.collection('tournaments').aggregate([
-        // Lookup individual tournament enrollments
-        {
-            $lookup: {
-                from: 'tournament_players',
-                localField: '_id',
-                foreignField: 'tournament_id',
-                as: 'individual_enrollments'
-            }
-        },
-        // Lookup team tournament enrollments (only approved teams)
-        {
-            $lookup: {
-                from: 'enrolledtournaments_team',
-                localField: '_id',
-                foreignField: 'tournament_id',
-                as: 'team_enrollments'
-            }
-        },
-        // Project relevant fields and compute enrollments
-        {
-            $project: {
-                name: 1,
-                entry_fee: 1,
-                type: 1,
-                date: 1,
-                individual_enrollments: {
-                    $size: '$individual_enrollments'
-                },
-                team_enrollments: {
-                    $size: {
-                        $filter: {
-                            input: '$team_enrollments',
-                            as: 'team',
-                            cond: { $eq: ['$$team.approved', 1] }
-                        }
-                    }
-                }
-            }
-        },
-        // Unwind to handle both individual and team tournaments
-        {
-            $facet: {
-                individual: [
-                    { $match: { type: 'Individual', individual_enrollments: { $gt: 0 } } },
-                    {
-                        $project: {
-                            name: 1,
-                            entry_fee: 1,
-                            type: 1,
-                            total_enrollments: '$individual_enrollments',
-                            revenue: { $multiply: ['$entry_fee', '$individual_enrollments'] },
-                            enrollment_date: '$date' // Use tournament date as fallback
-                        }
-                    }
-                ],
-                team: [
-                    { $match: { type: 'Team', team_enrollments: { $gt: 0 } } },
-                    {
-                        $lookup: {
-                            from: 'enrolledtournaments_team',
-                            localField: '_id',
-                            foreignField: 'tournament_id',
-                            as: 'team_enrollments'
-                        }
-                    },
-                    { $unwind: '$team_enrollments' },
-                    { $match: { 'team_enrollments.approved': 1 } },
-                    {
-                        $group: {
-                            _id: '$_id',
-                            name: { $first: '$name' },
-                            entry_fee: { $first: '$entry_fee' },
-                            type: { $first: '$type' },
-                            total_enrollments: { $sum: 1 },
-                            enrollment_dates: { $push: '$team_enrollments.enrollment_date' }
-                        }
-                    },
-                    {
-                        $project: {
-                            name: 1,
-                            entry_fee: 1,
-                            type: 1,
-                            total_enrollments: 1,
-                            revenue: { $multiply: ['$entry_fee', '$total_enrollments'] },
-                            enrollment_date: { $arrayElemAt: ['$enrollment_dates', 0] } // Use earliest enrollment date
-                        }
-                    }
-                ]
-            }
-        },
-        // Combine individual and team results
-        {
-            $project: {
-                combined: { $concatArrays: ['$individual', '$team'] }
-            }
-        },
-        { $unwind: '$combined' },
-        { $replaceRoot: { newRoot: '$combined' } },
-        // Sort by enrollment_date descending
-        { $sort: { enrollment_date: -1 } }
-    ]).toArray();
+// ==================== PAGE RENDERING ROUTES ====================
+// Helper function to safely send HTML files from /views/admin
 
-    console.log('Payments loaded:', { playerCount: players.length, salesCount: sales.length, tournamentSalesCount: tournamentSales.length });
-    utils.renderDashboard('admin/payments', req, res, { players, sales, tournamentSales });
-}else if (subpage === 'admin_profile') {
-    if (!req.session.userEmail) {
-      console.log('Admin profile failed: User not logged in');
-      return res.redirect("/?error-message=Please log in");
+function sendAdminPage(res, filename) {
+  // FIX: include ChessHive.v1.0.2 folder in the path
+  const filePath = path.join(__dirname, '..', 'ChessHive.v1.0.2', 'views', 'admin', `${filename}.html`);
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error(`Error sending file: ${filename}.html`, err);
+      res.status(err.status || 500).send('Error loading page');
     }
-    const admin = await db.collection('users').findOne({ email: req.session.userEmail, role: 'admin' });
-    if (!admin) {
-      console.log('Admin profile failed: Admin not found:', req.session.userEmail);
-      return res.redirect("/admin/admin_dashboard?error-message=Admin not found");
+  });
+}
+
+
+router.get('/:subpage?', async (req, res) => {
+  const subpage = req.params.subpage || 'admin_dashboard';
+
+  if (!req.session.userEmail || req.session.userRole !== 'admin') {
+    console.log('Access denied: User not logged in or not an admin');
+    return res.redirect("/?error-message=Please log in as an admin");
+  }
+
+  try {
+    switch (subpage) {
+      case 'admin_dashboard':
+        sendAdminPage(res, 'admin_dashboard');
+        break;
+      case 'admin_tournament_management':
+        sendAdminPage(res, 'admin_tournament_management');
+        break;
+      case 'organizer_management':
+        sendAdminPage(res, 'organizer_management');
+        break;
+      case 'coordinator_management':
+        sendAdminPage(res, 'coordinator_management');
+        break;
+      case 'payments':
+        sendAdminPage(res, 'payments');
+        break;
+      default:
+        console.log('Invalid subpage:', subpage);
+        return res.redirect('/admin_dashboard?error-message=Page not found');
     }
-    console.log('Admin profile loaded for:', admin.email);
-    utils.renderDashboard('admin/admin_profile', req, res, { admin });
-  } else {
-    console.log('Admin subpage not found:', subpage);
-    res.redirect('/admin/admin_dashboard?error-message=Page not found');
+  } catch (error) {
+    console.error('Error rendering admin page:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
