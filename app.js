@@ -76,7 +76,7 @@ app.post('/login', async (req, res) => {
   }
   if (user.isDeleted) {
     console.log('Login failed: Account deleted for', email);
-    return res.redirect(`/login?error-message=Account has been deleted&deletedUserId=${user._id}`);
+    return res.redirect(`/login?error-message=Account has been deleted&deletedUserId=${user._id}&deletedUserRole=${user.role}`);
   }
   req.session.userID = user._id;
   req.session.userEmail = user.email;
@@ -87,9 +87,27 @@ app.post('/login', async (req, res) => {
   req.session.collegeName = user.college;
   console.log(`User logged in: ${email} as ${user.role}`);
   switch (user.role) {
-    case 'admin': return res.redirect('/admin/admin_dashboard?success-message=Admin Login Successful');
-    case 'organizer': return res.redirect('/organizer/organizer_dashboard?success-message=Organizer Login Successful');
-    case 'coordinator': return res.redirect('/coordinator/coordinator_dashboard?success-message=Coordinator Login Successful');
+    case 'admin':
+      return res.sendFile(path.join(__dirname, 'views', 'admin', 'admin_dashboard.html'), (err) => {
+        if (err) {
+          console.error('Error sending admin_dashboard.html:', err);
+          return res.redirect('/?error-message=Server Error');
+        }
+      });
+    case 'organizer':
+      return res.sendFile(path.join(__dirname, 'views', 'organizer', 'organizer_dashboard.html'), (err) => {
+        if (err) {
+          console.error('Error sending organizer_dashboard.html:', err);
+          return res.redirect('/?error-message=Server Error');
+        }
+      });
+    case 'coordinator':
+      return res.sendFile(path.join(__dirname, 'views', 'coordinator', 'coordinator_dashboard.html'), (err) => {
+        if (err) {
+          console.error('Error sending coordinator_dashboard.html:', err);
+          return res.redirect('/?error-message=Server Error');
+        }
+      });
     case 'player': return res.redirect('/player/player_dashboard?success-message=Player Login Successful');
     default: return res.redirect('/?error-message=Invalid Role');
   }
@@ -121,7 +139,140 @@ app.post('/player/restore/:id', async (req, res) => {
     res.redirect('/login?error-message=An unexpected error occurred');
   }
 });
+app.post('/player/restore/:id', async (req, res) => {
+  const { id } = req.params;
+  const db = await connectDB();
+  
+  try {
+    const result = await db.collection('users').updateOne(
+      { _id: new ObjectId(id), role: 'player' },
+      { $set: { isDeleted: 0 } }
+    );
+    
+    if (result.matchedCount === 0) {
+      console.log('Restore failed: Player not found:', id);
+      return res.status(404).json({ message: 'Player not found' });
+    }
+    
+    console.log(`Player account restored: ${id}`);
+    res.json({ message: 'Player account restored successfully' });
+  } catch (err) {
+    if (err.code === 121) {
+      console.log('Restore failed due to validation error:', err.errInfo);
+      return res.status(400).json({ message: 'Account restoration failed due to validation error' });
+    }
+    console.error('Unexpected error:', err);
+    res.status(500).json({ message: 'An unexpected error occurred' });
+  }
+});
 
+// Restore Coordinator Account
+app.post('/coordinators/restore/:id', async (req, res) => {
+  const { id } = req.params;
+  const { email, password } = req.body;
+  const db = await connectDB();
+  
+  try {
+    const user = await db.collection('users').findOne({
+      _id: new ObjectId(id),
+      role: 'coordinator',
+      email,
+      password,
+      isDeleted: 1
+    });
+    
+    const result = await db.collection('users').updateOne(
+      { _id: new ObjectId(id), role: 'coordinator' },
+      { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
+    );
+    
+    if (result.matchedCount === 0) {
+      console.log('Restore failed: Coordinator not found:', id);
+      return res.status(404).json({ message: 'Coordinator not found' });
+    }
+    
+    console.log(`Coordinator account restored: ${id}, ${email}`);
+    // Log the restore attempt
+    await db.collection('logs').insertOne({
+      action: 'coordinator_restore',
+      userId: id,
+      email,
+      success: true,
+      timestamp: new Date()
+    });
+    
+    res.json({ message: 'Coordinator account restored successfully' });
+  } catch (err) {
+    console.error('Restore error:', err);
+    // Log the failed attempt
+    await db.collection('logs').insertOne({
+      action: 'coordinator_restore',
+      userId: id,
+      email,
+      success: false,
+      error: err.message,
+      timestamp: new Date()
+    });
+    
+    if (err.code === 121) {
+      return res.status(400).json({ message: 'Account restoration failed due to validation error' });
+    }
+    res.status(500).json({ message: 'An unexpected error occurred' });
+  }
+});
+
+app.post('/organizers/restore/:id', async (req, res) => {
+    console.log('Restore request received:', req.params, req.body);
+    const { id } = req.params;
+    const { email, password } = req.body;
+    const db = await connectDB();
+    
+    try {
+        const user = await db.collection('users').findOne({
+            _id: new ObjectId(id),
+            role: 'organizer',
+            email,
+            password,
+            isDeleted: 1
+        });
+        
+        const result = await db.collection('users').updateOne(
+            { _id: new ObjectId(id), role: 'organizer' },
+            { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
+        );
+        
+        if (result.matchedCount === 0) {
+            console.log('Restore failed: organizer not found:', id);
+            return res.status(404).json({ message: 'organizer not found' });
+        }
+        
+        console.log(`organizer account restored: ${id}, ${email}`);
+        await db.collection('logs').insertOne({
+            action: 'organizer_restore',
+            userId: id,
+            email,
+            success: true,
+            timestamp: new Date()
+        });
+        
+        res.json({ message: 'organizer account restored successfully' });
+    } catch (err) {
+        console.error('Restore error:', err);
+        await db.collection('logs').insertOne({
+            action: 'organizer_restore',
+            userId: id,
+            email,
+            success: false,
+            error: err.message,
+            timestamp: new Date()
+        });
+        
+        if (err.code === 121) {
+            return res.status(400).json({ message: 'Account restoration failed due to validation error' });
+        }
+        res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+});
 // DELETE route for coordinators
 app.delete('/coordinators/remove/:email', isAdminOrOrganizer, async (req, res) => {
   console.log('DELETE /coordinators/remove/:email called with email:', req.params.email);

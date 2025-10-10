@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pairings & Results - ChessHive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --sea-green: #2E8B57;
+            --cream: #FFFDD0;
+            --sky-blue: #87CEEB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Playfair Display', serif;
+            background-color: var(--cream);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 3rem;
+            color: var(--sea-green);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--sea-green);
+            margin-bottom: 2rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '⚔️';
+            font-size: 2.5rem;
+        }
+
+        .pairings-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+
+        th {
+            background-color: var(--sea-green);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-family: 'Cinzel', serif;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(46, 139, 87, 0.2);
+        }
+
+        tr:hover {
+            background-color: rgba(135, 206, 235, 0.1);
+        }
+
+        .score {
+            color: var(--sea-green);
+            font-weight: bold;
+        }
+
+        .bye {
+            color: #666;
+            font-style: italic;
+        }
+
+        .navigation {
+            text-align: right;
+            margin-top: 2rem;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--sea-green);
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+        }
+
+        .nav-link:hover {
+            background: #236B43;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .tree-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+
+        .tree-container h2::before {
+            content: '🏆';
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+        }
+
+        .node rect {
+            fill: var(--sea-green);
+            stroke: var(--cream);
+            stroke-width: 2px;
+            rx: 5;
+            ry: 5;
+        }
+
+        .node text {
+            font-family: 'Playfair Display', serif;
+            font-size: 14px;
+            fill: #fff;
+            dominant-baseline: middle;
+            text-anchor: middle;
+        }
+
+        .link {
+            fill: none;
+            stroke: var(--sea-green);
+            stroke-width: 2px;
+        }
+
+        #data-container {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            h2 {
+                font-size: 2rem;
+            }
+
+            .pairings-container, .tree-container {
+                padding: 1rem;
+            }
+
+            .node text {
+                font-size: 12px;
+            }
+
+            .node rect {
+                width: 80px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Pairings & Results</h1>
+
+    <div id="pairingsContainer"></div>
+
+    <div class="tree-container">
+        <h2>Tournament Progression</h2>
+        <svg id="tournament-tree"></svg>
+    </div>
+</div>
+
+<div class="navigation">
+    <a href="/player/player_tournament" class="nav-link">
+        <i class="fas fa-users"></i> Back to Tournaments
+    </a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const pairingsContainer = document.getElementById('pairingsContainer');
+
+    // Extract tournamentId and rounds from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('tournament_id');
+    const rounds = urlParams.get('rounds') || '5';
+
+    if (!tournamentId) {
+        pairingsContainer.innerHTML = '<p>Error: Tournament ID is required.</p>';
+        return;
+    }
+
+    try {
+        // Fetch all rounds data from backend API
+        const res = await fetch(`/player/api/pairings?tournament_id=${tournamentId}&rounds=${rounds}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        const allRounds = data.allRounds;
+
+        if (!allRounds || allRounds.length === 0) {
+            pairingsContainer.innerHTML = '<p>No pairings available.</p>';
+            return;
+        }
+
+        // Render pairings tables
+        allRounds.forEach(roundData => {
+            const roundDiv = document.createElement('div');
+            roundDiv.className = 'pairings-container';
+            roundDiv.innerHTML = `
+                <h2>Round ${roundData.round}</h2>
+                <table>
+                    <tr>
+                        <th>Player 1</th>
+                        <th>Player 2</th>
+                        <th>Result</th>
+                    </tr>
+                    ${roundData.pairings.map(pair => `
+                        <tr>
+                            <td>${pair.player1.username} <span class="score">(Score: ${pair.player1.score})</span></td>
+                            <td>${pair.player2.username} <span class="score">(Score: ${pair.player2.score})</span></td>
+                            <td>${pair.result}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                ${roundData.byePlayer ? `<p class="bye"><strong>BYE:</strong> ${roundData.byePlayer.username} <span class="score">(Score: ${roundData.byePlayer.score})</span></p>` : ''}
+            `;
+            pairingsContainer.appendChild(roundDiv);
+        });
+
+        // Extract unique player usernames for tree
+        let players = [];
+        allRounds.forEach(round => {
+            round.pairings.forEach(pair => {
+                if (!players.includes(pair.player1.username)) players.push(pair.player1.username);
+                if (!players.includes(pair.player2.username)) players.push(pair.player2.username);
+            });
+            if (round.byePlayer && !players.includes(round.byePlayer.username)) players.push(round.byePlayer.username);
+        });
+
+        // Create tournament tree (simplified bracket for visualization)
+        const playerCount = players.length || 2;
+        const slots = Math.pow(2, Math.ceil(Math.log2(playerCount)));
+        while (players.length < slots) players.push("BYE");
+
+        const treeData = { name: "Champion", children: [] };
+        const firstRound = [];
+        for (let i = 0; i < slots; i += 2) {
+            firstRound.push({
+                name: `R1-M${i/2 + 1}`,
+                children: [{ name: players[i] }, { name: players[i+1] }]
+            });
+        }
+
+        let currentRound = firstRound;
+        let roundIndex = 2;
+        while (currentRound.length > 1) {
+            const nextRound = [];
+            for (let i = 0; i < currentRound.length; i += 2) {
+                if (i + 1 < currentRound.length) {
+                    nextRound.push({ 
+                        name: `R${roundIndex}-M${i/2 + 1}`, 
+                        children: [currentRound[i], currentRound[i+1]] 
+                    });
+                } else {
+                    nextRound.push(currentRound[i]);
+                }
+            }
+            currentRound = nextRound;
+            roundIndex++;
+        }
+        treeData.children = currentRound;
+
+        // Render D3 tree
+        const svg = d3.select("#tournament-tree");
+        const width = 900, height = Math.max(300, slots * 50);
+        svg.attr("viewBox", `0 0 ${width} ${height}`);
+        const treeLayout = d3.tree().size([height - 100, width - 200]);
+        const root = d3.hierarchy(treeData);
+        treeLayout(root);
+
+        svg.append("g")
+            .attr("transform", "translate(100,50)")
+            .selectAll("path")
+            .data(root.links())
+            .enter()
+            .append("path")
+            .attr("class", "link")
+            .attr("d", d3.linkHorizontal().x(d => d.y).y(d => d.x));
+
+        const nodes = svg.append("g")
+            .attr("transform", "translate(100,50)")
+            .selectAll("g")
+            .data(root.descendants())
+            .enter()
+            .append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.y},${d.x})`);
+
+        nodes.append("rect")
+            .attr("x", -50)
+            .attr("y", -15)
+            .attr("width", 100)
+            .attr("height", 30)
+            .attr("rx", 5)
+            .attr("ry", 5);
+
+        nodes.append("text")
+            .attr("y", 0)
+            .text(d => d.data.name.length > 12 ? d.data.name.substring(0,10) + "..." : d.data.name);
+
+    } catch (err) {
+        console.error(err);
+        pairingsContainer.innerHTML = '<p>Failed to load pairings.</p>';
+    }
+});
+</script>
+</body>
+</html>

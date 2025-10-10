@@ -94,15 +94,17 @@
             flex-grow: 1;
         }
 
-        .back-container {
-            text-align: right;
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2rem;
         }
 
-        .back {
+        .back, .delete-account {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: var(--sea-green);
             color: white;
             text-decoration: none;
             padding: 0.8rem 1.5rem;
@@ -112,8 +114,22 @@
             font-weight: bold;
         }
 
+        .back {
+            background: var(--sea-green);
+        }
+
         .back:hover {
             background: #236B43;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .delete-account {
+            background: #d32f2f;
+        }
+
+        .delete-account:hover {
+            background: #b71c1c;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
@@ -140,6 +156,11 @@
             .info-label {
                 min-width: auto;
             }
+
+            .button-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
         }
     </style>
 </head>
@@ -150,7 +171,7 @@
             <div class="profile-info">
                 <div class="info-item">
                     <div class="info-label">
-                        <i class="fas fa-user"></i> Name---:
+                        <i class="fas fa-user"></i> Name:
                     </div>
                     <div class="info-value" id="coordinatorName">Loading...</div>
                 </div>
@@ -168,10 +189,13 @@
                 </div>
             </div>
 
-            <div class="back-container">
+            <div class="button-container">
                 <a href="/coordinator/coordinator_dashboard" class="back">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
+                <button class="delete-account" onclick="deleteAccount()">
+                    <i class="fas fa-trash"></i> Delete Account
+                </button>
             </div>
         </div>
     </div>
@@ -198,6 +222,32 @@
             }
         }
 
+        // ================================
+        // 🗑️ Delete Account (Client-side)
+        // ================================
+        async function deleteAccount() {
+            if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                return;
+            }
+            try {
+                // 🔹 API: DELETE /coordinator/api/profile
+                const res = await fetch('/coordinator/api/profile', {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('Account deleted successfully. You will be redirected to the login page.');
+                    window.location.href = '/?message=Account deleted';
+                } else {
+                    alert('Failed to delete account: ' + (data.message || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error deleting account:', err);
+                alert('Error deleting account. Please try again.');
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', loadCoordinatorProfile);
 
@@ -206,6 +256,8 @@
         // ================================
         // GET /coordinator/api/profile
         // Returns JSON: { name, email, college }
+        // DELETE /coordinator/api/profile
+        // Marks user as deleted (isDeleted: 1), returns JSON: { success, message }
         // ================================
     </script>
 </body>
