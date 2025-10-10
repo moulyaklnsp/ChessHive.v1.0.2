@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coordinator Management - ChessHive</title>
+    <title>Player Management - ChessHive</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -93,7 +93,7 @@
             display: flex;
             justify-content: flex-start;
             align-items: center;
-            margin-bottom: 2 Sistine Chapel frescoes, Michelangelo, 1508-1512
+            margin-bottom: 2rem;
             gap: 1rem;
             flex-wrap: wrap;
         }
@@ -330,10 +330,10 @@
 </head>
 <body>
     <div class="container">
-        <h2>Coordinator Management</h2>
+        <h2>Player Management</h2>
         
         <div class="table-div">
-            <div class="row-counter" id="coordinatorsCounter">0 / 0</div>
+            <div class="row-counter" id="playersCounter">0 / 0</div>
             <div class="searchBarContainer"></div>
             <table>
                 <thead>
@@ -344,19 +344,19 @@
                         <th><i class="fas fa-cog"></i> Actions</th>
                     </tr>
                 </thead>
-                <tbody id="coordinatorTable">
+                <tbody id="playerTable">
                     <tr>
                         <td colspan="4" class="empty-message">
-                            <i class="fas fa-info-circle"></i> Loading coordinators...
+                            <i class="fas fa-info-circle"></i> Loading players...
                         </td>
                     </tr>
                 </tbody>
             </table>
             <div class="more-container">
-                <a href="#" class="more" id="coordinatorsMoreLink" style="display:none;">
+                <a href="#" class="more" id="playersMoreLink" style="display:none;">
                     <i class="fas fa-chevron-down"></i> More
                 </a>
-                <a href="#" class="hide" id="coordinatorsHideLink" style="display:none;">
+                <a href="#" class="hide" id="playersHideLink" style="display:none;">
                     <i class="fas fa-chevron-up"></i> Hide
                 </a>
             </div>
@@ -370,41 +370,41 @@
 
     <script src="/js/searchbar.js"></script>
     <script>
-        async function fetchCoordinators() {
-            const tbody = document.getElementById('coordinatorTable');
-            const counter = document.getElementById('coordinatorsCounter');
-            const moreLink = document.getElementById('coordinatorsMoreLink');
-            const hideLink = document.getElementById('coordinatorsHideLink');
+        async function fetchPlayers() {
+            const tbody = document.getElementById('playerTable');
+            const counter = document.getElementById('playersCounter');
+            const moreLink = document.getElementById('playersMoreLink');
+            const hideLink = document.getElementById('playersHideLink');
 
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Loading coordinators...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Loading players...</td></tr>';
 
             try {
-                const res = await fetch('/admin/api/coordinators');
-                const coordinators = await res.json();
-                console.log('Coordinators array:', coordinators);
+                const res = await fetch('/admin/api/players');
+                const players = await res.json();
+                console.log('Players array:', players);
 
-                if (!Array.isArray(coordinators) || !coordinators.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No coordinators available.</td></tr>';
+                if (!Array.isArray(players) || !players.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No players available.</td></tr>';
                     counter.textContent = '0 / 0';
                     return;
                 }
 
                 tbody.innerHTML = '';
-                coordinators.forEach((coordinator, index) => {
+                players.forEach((player, index) => {
                     const tr = document.createElement('tr');
-                    tr.classList.add('coordinator-row');
-                    tr.dataset.isDeleted = coordinator.isDeleted ? '1' : '0';
+                    tr.classList.add('player-row');
+                    tr.dataset.isDeleted = player.isDeleted ? '1' : '0';
                     if (index >= 5) tr.style.display = 'none';
 
-                    const buttonClass = coordinator.isDeleted ? 'restore-btn' : '';
-                    const buttonText = coordinator.isDeleted ? 'Restore' : 'Remove';
-                    const buttonIcon = coordinator.isDeleted ? 'fas fa-user-plus' : 'fas fa-user-minus';
-                    const buttonAction = coordinator.isDeleted ? `restoreCoordinator('${coordinator.email}', this)` : `removeCoordinator('${coordinator.email}', this)`;
+                    const buttonClass = player.isDeleted ? 'restore-btn' : '';
+                    const buttonText = player.isDeleted ? 'Restore' : 'Remove';
+                    const buttonIcon = player.isDeleted ? 'fas fa-user-plus' : 'fas fa-user-minus';
+                    const buttonAction = player.isDeleted ? `restorePlayer('${player.email}', this)` : `removePlayer('${player.email}', this)`;
 
                     tr.innerHTML = `
-                        <td>${coordinator.name}</td>
-                        <td>${coordinator.email}</td>
-                        <td>${coordinator.college}</td>
+                        <td>${player.name}</td>
+                        <td>${player.email}</td>
+                        <td>${player.college}</td>
                         <td>
                             <button class="${buttonClass}" onclick="${buttonAction}">
                                 <i class="${buttonIcon}"></i> ${buttonText}
@@ -414,14 +414,14 @@
                     tbody.appendChild(tr);
                 });
 
-                counter.textContent = `${Math.min(5, coordinators.length)} / ${coordinators.length}`;
-                moreLink.style.display = coordinators.length > 5 ? 'inline-flex' : 'none';
+                counter.textContent = `${Math.min(5, players.length)} / ${players.length}`;
+                moreLink.style.display = players.length > 5 ? 'inline-flex' : 'none';
                 hideLink.style.display = 'none';
 
                 // More/Hide functionality
                 let visibleRows = 5;
                 const rowsPerPage = 5;
-                const rows = document.querySelectorAll('.coordinator-row');
+                const rows = document.querySelectorAll('.player-row');
 
                 moreLink.onclick = e => {
                     e.preventDefault();
@@ -447,15 +447,15 @@
 
             } catch (err) {
                 console.error(err);
-                tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-exclamation-triangle"></i> Failed to load coordinators.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-exclamation-triangle"></i> Failed to load players.</td></tr>';
                 counter.textContent = '0 / 0';
             }
         }
 
-        async function removeCoordinator(email, button) {
+        async function removePlayer(email, button) {
             if (!confirm(`Are you sure you want to remove ${email}?`)) return;
             try {
-                const res = await fetch(`/admin/api/coordinators/${encodeURIComponent(email)}`, {
+                const res = await fetch(`/admin/api/players/${encodeURIComponent(email)}`, {
                     method: 'DELETE'
                 });
                 if (res.ok) {
@@ -463,21 +463,21 @@
                     row.dataset.isDeleted = '1';
                     button.className = 'restore-btn';
                     button.innerHTML = '<i class="fas fa-user-plus"></i> Restore';
-                    button.onclick = () => restoreCoordinator(email, button);
-                    alert('Coordinator removed successfully.');
+                    button.onclick = () => restorePlayer(email, button);
+                    alert('Player removed successfully.');
                 } else {
-                    alert('Failed to remove coordinator.');
+                    alert('Failed to remove player.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Error removing coordinator.');
+                alert('Error removing player.');
             }
         }
 
-        async function restoreCoordinator(email, button) {
+        async function restorePlayer(email, button) {
             if (!confirm(`Are you sure you want to restore ${email}?`)) return;
             try {
-                const res = await fetch(`/admin/api/coordinators/restore/${encodeURIComponent(email)}`, {
+                const res = await fetch(`/admin/api/players/restore/${encodeURIComponent(email)}`, {
                     method: 'PATCH'
                 });
                 if (res.ok) {
@@ -485,18 +485,18 @@
                     row.dataset.isDeleted = '0';
                     button.className = '';
                     button.innerHTML = '<i class="fas fa-user-minus"></i> Remove';
-                    button.onclick = () => removeCoordinator(email, button);
-                    alert('Coordinator restored successfully.');
+                    button.onclick = () => removePlayer(email, button);
+                    alert('Player restored successfully.');
                 } else {
-                    alert('Failed to restore coordinator.');
+                    alert('Failed to restore player.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Error restoring coordinator.');
+                alert('Error restoring player.');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', fetchCoordinators);
+        document.addEventListener('DOMContentLoaded', fetchPlayers);
     </script>
 </body>
 </html>
