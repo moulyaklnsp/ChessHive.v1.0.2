@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign Up - ChessHive</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     :root {
       --sea-green: #2E8B57;
@@ -132,13 +133,124 @@
     }
 
     .login-box button:hover { background-color:#6CB4D1; }
+    header {
+  background-color: var(--sea-green);
+  color: var(--cream);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logo-section i {
+  font-size: 1.8rem;
+}
+
+.logo-section h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--cream);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+  color: var(--sky-blue);
+}
+
+/* FOOTER */
+footer {
+  background-color: var(--sea-green);
+  color: var(--cream);
+  padding: 1.5rem 2rem;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.footer-content p {
+  margin: 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.footer-socials {
+  display: flex;
+  gap: 1rem;
+}
+
+.footer-socials a {
+  text-decoration: none;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--cream);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.3s ease;
+}
+
+.footer-socials a:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Responsive */
+@media(max-width:768px) {
+  header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
   </style>
 </head>
 <body>
-
-<header>
-  <h1>Chess Hive</h1>
-</header>
+    <header>
+    <div class="logo-section">
+      <i class="fas fa-chess-rook"></i>
+      <h1>CHESS HIVE</h1>
+    </div>
+    <nav class="main-nav">
+      <ul class="nav-links">
+        <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+        <li><a href="/about"><i class="fas fa-info-circle"></i> About</a></li>
+        <li><a href="/login"><i class="fas fa-users"></i> Join Community</a></li>
+        <li><a href="/contactus"><i class="fas fa-envelope"></i> Contact Us</a></li>
+      </ul>
+    </nav>
+  </header>
 
 <main>
   <div class="form-container">
@@ -228,8 +340,15 @@
 </main>
 
 <footer>
-  &copy; Chess Hive
-</footer>
+    <div class="footer-content">
+      <p><i class="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
+      <div class="footer-socials">
+        <a href="#"><i class="fab fa-facebook-f"></i> Facebook</a>
+        <a href="#"><i class="fab fa-twitter"></i> Twitter</a>
+        <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
+      </div>
+    </div>
+  </footer>
 
 <script>
   function redirectToLogin() {
