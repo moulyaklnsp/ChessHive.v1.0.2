@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Dashboard - ChessHive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --sea-green: #2E8B57;
+            --cream: #FFFDD0;
+            --sky-blue: #87CEEB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Playfair Display', serif;
+            background-color: var(--cream);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--sea-green);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            left: 0; /* Changed from -280px to 0 to make sidebar visible by default */
+            top: 0;
+            padding-top: 1rem;
+            z-index: 1000;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding: 1rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-header h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--cream);
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-section {
+            margin-bottom: 1rem;
+            padding: 0 1rem;
+        }
+
+        .nav-section-title {
+            color: var(--cream);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            opacity: 0.7;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            transition: all 0.3s ease;
+            font-family: 'Playfair Display', serif;
+            border-radius: 5px;
+            margin: 0.2rem 0;
+        }
+
+        .sidebar a:hover {
+            background: rgba(135, 206, 235, 0.2);
+            color: var(--cream);
+            transform: translateX(5px);
+        }
+
+        .sidebar a i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Removed menu-btn since we no longer need it for a permanent sidebar */
+
+        .content {
+            flex-grow: 1;
+            margin-left: 280px; /* Changed from 60px to match sidebar width */
+            padding: 2rem;
+        }
+
+        /* We don't need the sidebar-open class anymore since sidebar is always visible */
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--sea-green);
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .updates-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .updates-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .updates-section h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--sea-green);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.5rem;
+        }
+        .approve-btn{
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--sea-green);
+            color: var(--cream);
+        }
+                .approve-btn.reject {
+            background-color: #ff4d4d; /* Red for reject */
+        }
+        .approve-btn.reject:hover {
+            background-color: #cc0000;
+        }
+        .updates-section ul {
+            list-style: none;
+        }
+
+        .updates-section li {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(46, 139, 87, 0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .updates-section li:last-child {
+            border-bottom: none;
+        }
+
+        .updates-section li:hover {
+            background: rgba(135, 206, 235, 0.1);
+            transform: translateX(5px);
+            border-radius: 8px;
+        }
+
+        .updates-section li i {
+            color: var(--sea-green);
+        }
+
+        .tournament-info, .item-info {
+            flex-grow: 1;
+        }
+
+        .price-tag {
+            background: var(--sea-green);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .date-tag {
+            color: var(--sea-green);
+            font-style: italic;
+        }
+
+        .logout-box {
+            position: absolute;
+            bottom: 2rem;
+            width: 100%;
+            padding: 0 2rem;
+        }
+
+        .logout-box button {
+            width: 100%;
+            background: var(--sky-blue);
+            color: var(--sea-green);
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .logout-box button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            background: #6CB4D4;
+        }
+
+        /* Modified the media query for responsive design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                left: -100%; /* Hide sidebar on mobile by default */
+                transition: 0.3s;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .updates-section {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+
+            /* Add back menu button for mobile view */
+            .menu-btn {
+                display: block;
+                position: fixed;
+                left: 1rem;
+                top: 1rem;
+                background: var(--sea-green);
+                color: white;
+                border: none;
+                padding: 0.8rem;
+                border-radius: 8px;
+                cursor: pointer;
+                z-index: 1001;
+                transition: all 0.3s ease;
+            }
+
+            .menu-btn:hover {
+                background: #236B43;
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+<body>
+  <!-- Menu button for mobile -->
+  <button class="menu-btn" id="menuBtn" style="display: none;">
+    <i class="fas fa-bars"></i>
+  </button>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2><i class="fas fa-chess"></i> ChessHive</h2>
+      <p id="welcome-player">Welcome, ...</p>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Main Menu</div>
+      <a href="/player/player_profile" class="nav-item">
+        <i class="fas fa-user"></i><span>Profile</span>
+      </a>
+      <a href="/player/growth" class="nav-item">
+        <i class="fas fa-chart-line"></i><span>Growth Tracking</span>
+      </a>
+      <a href="/player/player_tournament" class="nav-item">
+        <i class="fas fa-trophy"></i><span>Tournaments</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Services</div>
+      <a href="/player/subscription" class="nav-item">
+        <i class="fas fa-star"></i><span>Manage Subscription</span>
+      </a>
+      <a href="/player/store" class="nav-item">
+        <i class="fas fa-store"></i><span>E-Commerce Store</span>
+      </a>
+    </div>
+
+    <div class="logout-box">
+      <button onclick="handleLogout()">
+        <i class="fas fa-sign-out-alt"></i><span>Log Out</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="content">
+    <h1 id="dashboard-heading">
+      <i class="fas fa-chess-king"></i>
+      Welcome to ChessHive, Player!
+    </h1>
+
+    <!-- Team Requests -->
+    <div class="updates-section team-requests">
+      <h3>Pending Team Tournament Requests</h3>
+      <ul id="team-requests-list">
+        <li>Loading team requests...</li>
+      </ul>
+    </div>
+
+    <!-- Latest Tournaments -->
+    <div class="updates-section">
+      <h3><i class="fas fa-trophy"></i> Latest Tournaments</h3>
+      <ul id="latest-tournaments-list">
+        <li>Loading tournaments...</li>
+      </ul>
+    </div>
+
+    <!-- Latest Store Items -->
+    <div class="updates-section">
+      <h3><i class="fas fa-shopping-bag"></i> Latest Store Items</h3>
+      <ul id="latest-items-list">
+        <li>Loading items...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+  // --- Responsive sidebar ---
+  function isMobile() {
+    return window.innerWidth <= 768;
+  }
+
+  function updateMenuButtonVisibility() {
+    const menuBtn = document.getElementById("menuBtn");
+    const sidebar = document.getElementById("sidebar");
+    if (isMobile()) {
+      menuBtn.style.display = "block";
+      sidebar.style.left = "-100%";
+    } else {
+      menuBtn.style.display = "none";
+      sidebar.style.left = "0";
+    }
+  }
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.style.left = sidebar.style.left === "0px" ? "-100%" : "0px";
+  }
+
+  function handleLogout() {
+    window.location.href = '/login';
+  }
+
+  document.getElementById("menuBtn").addEventListener("click", toggleSidebar);
+  window.addEventListener("load", updateMenuButtonVisibility);
+  window.addEventListener("resize", updateMenuButtonVisibility);
+
+  // --- Enhanced Dynamic Data Loading ---
+  async function fetchWithRetry(url, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        console.log(`Fetching ${url} (attempt ${i + 1}/${retries})`);
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) {
+          if (res.status === 401) {
+            alert('Session expired. Redirecting to login...');
+            window.location.href = '/login';
+            return null;
+          }
+          throw new Error(`HTTP ${res.status}: ${res.statusText} for ${url}`);
+        }
+        return await res.json();
+      } catch (err) {
+        console.error(`Fetch failed for ${url} (attempt ${i + 1}):`, err);
+        if (i === retries - 1) throw err;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+      }
+    }
+  }
+
+  async function loadPlayerDashboard() {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'dashboard-error';
+    errorDiv.style.cssText = 'background: #ffdddd; color: #cc0000; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none;';
+    errorDiv.innerHTML = '<strong>Error loading data:</strong> <span id="error-msg"></span> <button id="retry-btn" class="approve-btn" style="background: var(--sea-green);">Retry</button>';
+    document.querySelector('.content').insertBefore(errorDiv, document.querySelector('h1'));
+
+    try {
+      // Clear previous errors
+      errorDiv.style.display = 'none';
+
+      // Fetch dashboard data
+      console.log('Loading dashboard data...');
+      const data = await fetchWithRetry('/player/api/dashboard');
+      if (!data) return; // Stop if redirected to login
+
+      // Render player info
+      document.getElementById('welcome-player').textContent = `Welcome, ${data.playerName}!`;
+      document.getElementById('dashboard-heading').innerHTML = `<i class="fas fa-chess-king"></i> Welcome to ChessHive, ${data.playerName}!`;
+
+      // Render team requests, tournaments, and items
+      renderTeamRequests(data.teamRequests, data.playerName);
+      renderTournaments(data.latestTournaments);
+      renderItems(data.latestItems);
+
+      console.log('Dashboard loaded successfully!');
+
+    } catch (err) {
+      console.error('Dashboard load failed:', err);
+      const errorMsg = document.getElementById('error-msg');
+      errorMsg.textContent = err.message || 'Unknown error. Check console for details.';
+      errorDiv.style.display = 'block';
+      document.getElementById('retry-btn').addEventListener('click', loadPlayerDashboard);
+
+      // Mock data fallback for testing
+      const mockData = {
+        playerName: 'Test Player',
+        teamRequests: [
+          {
+            id: 'mock1',
+            tournamentName: 'Mock Team Battle',
+            captainName: 'Captain A',
+            player1_name: 'Player1',
+            player2_name: 'Test Player',
+            player3_name: 'Player3',
+            player1_approved: true,
+            player2_approved: false,
+            player3_approved: false
+          }
+        ],
+        latestTournaments: [
+          { name: 'October Online Blitz', date: '2025-10-15' },
+          { name: 'Weekly Rapid', date: '2025-10-12' }
+        ],
+        latestItems: [
+          { name: 'Chess Board Set', price: 1500 },
+          { name: 'E-Book: Advanced Tactics', price: 299 }
+        ]
+      };
+      console.log('Using mock data due to error');
+      document.getElementById('welcome-player').textContent = `Welcome, ${mockData.playerName}!`;
+      document.getElementById('dashboard-heading').innerHTML = `<i class="fas fa-chess-king"></i> Welcome to ChessHive, ${mockData.playerName}!`;
+      renderTeamRequests(mockData.teamRequests, mockData.playerName);
+      renderTournaments(mockData.latestTournaments);
+      renderItems(mockData.latestItems);
+    }
+  }
+
+  // --- Rendering functions ---
+  function renderTeamRequests(requests, currentUser) {
+    console.log('Rendering team requests:', requests);
+    const ul = document.getElementById('team-requests-list');
+    ul.innerHTML = '';
+
+    if (!requests.length) {
+      ul.innerHTML = '<li><i class="fas fa-info-circle"></i> No pending team requests.</li>';
+      return;
+    }
+
+    const pending = requests.filter(req => !(
+      (req.player1_name === currentUser && req.player1_approved) ||
+      (req.player2_name === currentUser && req.player2_approved) ||
+      (req.player3_name === currentUser && req.player3_approved)
+    ));
+
+    if (!pending.length) {
+      ul.innerHTML = '<li><i class="fas fa-info-circle"></i> No pending team requests requiring your approval.</li>';
+      return;
+    }
+
+    pending.forEach(req => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <i class="fas fa-users"></i>
+        <div class="tournament-info">
+          <strong>${req.tournamentName}</strong><br>
+          Captain: ${req.captainName} | Team: ${req.player1_name}, ${req.player2_name}, ${req.player3_name}
+        </div>
+        <button class="approve-btn" data-id="${req.id}">Approve</button>
+      `;
+      li.querySelector('.approve-btn').addEventListener('click', () => approveTeamRequest(req.id));
+      ul.appendChild(li);
+    });
+  }
+
+  async function approveTeamRequest(id) {
+    try {
+      console.log('Approving team request:', id);
+      const res = await fetch('/player/api/approve-team-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ requestId: id })
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          alert('Session expired. Redirecting to login...');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`Approval failed: HTTP ${res.status}`);
+      }
+      alert('Team request approved!');
+      loadPlayerDashboard(); // Reload to update list
+    } catch (err) {
+      console.error('Approval error:', err);
+      alert(`Error approving team request: ${err.message}`);
+    }
+  }
+
+  function renderTournaments(tournaments) {
+    console.log('Rendering tournaments:', tournaments);
+    const ul = document.getElementById('latest-tournaments-list');
+    ul.innerHTML = '';
+    if (!tournaments.length) {
+      ul.innerHTML = `<li><i class="fas fa-info-circle"></i> No tournaments available at the moment.</li>`;
+      return;
+    }
+    tournaments.forEach(t => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <i class="fas fa-chess-knight"></i>
+        <div class="tournament-info">
+          <strong>${t.name}</strong>
+          <div class="date-tag">
+            <i class="fas fa-calendar-alt"></i> ${t.date}
+          </div>
+        </div>
+      `;
+      ul.appendChild(li);
+    });
+  }
+
+  function renderItems(items) {
+    console.log('Rendering items:', items);
+    const ul = document.getElementById('latest-items-list');
+    ul.innerHTML = '';
+    if (!items.length) {
+      ul.innerHTML = `<li><i class="fas fa-info-circle"></i> No items available at the moment.</li>`;
+      return;
+    }
+    items.forEach(i => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <i class="fas fa-chess-pawn"></i>
+        <div class="item-info"><strong>${i.name}</strong></div>
+        <span class="price-tag"><i class="fas fa-tag"></i> ₹${i.price}</span>
+      `;
+      ul.appendChild(li);
+    });
+  }
+
+  // Initialize
+  window.addEventListener('DOMContentLoaded', loadPlayerDashboard);
+</script>
+</body>
+</html>

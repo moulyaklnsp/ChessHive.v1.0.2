@@ -231,78 +231,170 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Manage Subscription</h2>
-        
-        <% if (successMessage) { %>
-            <div class="success-message"><%= successMessage %></div>
-        <% } %>
-        <% if (errorMessage) { %>
-            <div class="error-message"><%= errorMessage %></div>
-        <% } %>
-        
-        <div class="wallet-section">
-            <span class="wallet-icon">💰</span>
-            <h3>Wallet Balance: ₹<span id="walletBalance"><%= walletBalance %></span></h3>
-            <form action="/player/add-funds" method="POST">
-                <input type="number" name="amount" placeholder="Enter amount" min="1" required>
-                <input type="hidden" name="redirectTo" value="/player/subscription">
-                <button type="submit">Add Funds</button>
-            </form>
-        </div>
+  <div class="container">
+    <h2>Manage Subscription</h2>
 
-     <div class="form-container">
-        
-    <div class="table-div 
-        <% if (currentSubscription) { %>
-            subscribed 
-            <% if (currentSubscription.plan === 'Basic') { %> highlight-plan <% } %>
-        <% } %>">
-                <h3>Basic Plan</h3>
-                <ul class="plan-features">
-                    <li>Access to tournaments</li>
-                    <li>10% discount on store products</li>
-                </ul>
-                <div class="price">₹15/month</div>
-                <form action="/player/subscribe" method="POST">
-                    <input type="hidden" name="plan" value="Basic">
-                    <input type="hidden" name="price" value="15">
-                    <button type="submit">Subscribe</button>
-                </form>
-            </div>
+    <div id="alertContainer"></div>
 
-            <div class="table-div 
-        <% if (currentSubscription) { %>
-            subscribed 
-            <% if (currentSubscription.plan === 'Premium') { %> highlight-plan <% } %>
-        <% } %>">
-                <h3>Premium Plan</h3>
-                <ul class="plan-features">
-                    <li>Access to tournaments</li>
-                    <li>20% discount on store products</li>
-                </ul>
-                <div class="price">₹30/month</div>
-                <form action="/player/subscribe" method="POST">
-                    <input type="hidden" name="plan" value="Premium">
-                    <input type="hidden" name="price" value="30">
-                    <button type="submit">Subscribe</button>
-                </form>
-            </div>
-        </div>
-
-        <% if (currentSubscription) { %>
-            <div class="table-div">
-                <h3>Current Subscription</h3>
-                <h4>Plan: <%= currentSubscription.plan %></h4>
-                <h4>Start Date: <%= new Date(currentSubscription.start_date).toLocaleDateString() %></h4>
-                <h4>Price: ₹<%= currentSubscription.price %>/month</h4>
-            </div>
-        <% } %>
-
-        <div class="form-container back-container">
-            <a href="/player/player_dashboard" class="back">Back to Dashboard</a>
-        </div>
+    <div class="wallet-section">
+      <span class="wallet-icon">💰</span>
+      <h3>Wallet Balance: ₹<span id="walletBalance"></span></h3>
+      <form id="walletForm">
+        <input type="number" name="amount" placeholder="Enter amount" min="1" required>
+        <input type="hidden" name="redirectTo" value="/player/subscription">
+        <button type="submit">Add Funds</button>
+      </form>
     </div>
+
+    <div class="form-container" id="plansContainer"></div>
+
+    <div id="currentSubscriptionContainer"></div>
+
+    <div class="form-container back-container">
+      <a href="/player/player_dashboard" class="back">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script>
+    async function fetchSubscriptionData() {
+      try {
+        const res = await fetch('/player/api/subscription', { credentials: 'same-origin' });
+        const data = await res.json();
+
+        // Show alerts
+        const alertContainer = document.getElementById('alertContainer');
+        alertContainer.innerHTML = '';
+        if (data.successMessage) {
+          const div = document.createElement('div');
+          div.className = 'success-message';
+          div.textContent = data.successMessage;
+          alertContainer.appendChild(div);
+        }
+        if (data.errorMessage) {
+          const div = document.createElement('div');
+          div.className = 'error-message';
+          div.textContent = data.errorMessage;
+          alertContainer.appendChild(div);
+        }
+
+        // Wallet
+        document.getElementById('walletBalance').textContent = data.walletBalance || '0';
+
+        // Render subscription plans
+        const plansContainer = document.getElementById('plansContainer');
+        plansContainer.innerHTML = '';
+        const plans = [
+          { name: 'Basic', price: 15, features: ['Access to tournaments', '10% discount on store products'] },
+          { name: 'Premium', price: 30, features: ['Access to tournaments', '20% discount on store products'] }
+        ];
+
+        plans.forEach(plan => {
+          const div = document.createElement('div');
+          div.className = 'table-div';
+          if (data.currentSubscription) {
+            div.classList.add('subscribed');
+            if (data.currentSubscription.plan === plan.name) {
+              div.classList.add('highlight-plan');
+            }
+          }
+
+          const featuresList = plan.features.map(f => `<li>${f}</li>`).join('');
+          div.innerHTML = `
+            <h3>${plan.name} Plan</h3>
+            <ul class="plan-features">${featuresList}</ul>
+            <div class="price">₹${plan.price}/month</div>
+            <form data-plan="${plan.name}" class="subscribeForm">
+              <input type="hidden" name="plan" value="${plan.name}">
+              <input type="hidden" name="price" value="${plan.price}">
+              <button type="submit">Subscribe</button>
+            </form>
+          `;
+          plansContainer.appendChild(div);
+        });
+
+        attachSubscribeHandlers();
+
+        // Render current subscription
+        const currentSubContainer = document.getElementById('currentSubscriptionContainer');
+        currentSubContainer.innerHTML = '';
+        if (data.currentSubscription) {
+          const div = document.createElement('div');
+          div.className = 'table-div';
+          const startDate = new Date(data.currentSubscription.start_date).toLocaleDateString();
+          div.innerHTML = `
+            <h3>Current Subscription</h3>
+            <h4>Plan: ${data.currentSubscription.plan}</h4>
+            <h4>Start Date: ${startDate}</h4>
+            <h4>Price: ₹${data.currentSubscription.price}/month</h4>
+          `;
+          currentSubContainer.appendChild(div);
+        }
+
+      } catch (err) {
+        console.error('Failed to load subscription data', err);
+      }
+    }
+
+    function attachSubscribeHandlers() {
+      document.querySelectorAll('.subscribeForm').forEach(form => {
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          const formData = new FormData(form);
+          const payload = Object.fromEntries(formData.entries());
+
+          try {
+            const res = await fetch('/player/api/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            alert(data.message || 'Subscription successful!');
+            fetchSubscriptionData(); // Refresh view
+          } catch (err) {
+            console.error(err);
+            alert('Subscription failed.');
+          }
+        });
+      });
+    }
+
+   document.getElementById('walletForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const amount = parseFloat(formData.get('amount'));
+
+  if (isNaN(amount) || amount <= 0) {
+    alert('Please enter a valid positive amount.');
+    return;
+  }
+
+  const payload = { amount, redirectTo: formData.get('redirectTo') };
+
+  try {
+    const res = await fetch('/player/api/add-funds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('walletBalance').textContent = data.walletBalance || '0';
+      alert('Funds added successfully!');
+    } else {
+      alert(data.message || 'Failed to add funds.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to add funds.');
+  }
+});
+
+    fetchSubscriptionData();
+  </script>
 </body>
 
 </html>

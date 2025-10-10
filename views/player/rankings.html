@@ -153,36 +153,74 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Final Rankings</h2>
-        
-        <div class="rankings-container">
-            <table>
+<div class="container">
+    <h2>Final Rankings</h2>
+    
+    <div class="rankings-container">
+        <table>
+            <thead>
                 <tr>
                     <th>Rank</th>
                     <th>Player Name</th>
                     <th>Score</th>
                 </tr>
-                <% if (rankings && rankings.length > 0) { %>
-                    <% rankings.forEach((player, index) => { %>
-                        <tr>
-                            <td><%= index + 1 %></td>
-                            <td><%= player.username %></td>
-                            <td><%= player.score %></td>
-                        </tr>
-                    <% }); %>
-                <% } else { %>
-                    <tr>
-                        <td colspan="3">No rankings available.</td>
-                    </tr>
-                <% } %>
-            </table>
-        </div>
-        <div class="navigation">
-            <a href="/player/player_tournament" class="nav-link">
-                <i class="fas fa-users"></i> Back to Player tournament
-            </a>
-        </div>
+            </thead>
+            <tbody id="rankingsTable">
+                <tr>
+                    <td colspan="3">Loading rankings...</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
+    <div class="navigation">
+        <a href="/player/player_tournament" class="nav-link">
+            <i class="fas fa-users"></i> Back to tournaments
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const tableBody = document.getElementById('rankingsTable');
+    
+    // Extract tournamentId from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('tournament_id');
+    
+    if (!tournamentId) {
+        tableBody.innerHTML = '<tr><td colspan="3">Error: Tournament ID is required.</td></tr>';
+        return;
+    }
+    
+    try {
+        // Fetch rankings data from backend API
+        const res = await fetch(`/player/api/rankings?tournament_id=${tournamentId}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        const rankings = data.rankings;
+
+        tableBody.innerHTML = '';
+        if (!rankings || rankings.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="3">No rankings available.</td></tr>';
+            return;
+        }
+
+        rankings.forEach((player, index) => {
+            const tr = document.createElement('tr');
+            const rankNum = index + 1;
+            tr.className = rankNum <= 3 ? `rank-${rankNum}` : '';
+            tr.innerHTML = `
+                <td class="rank ${rankNum <= 3 ? 'top-3' : ''}">${rankNum} ${rankNum <= 3 ? `<i class="fas fa-medal medal-icon"></i>` : ''}</td>
+                <td>${player.playerName}</td>
+                <td class="score">${player.score}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error(err);
+        tableBody.innerHTML = '<tr><td colspan="3">Failed to load rankings.</td></tr>';
+    }
+});
+</script>
 </body>
 </html>

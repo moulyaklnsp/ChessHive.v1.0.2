@@ -34,7 +34,7 @@ async function initializeCollections(db) {
           collMod: collectionName,
           validator
         });
-        console.log(`${collectionName} collection validator updated`);
+        // console.log(`${collectionName} collection validator updated`);
       }
       // Apply indexes if provided
       for (const [field, options] of indexes) {
