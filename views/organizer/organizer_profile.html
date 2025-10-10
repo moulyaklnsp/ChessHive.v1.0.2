@@ -92,8 +92,35 @@
             flex-grow: 1;
         }
 
-        .back-container {
+        .delete-container {
             text-align: right;
+            margin-top: 1rem;
+        }
+
+        .delete-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #c62828;
+            color: var(--cream);
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+
+        .delete-button:hover {
+            background-color: #b71c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .back-container {
+            text-align: left;
         }
 
         .back {
@@ -114,6 +141,25 @@
             background-color: #236B43;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        #delete-message {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .error {
+            background-color: rgba(198, 40, 40, 0.1);
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+
+        .success {
+            background-color: rgba(46, 125, 50, 0.1);
+            color: var(--text-dark);
+            padding: 1rem;
+            border-radius: 5px;
         }
 
         @media (max-width: 768px) {
@@ -138,6 +184,10 @@
             .info-label {
                 min-width: auto;
             }
+
+            .delete-container, .back-container {
+                text-align: center;
+            }
         }
     </style>
 </head>
@@ -149,7 +199,7 @@
             <div class="profile-info">
                 <div class="info-item">
                     <i class="fas fa-user"></i>
-                    <span class="info-label">Name: kmjhgfd</span>
+                    <span class="info-label">Name:</span>
                     <span class="info-value" id="organizerName"></span>
                 </div>
                 <div class="info-item">
@@ -159,11 +209,16 @@
                 </div>
                 <div class="info-item">
                     <i class="fas fa-university"></i>
-                    <span class="info-label">Collkege:</span>
+                    <span class="info-label">College:</span>
                     <span class="info-value" id="organizerCollege"></span>
                 </div>
             </div>
         </div>
+
+        <div class="delete-container">
+            <button class="delete-button" onclick="deleteAccount()">Delete Account <i class="fas fa-trash"></i></button>
+        </div>
+        <div id="delete-message"></div>
 
         <div class="back-container">
             <a href="/organizer/organizer_dashboard" class="back">
@@ -173,19 +228,66 @@
     </div>
 
     <script>
-      // Fetch organizer profile data from API and inject into DOM
-      fetch('/organizer/api/profile')
-        .then(res => res.json())
-        .then(data => {
-            console.log('Fetched profile data:', data);
-          document.getElementById('organizerName').textContent = data.name || 'N/A';
-          document.getElementById('organizerEmail').textContent = data.email || 'N/A';
-          document.getElementById('organizerCollege').textContent = data.college || 'N/A';
+        // Fetch organizer profile data from API and inject into DOM
+        fetch('/organizer/api/profile')
+            .then(res => res.json())
+            .then(data => {
+                console.log('Fetched profile data:', data);
+                document.getElementById('organizerName').textContent = data.name || 'N/A';
+                document.getElementById('organizerEmail').textContent = data.email || 'N/A';
+                document.getElementById('organizerCollege').textContent = data.college || 'N/A';
+            })
+            .catch(err => {
+                console.error('Error fetching profile:', err);
+            });
 
-        })
-        .catch(err => {
-          console.error('Error fetching pronbfile:', err);
-        });
+        // Function to delete organizer account
+        let timeoutId = null;
+        function clearMessage() {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            timeoutId = setTimeout(() => {
+                document.getElementById('delete-message').innerHTML = '';
+                timeoutId = null;
+            }, 3000);
+        }
+
+        function deleteAccount() {
+            const email = document.getElementById('organizerEmail').textContent;
+            if (!email || email === 'N/A') {
+                document.getElementById('delete-message').innerHTML = '<p class="error">Cannot determine account to delete</p>';
+                clearMessage();
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                return;
+            }
+
+            fetch(`/organizer/api/organizers/${encodeURIComponent(email)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('delete-message').innerHTML = '<p class="success">' + data.message + '</p>';
+                    // Optionally redirect after a short delay
+                    setTimeout(() => window.location.href = '/login', 3000);
+                } else {
+                    document.getElementById('delete-message').innerHTML = '<p class="error">' + data.message + '</p>';
+                }
+                clearMessage();
+            })
+            .catch(err => {
+                console.error('Error deleting account:', err);
+                document.getElementById('delete-message').innerHTML = '<p class="error">Failed to delete account</p>';
+                clearMessage();
+            });
+        }
     </script>
 </body>
 </html>

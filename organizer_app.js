@@ -65,7 +65,6 @@ router.get('/api/profile', async (req, res) => {
   }
 });
 
-// Coordinators API
 router.get('/api/coordinators', async (req, res) => {
   try {
     const db = await connectDB();
@@ -89,7 +88,6 @@ router.get('/api/coordinators', async (req, res) => {
   }
 });
 
-// Remove coordinator API
 router.delete('/api/coordinators/:email', async (req, res) => {
   try {
     const db = await connectDB();
@@ -112,7 +110,6 @@ router.delete('/api/coordinators/:email', async (req, res) => {
   }
 });
 
-// Tournaments API
 router.get('/api/tournaments', async (req, res) => {
   try {
     const db = await connectDB();
@@ -128,7 +125,6 @@ router.get('/api/tournaments', async (req, res) => {
   }
 });
 
-// Approve tournament API
 router.post('/api/tournaments/approve', async (req, res) => {
   try {
     const db = await connectDB();
@@ -157,7 +153,6 @@ router.post('/api/tournaments/approve', async (req, res) => {
   }
 });
 
-// Reject tournament API
 router.post('/api/tournaments/reject', async (req, res) => {
   try {
     const db = await connectDB();
@@ -186,7 +181,6 @@ router.post('/api/tournaments/reject', async (req, res) => {
   }
 });
 
-// Store monitoring API
 router.get('/api/store', async (req, res) => {
   try {
     const db = await connectDB();
@@ -230,17 +224,11 @@ router.get('/api/store', async (req, res) => {
   }
 });
 
-// Schedule new meeting API
 router.post('/api/meetings', async (req, res) => {
   try {
     const db = await connectDB();
     const { title, date, time, link } = req.body;
 console.log('Request body:', req.body);
-
-    // Validate required fields
-    if (!title || !date || !time || !link) {
-      return res.status(409).json({ success: false, message: 'All fields are required' });
-    }
 
     // Ensure user session exists
     const userName = req.session.username || req.session.userEmail;
@@ -275,8 +263,6 @@ console.log('Request body:', req.body);
   }
 });
 
-
-// Get organized meetings API
 router.get('/api/meetings/organized', async (req, res) => {
   try {
     const db = await connectDB();
@@ -295,7 +281,6 @@ router.get('/api/meetings/organized', async (req, res) => {
   }
 });
 
-// Get upcoming meetings API
 router.get('/api/meetings/upcoming', async (req, res) => {
   try {
     const db = await connectDB();
@@ -316,10 +301,8 @@ router.get('/api/meetings/upcoming', async (req, res) => {
   }
 });
 
-// College stats API
 router.get('/api/college-stats', async (req, res) => {
   try {
-    // For now returning static data, but this should be calculated from actual tournament results
     const data = {
       collegePerformance: [
         { college: "IIIT Hyderabad", tournaments: 10, wins: 6, losses: 3, draws: 1 },
@@ -348,8 +331,28 @@ router.get('/api/college-stats', async (req, res) => {
   }
 });
 
-// ==================== PAGE RENDERING ROUTES ====================
-// IMPORTANT: This wildcard route must come LAST after all API routes
+// Remove organizer API
+router.delete('/api/organizers/:email', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const email = decodeURIComponent(req.params.email);
+    
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'organizer' },
+      { $set: { isDeleted: 1 } }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log('Organizer removed:', email);
+      res.json({ success: true, message: 'Organizer removed successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Organizer not found' });
+    }
+  } catch (error) {
+    console.error('Error removing organizer:', error);
+    res.status(500).json({ success: false, error: 'Failed to remove organizer' });
+  }
+});
 
 // Helper function to safely send organizer HTML files
 function sendOrganizerPage(res, filename) {
@@ -367,7 +370,6 @@ function sendOrganizerPage(res, filename) {
 router.get('/:subpage?', async (req, res) => {
   const subpage = req.params.subpage || 'organizer_dashboard';
 
-  // Check if user is logged in and is an organizer
   if (!req.session.userEmail || req.session.userRole !== 'organizer') {
     console.log('Access denied: User not logged in or not an organizer');
     return res.redirect("/?error-message=Please log in as an organizer");

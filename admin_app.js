@@ -38,27 +38,6 @@ router.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// // Admin profile API
-// router.get('/api/profile', async (req, res) => {
-//   try {
-//     if (!req.session.userEmail) return res.status(401).json({ error: 'Not logged in' });
-
-//     const db = await connectDB();
-//     const admin = await db.collection('users').findOne({ email: req.session.userEmail, role: 'admin' });
-
-//     if (!admin) return res.status(404).json({ error: 'Admin not found' });
-
-//     res.json({
-//       name: admin.name,
-//       email: admin.email,
-//       role: admin.role
-//     });
-//   } catch (error) {
-//     console.error('Error fetching admin profile:', error);
-//     res.status(500).json({ error: 'Failed to fetch profile' });
-//   }
-// });
-
 // Tournaments API (for admin to view all)
 router.get('/api/tournaments', async (req, res) => {
   try {
@@ -107,8 +86,8 @@ router.get('/api/coordinators', async (req, res) => {
   try {
     const db = await connectDB();
     const coordinators = await db.collection('users')
-      .find({ role: 'coordinator', isDeleted: { $ne: 1 } })
-      .project({ name: 1, email: 1, college: 1 })
+      .find({ role: 'coordinator' })
+      .project({ name: 1, email: 1, college: 1, isDeleted: 1 })
       .toArray();
 
     res.json(coordinators);
@@ -145,13 +124,40 @@ router.delete('/api/coordinators/:email', async (req, res) => {
   }
 });
 
+// Restore Coordinator API
+router.patch('/api/coordinators/restore/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'coordinator', isDeleted: 1 },
+      { $set: { isDeleted: 0, restored_date: new Date(), restored_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Coordinator restored successfully' });
+    } else {
+      res.status(404).json({ error: 'Coordinator not found or already restored' });
+    }
+  } catch (error) {
+    console.error('Error restoring coordinator:', error);
+    res.status(500).json({ error: 'Failed to restore coordinator' });
+  }
+});
+
 // Organizers API
 router.get('/api/organizers', async (req, res) => {
   try {
     const db = await connectDB();
     const organizers = await db.collection('users')
-      .find({ role: 'organizer', isDeleted: { $ne: 1 } })
-      .project({ name: 1, email: 1, college: 1 })
+      .find({ role: 'organizer' })
+      .project({ name: 1, email: 1, college: 1, isDeleted: 1 })
       .toArray();
 
     res.json(organizers);
@@ -185,6 +191,103 @@ router.delete('/api/organizers/:email', async (req, res) => {
   } catch (error) {
     console.error('Error removing organizer:', error);
     res.status(500).json({ error: 'Failed to remove organizer' });
+  }
+});
+
+// Restore Organizer API
+router.patch('/api/organizers/restore/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'organizer', isDeleted: 1 },
+      { $set: { isDeleted: 0, restored_date: new Date(), restored_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Organizer restored successfully' });
+    } else {
+      res.status(404).json({ error: 'Organizer not found or already restored' });
+    }
+  } catch (error) {
+    console.error('Error restoring organizer:', error);
+    res.status(500).json({ error: 'Failed to restore organizer' });
+  }
+});
+
+// Players API
+router.get('/api/players', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const players = await db.collection('users')
+      .find({ role: 'player' })
+      .project({ name: 1, email: 1, college: 1, isDeleted: 1 })
+      .toArray();
+
+    res.json(players);
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    res.status(500).json({ error: 'Failed to fetch players' });
+  }
+});
+
+// Remove Player API
+router.delete('/api/players/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'player', isDeleted: { $ne: 1 } },
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Player removed successfully' });
+    } else {
+      res.status(404).json({ error: 'Player not found' });
+    }
+  } catch (error) {
+    console.error('Error removing player:', error);
+    res.status(500).json({ error: 'Failed to remove player' });
+  }
+});
+
+// Restore Player API
+router.patch('/api/players/restore/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'admin') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'player', isDeleted: 1 },
+      { $set: { isDeleted: 0, restored_date: new Date(), restored_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Player restored successfully' });
+    } else {
+      res.status(404).json({ error: 'Player not found or already restored' });
+    }
+  } catch (error) {
+    console.error('Error restoring player:', error);
+    res.status(500).json({ error: 'Failed to restore player' });
   }
 });
 
@@ -262,7 +365,6 @@ router.get('/api/payments', async (req, res) => {
 
 // ==================== PAGE RENDERING ROUTES ====================
 // Helper function to safely send HTML files from /views/admin
-
 function sendAdminPage(res, filename) {
   // FIX: include ChessHive.v1.0.2 folder in the path
   const filePath = path.join(__dirname, '..', 'ChessHive.v1.0.2', 'views', 'admin', `${filename}.html`);
@@ -274,7 +376,6 @@ function sendAdminPage(res, filename) {
     }
   });
 }
-
 
 router.get('/:subpage?', async (req, res) => {
   const subpage = req.params.subpage || 'admin_dashboard';
@@ -300,6 +401,9 @@ router.get('/:subpage?', async (req, res) => {
         break;
       case 'payments':
         sendAdminPage(res, 'payments');
+        break;
+      case 'player_management':
+        sendAdminPage(res, 'player_management');
         break;
       default:
         console.log('Invalid subpage:', subpage);

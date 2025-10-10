@@ -81,22 +81,25 @@
             background-color: rgba(135, 206, 235, 0.1);
         }
 
-        /* Action Buttons */
         button {
             background-color: var(--sky-blue);
             color: var(--sea-green);
             border: none;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1rem;
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: 'Cinzel', serif;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         button:hover {
             background-color: #6CB4D1;
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
         .remove-btn {
@@ -108,7 +111,15 @@
             background-color: #ff5252;
         }
 
-        /* Back Button */
+        .restore-btn {
+            background-color: var(--sky-blue);
+            color: var(--sea-green);
+        }
+
+        .restore-btn:hover {
+            background-color: #6CB4D1;
+        }
+
         .back-container {
             margin-top: 2rem;
             text-align: right;
@@ -133,7 +144,6 @@
             transform: translateY(-2px);
         }
 
-        /* Search and Filter Section */
         .controls {
             display: flex;
             justify-content: space-between;
@@ -205,49 +215,90 @@
             color: var(--sea-green);
             font-style: italic;
         }
-.searchBarContainer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  max-width: 500px;
-  margin: 20px auto;
-}
 
-/* Dropdown styling */
-.searchBarContainer select {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-}
+        .searchBarContainer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 20px auto;
+        }
 
-.searchBarContainer select:focus {
-  outline: none;
-  border-color: #007bff;
-}
+        .searchBarContainer select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
 
-/* Input styling */
-.searchBarContainer input {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-}
+        .searchBarContainer select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
 
-.searchBarContainer input:focus {
-  outline: none;
-  border-color: #007bff;
-}
+        .searchBarContainer input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
 
-        /* Responsive Design */
+        .searchBarContainer input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .more-container {
+            text-align: center;
+            margin: 1rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .more, .hide {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--sky-blue);
+            color: var(--sea-green);
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .more:hover, .hide:hover {
+            background-color: #5f9ece;
+            transform: translateY(-2px);
+        }
+
+        .row-counter {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--sea-green);
+            background-color: rgba(46, 139, 87, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: inline-block;
+            width: auto;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -264,6 +315,16 @@
             .back-container {
                 text-align: center;
             }
+
+            .more-container {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .row-counter {
+                font-size: 1rem;
+                padding: 0.4rem 0.8rem;
+            }
         }
     </style>
 </head>
@@ -272,7 +333,8 @@
     <h2>Organizer Management</h2>
 
     <div class="table-div">
-       <div class="searchBarContainer"></div>
+        <div class="row-counter" id="organizersCounter">0 / 0</div>
+        <div class="searchBarContainer"></div>
         <table>
             <thead>
                 <tr>
@@ -290,6 +352,14 @@
                 </tr>
             </tbody>
         </table>
+        <div class="more-container">
+            <a href="#" class="more" id="organizersMoreLink" style="display:none;">
+                <i class="fas fa-chevron-down"></i> More
+            </a>
+            <a href="#" class="hide" id="organizersHideLink" style="display:none;">
+                <i class="fas fa-chevron-up"></i> Hide
+            </a>
+        </div>
     </div>
 
     <div class="back-container">
@@ -303,35 +373,83 @@
 <script>
 async function fetchOrganizers() {
     const tbody = document.getElementById('organizerTable');
+    const counter = document.getElementById('organizersCounter');
+    const moreLink = document.getElementById('organizersMoreLink');
+    const hideLink = document.getElementById('organizersHideLink');
+
     tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Loading organizers...</td></tr>';
+
     try {
         const res = await fetch('/admin/api/organizers');
         const organizers = await res.json();
-        tbody.innerHTML = '';
+        console.log('Organizers array:', organizers);
 
-        if (!organizers.length) {
+        if (!Array.isArray(organizers) || !organizers.length) {
             tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No organizers available.</td></tr>';
+            counter.textContent = '0 / 0';
             return;
         }
 
-        organizers.forEach(org => {
+        tbody.innerHTML = '';
+        organizers.forEach((org, index) => {
             const tr = document.createElement('tr');
             tr.classList.add('organizer-row');
+            tr.dataset.isDeleted = org.isDeleted ? '1' : '0';
+            if (index >= 5) tr.style.display = 'none';
+
+            const buttonClass = org.isDeleted ? 'restore-btn' : 'remove-btn';
+            const buttonText = org.isDeleted ? 'Restore' : 'Remove';
+            const buttonIcon = org.isDeleted ? 'fas fa-user-plus' : 'fas fa-user-minus';
+            const buttonAction = org.isDeleted ? `restoreOrganizer('${org.email}', this)` : `removeOrganizer('${org.email}', this)`;
+
             tr.innerHTML = `
                 <td>${org.name}</td>
                 <td>${org.email}</td>
                 <td>${org.college}</td>
                 <td>
-                    <button class="remove-btn" onclick="removeOrganizer('${org.email}', this)">
-                        <i class="fas fa-user-minus"></i> Remove
+                    <button class="${buttonClass}" onclick="${buttonAction}">
+                        <i class="${buttonIcon}"></i> ${buttonText}
                     </button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+
+        counter.textContent = `${Math.min(5, organizers.length)} / ${organizers.length}`;
+        moreLink.style.display = organizers.length > 5 ? 'inline-flex' : 'none';
+        hideLink.style.display = 'none';
+
+        // More/Hide functionality
+        let visibleRows = 5;
+        const rowsPerPage = 5;
+        const rows = document.querySelectorAll('.organizer-row');
+
+        moreLink.onclick = e => {
+            e.preventDefault();
+            for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, rows.length); i++) {
+                rows[i].style.display = '';
+            }
+            visibleRows += rowsPerPage;
+            counter.textContent = `${Math.min(visibleRows, rows.length)} / ${rows.length}`;
+            moreLink.style.display = visibleRows < rows.length ? 'inline-flex' : 'none';
+            hideLink.style.display = visibleRows > 5 ? 'inline-flex' : 'none';
+        };
+
+        hideLink.onclick = e => {
+            e.preventDefault();
+            rows.forEach((row, index) => {
+                row.style.display = index < 5 ? '' : 'none';
+            });
+            visibleRows = 5;
+            counter.textContent = `5 / ${rows.length}`;
+            moreLink.style.display = rows.length > 5 ? 'inline-flex' : 'none';
+            hideLink.style.display = 'none';
+        };
+
     } catch (err) {
         console.error(err);
         tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-exclamation-triangle"></i> Failed to load organizers.</td></tr>';
+        counter.textContent = '0 / 0';
     }
 }
 
@@ -343,7 +461,11 @@ async function removeOrganizer(email, btn) {
         });
         const data = await res.json();
         if (res.ok) {
-            btn.closest('tr').remove();
+            const row = btn.closest('tr');
+            row.dataset.isDeleted = '1';
+            btn.className = 'restore-btn';
+            btn.innerHTML = '<i class="fas fa-user-plus"></i> Restore';
+            btn.onclick = () => restoreOrganizer(email, btn);
             alert(data.message || 'Organizer removed successfully.');
         } else {
             alert(data.error || 'Failed to remove organizer.');
@@ -351,6 +473,29 @@ async function removeOrganizer(email, btn) {
     } catch (err) {
         console.error(err);
         alert('Error removing organizer.');
+    }
+}
+
+async function restoreOrganizer(email, btn) {
+    if (!confirm(`Are you sure you want to restore organizer: ${email}?`)) return;
+    try {
+        const res = await fetch(`/admin/api/organizers/restore/${encodeURIComponent(email)}`, {
+            method: 'PATCH'
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const row = btn.closest('tr');
+            row.dataset.isDeleted = '0';
+            btn.className = 'remove-btn';
+            btn.innerHTML = '<i class="fas fa-user-minus"></i> Remove';
+            btn.onclick = () => removeOrganizer(email, btn);
+            alert(data.message || 'Organizer restored successfully.');
+        } else {
+            alert(data.error || 'Failed to restore organizer.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error restoring organizer.');
     }
 }
 
