@@ -6,7 +6,6 @@ const utils = require('./utils');
 const { ObjectId } = require('mongodb');
 const path = require('path'); 
 
-
 class Player {
   constructor(id, username, college, gender) {
     this.id = id;
@@ -83,7 +82,7 @@ function swissPairing(players, totalRounds) {
 
 router.use(express.json());
 
-// Name API (to match client fetch('/coordinator/api/name'))
+// Name API
 router.get('/api/name', async (req, res) => {
   try {
     const db = await connectDB();
@@ -150,12 +149,37 @@ router.get('/api/profile', async (req, res) => {
   }
 });
 
+// Delete Account API
+router.delete('/api/profile', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const username = req.session.username || req.session.userEmail;
+
+    const result = await db.collection('users').updateOne(
+      { email: req.session.userEmail, role: 'coordinator' },
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: username } }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log('Account deleted:', req.session.userEmail);
+      // Clear session
+      req.session.destroy((err) => {
+        if (err) console.error('Error destroying session:', err);
+      });
+      res.json({ success: true, message: 'Account deleted successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Account not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete account' });
+  }
+});
+
 // Tournament APIs
 router.get('/api/tournaments', async (req, res) => {
   try {
     const db = await connectDB();
-    
-    // Fetch user to get consistent username (name from DB, like in POST)
     const user = await db.collection('users').findOne({ 
       email: req.session.userEmail,
       role: 'coordinator' 
@@ -164,16 +188,16 @@ router.get('/api/tournaments', async (req, res) => {
       console.log('User not found for tournaments fetch');
       return res.status(401).json({ error: 'User not logged in' });
     }
-    const username = user.name || req.session.userEmail;  // Use name to match insert
+    const username = user.name || req.session.userEmail;
     
-    console.log('Fetching tournaments for username:', username);  // Debug log
+    console.log('Fetching tournaments for username:', username);
     
     const tournaments = await db.collection('tournaments')
-      .find({ coordinator: username })  // Matches insert's coordinator field
+      .find({ coordinator: username })
       .sort({ date: -1 })
       .toArray();
 
-    console.log('Fetched tournaments count:', tournaments.length);  // Debug
+    console.log('Fetched tournaments count:', tournaments.length);
 
     res.json({ tournaments: tournaments || [] });
   } catch (error) {
@@ -185,9 +209,8 @@ router.get('/api/tournaments', async (req, res) => {
 router.post('/api/tournaments', async (req, res) => {
   try {
     const { tournamentName, tournamentDate, time, location, entryFee, type, noOfRounds } = req.body;
-    console.log('POST body received:', req.body);  // Debug: Log incoming data
+    console.log('POST body received:', req.body);
 
-    // Fetch user for coordinator (like in profile/store)
     const db = await connectDB();
     const user = await db.collection('users').findOne({ 
       email: req.session.userEmail,
@@ -198,31 +221,23 @@ router.post('/api/tournaments', async (req, res) => {
       return res.status(401).json({ success: false, message: 'User not logged in' });
     }
     const username = user.name || req.session.userEmail;
-    const college = user.college;  // Use if needed for schema
+    const college = user.college;
 
-    // Ensure types match schema (common fixes)
     const tournament = {
-      name: tournamentName.toString().trim(),  // String
-      date: new Date(tournamentDate),  // Date object (ISODate in Mongo)
-      time: time.toString().trim(),  // String
-      location: location.toString().trim(),  // String
-      entry_fee: parseFloat(entryFee),  // ← Snake_case for schema
-      type: type.toString().trim(),  // String
-      noOfRounds: parseInt(noOfRounds),  // Number (integer) - check if needs "no_of_rounds"
-      coordinator: username.toString(),  // String (if required)
-      status: 'Pending',  // String default
-      added_by: username.toString(),  // ← Add required field
-      submitted_date: new Date()  // Date default
+      name: tournamentName.toString().trim(),
+      date: new Date(tournamentDate),
+      time: time.toString().trim(),
+      location: location.toString().trim(),
+      entry_fee: parseFloat(entryFee),
+      type: type.toString().trim(),
+      noOfRounds: parseInt(noOfRounds),
+      coordinator: username.toString(),
+      status: 'Pending',
+      added_by: username.toString(),
+      submitted_date: new Date()
     };
-    
-    // Optional: If schema requires "no_of_rounds" instead
-    // tournament.no_of_rounds = parseInt(noOfRounds);
-    // delete tournament.noOfRounds;
 
-    // Optional: If schema requires college
-    // tournament.college = college;
-
-    console.log('Tournament to insert:', tournament);  // Debug: Log before insert
+    console.log('Tournament to insert:', tournament);
 
     const result = await db.collection('tournaments').insertOne(tournament);
     if (result.insertedId) {
@@ -233,7 +248,6 @@ router.post('/api/tournaments', async (req, res) => {
       return res.status(500).json({ success: false, message: 'Failed to add tournament' });
     }
   } catch (error) {
-    // Enhanced logging for full details
     console.error('Full validation error:', JSON.stringify(error, null, 2));
     console.error('Error details array:', JSON.stringify(error.errInfo?.details || 'No details', null, 2));
     return res.status(500).json({ success: false, error: 'Failed to add tournament' });
@@ -288,7 +302,6 @@ router.post('/api/store/addproducts', async (req, res) => {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
-    // Fetch user details
     const db = await connectDB();
     const user = await db.collection('users').findOne({ 
       email: req.session.userEmail,
@@ -311,7 +324,7 @@ router.post('/api/store/addproducts', async (req, res) => {
       category: productCategory.toString(),
       price: parseFloat(price),
       image_url: imageUrl.toString(),
-      availability: parseInt(availability) || 0,  // ← Fix: Parse as number (0 if false/empty)
+      availability: parseInt(availability) || 0,
       college: college.toString(),
       coordinator: username.toString(),
       added_date: new Date()
@@ -327,10 +340,11 @@ router.post('/api/store/addproducts', async (req, res) => {
       return res.status(500).json({ success: false, message: 'Failed to add product' });
     }
   } catch (error) {
-    console.error('Full validation error:', JSON.stringify(error, null, 2));  // ← Enhanced logging
+    console.error('Full validation error:', JSON.stringify(error, null, 2));
     return res.status(500).json({ success: false, error: 'Failed to add product' });
   }
 });
+
 // Meetings APIs
 router.post('/api/meetings', async (req, res) => {
   try {
@@ -413,18 +427,17 @@ router.get('/api/player-stats', async (req, res) => {
   try {
     const db = await connectDB();
     const college = req.session.collegeName || req.session.userCollege;
-    console.log('Fetching player stats for college:', college);  // Debug: Log session college
+    console.log('Fetching player stats for college:', college);
 
     const players = await db.collection('player_stats').aggregate([
       { $lookup: { from: 'users', localField: 'player_id', foreignField: '_id', as: 'user' } },
-      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },  // Preserve if no match
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
       { $match: { 
-          'user.isDeleted': { $ne: 1 },  // Use $ne for safety
-          // 'user.college': college  // ← Comment out temporarily to test without filter
+          'user.isDeleted': { $ne: 1 }
         } 
       },
       { $project: { 
-          name: { $ifNull: ['$user.name', 'Unknown Player'] },  // Fallback name
+          name: { $ifNull: ['$user.name', 'Unknown Player'] },
           gamesPlayed: { $ifNull: ['$gamesPlayed', 0] },
           wins: { $ifNull: ['$wins', 0] },
           losses: { $ifNull: ['$losses', 0] },
@@ -434,8 +447,8 @@ router.get('/api/player-stats', async (req, res) => {
       }
     ]).sort({ rating: -1 }).toArray();
 
-    console.log('Fetched player stats count:', players.length);  // Debug: Log output
-    console.log('Sample player:', players[0]);  // Debug: First item
+    console.log('Fetched player stats count:', players.length);
+    console.log('Sample player:', players[0]);
 
     res.json({ players });
   } catch (error) {
@@ -658,7 +671,6 @@ router.get('/api/rankings', async (req, res) => {
 
 // ==================== PAGE RENDERING ROUTES ====================
 
-// Helper function to safely send coordinator HTML files
 function sendCoordinatorPage(res, filename) {
   const filePath = path.join(__dirname, 'views', 'coordinator', `${filename}.html`);
 
@@ -714,6 +726,5 @@ router.get('/:subpage?', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
-
 
 module.exports = router;
