@@ -275,6 +275,62 @@
                 transform: scale(1.05);
             }
         }
+         .inbox-icon {
+            position: relative;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        .inbox-icon .unread-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.8rem;
+        }
+        #notifications-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1002;
+        }
+        .notifications-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .notifications-list li {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: rgba(135, 206, 235, 0.1);
+            border-radius: 8px;
+        }
+        #feedback-form {
+            display: none;
+            margin-top: 1rem;
+        }
+        #feedback-form select, #feedback-form textarea {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        #feedback-form button {
+            background: var(--sea-green);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -286,8 +342,12 @@
   <!-- Sidebar -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <h2><i class="fas fa-chess"></i> ChessHive</h2>
-      <p id="welcome-player">Welcome, ...</p>
+        <h2><i class="fas fa-chess"></i> ChessHive</h2>
+        <p id="welcome-player">Welcome, ...</p>
+        <div class="inbox-icon" id="inboxIcon">
+            <i class="fas fa-inbox"></i>
+            <span class="unread-count" id="unreadCount">0</span>
+        </div>
     </div>
 
     <div class="nav-section">
@@ -351,8 +411,29 @@
       </ul>
     </div>
   </div>
+  <div id="notifications-modal">
+        <div class="notifications-content">
+            <h3>Notifications</h3>
+            <ul id="notifications-list"></ul>
+            <div id="feedback-form">
+                <h4>Submit Feedback for <span id="feedback-tournament-name"></span></h4>
+                <select id="feedback-rating">
+                    <option value="">Select Rating (1-5)</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+                <textarea id="feedback-comments" placeholder="Comments (optional)"></textarea>
+                <button id="submit-feedback-btn">Submit</button>
+            </div>
+            <button onclick="closeNotifications()">Close</button>
+        </div>
+    </div>
 
   <script>
+    
   // --- Responsive sidebar ---
   function isMobile() {
     return window.innerWidth <= 768;
@@ -580,6 +661,80 @@
 
   // Initialize
   window.addEventListener('DOMContentLoaded', loadPlayerDashboard);
+   document.getElementById('inboxIcon').addEventListener('click', loadNotifications);
+
+        async function loadNotifications() {
+            try {
+                const data = await fetchWithRetry('/player/api/notifications');
+                if (!data) return;
+
+                const ul = document.getElementById('notifications-list');
+                ul.innerHTML = '';
+                const unread = data.notifications.filter(n => !n.read).length;
+                document.getElementById('unreadCount').textContent = unread;
+
+                if (!data.notifications.length) {
+                    ul.innerHTML = '<li>No notifications.</li>';
+                } else {
+                    data.notifications.forEach(n => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <strong>Feedback Request:</strong> ${n.tournamentName}<br>
+                            Date: ${new Date(n.date).toLocaleDateString()}
+                            ${!n.read ? '<button onclick="openFeedbackForm(\'' + n._id + '\', \'' + n.tournamentName + '\', \'' + n.tournament_id + '\')">Provide Feedback</button>' : '<span>(Read)</span>'}
+                        `;
+                        ul.appendChild(li);
+                    });
+                }
+                document.getElementById('notifications-modal').style.display = 'flex';
+            } catch (err) {
+                console.error('Notifications load failed:', err);
+            }
+        }
+
+        function openFeedbackForm(notificationId, tournamentName, tournamentId) {
+            document.getElementById('feedback-tournament-name').textContent = tournamentName;
+            document.getElementById('feedback-form').style.display = 'block';
+            document.getElementById('submit-feedback-btn').onclick = () => submitFeedback(notificationId, tournamentId);
+        }
+
+        async function submitFeedback(notificationId, tournamentId) {
+            const rating = document.getElementById('feedback-rating').value;
+            const comments = document.getElementById('feedback-comments').value;
+            if (!rating) return alert('Rating required');
+
+            try {
+                const res = await fetch('/player/api/submit-feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tournamentId, rating, comments })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Feedback submitted!');
+                    await fetch('/player/api/mark-notification-read', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ notificationId })
+                    });
+                    closeNotifications();
+                    loadNotifications();
+                } else {
+                    alert(data.error);
+                }
+            } catch (err) {
+                console.error('Submit feedback error:', err);
+                alert('Error submitting feedback');
+            }
+        }
+
+        function closeNotifications() {
+            document.getElementById('notifications-modal').style.display = 'none';
+            document.getElementById('feedback-form').style.display = 'none';
+        }
+
+        // Load notifications on init (for unread count)
+        loadNotifications();
 </script>
 </body>
 </html>
