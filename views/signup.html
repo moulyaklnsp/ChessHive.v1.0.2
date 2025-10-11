@@ -11,6 +11,7 @@
       --sea-green: #2E8B57;
       --cream: #FFFDD0;
       --sky-blue: #87CEEB;
+      --dark-green: #236B43;
     }
 
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -27,6 +28,47 @@
       color: var(--cream);
       text-align:center;
       padding:1.5rem 2rem;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .logo-section i {
+      font-size: 1.8rem;
+    }
+
+    .logo-section h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .main-nav {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-links {
+      display: flex;
+      list-style: none;
+      gap: 1.5rem;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--cream);
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: color 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--sky-blue);
     }
 
     main {
@@ -52,7 +94,7 @@
       gap:1.5rem;
     }
 
-    @media(max-width:768px){ form { grid-template-columns:1fr; } }
+    @media(max-width:768px) { form { grid-template-columns:1fr; } }
 
     .full-width { grid-column:1/-1; }
 
@@ -85,7 +127,11 @@
       color:#dc3545;
       font-size:0.9rem;
       margin-top:0.3rem;
-      display:block;
+      display:none;
+    }
+
+    .error-input {
+      border-color: #dc3545;
     }
 
     .server-error {
@@ -95,6 +141,12 @@
       border-radius:8px;
       margin-bottom:1.5rem;
       text-align:center;
+      display:none;
+    }
+
+    .server-error.success {
+      background-color: rgba(46,139,87,0.1);
+      color: var(--sea-green);
     }
 
     button {
@@ -133,111 +185,59 @@
     }
 
     .login-box button:hover { background-color:#6CB4D1; }
-    header {
-  background-color: var(--sea-green);
-  color: var(--cream);
-  padding: 1rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
 
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
+    footer {
+      background-color: var(--sea-green);
+      color: var(--cream);
+      padding: 1.5rem 2rem;
+    }
 
-.logo-section i {
-  font-size: 1.8rem;
-}
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-.logo-section h1 {
-  font-family: 'Cinzel', serif;
-  font-size: 1.8rem;
-  font-weight: 700;
-}
+    .footer-content p {
+      margin: 0;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
 
-.main-nav {
-  display: flex;
-  align-items: center;
-}
+    .footer-socials {
+      display: flex;
+      gap: 1rem;
+    }
 
-.nav-links {
-  display: flex;
-  list-style: none;
-  gap: 1.5rem;
-}
+    .footer-socials a {
+      text-decoration: none;
+      background-color: rgba(255, 255, 255, 0.15);
+      color: var(--cream);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.3s ease;
+    }
 
-.nav-links a {
-  text-decoration: none;
-  color: var(--cream);
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: color 0.3s ease;
-}
+    .footer-socials a:hover {
+      background-color: rgba(255, 255, 255, 0.25);
+    }
 
-.nav-links a:hover {
-  color: var(--sky-blue);
-}
-
-/* FOOTER */
-footer {
-  background-color: var(--sea-green);
-  color: var(--cream);
-  padding: 1.5rem 2rem;
-}
-
-.footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.footer-content p {
-  margin: 0;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.footer-socials {
-  display: flex;
-  gap: 1rem;
-}
-
-.footer-socials a {
-  text-decoration: none;
-  background-color: rgba(255, 255, 255, 0.15);
-  color: var(--cream);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: background 0.3s ease;
-}
-
-.footer-socials a:hover {
-  background-color: rgba(255, 255, 255, 0.25);
-}
-
-/* Responsive */
-@media(max-width:768px) {
-  header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-}
+    @media(max-width:768px) {
+      header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
-    <header>
+  <header>
     <div class="logo-section">
       <i class="fas fa-chess-rook"></i>
       <h1>CHESS HIVE</h1>
@@ -252,94 +252,96 @@ footer {
     </nav>
   </header>
 
-<main>
-  <div class="form-container">
-    <h2>Join ChessHive</h2>
+  <main>
+    <div class="form-container">
+      <h2>Join ChessHive</h2>
+      <div id="serverError" class="server-error"></div>
 
-    <!-- Optional server-side error message -->
-    <div id="serverError" class="server-error" style="display:none;"></div>
+      <form id="signupForm">
+        <div>
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="Enter full name" required>
+          <span id="nameError" class="error"></span>
+        </div>
 
-    <form id="signupForm" action="/signup" method="POST">
-      <div>
-        <label for="name">Full Name</label>
-        <input type="text" id="name" name="name" placeholder="Enter full name" required>
-        <span id="nameError" class="error"></span>
+        <div>
+          <label for="email">Email ID</label>
+          <input type="email" id="email" name="email" placeholder="Enter your email" required>
+          <span id="emailError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="dob">Date of Birth</label>
+          <input type="date" id="dob" name="dob" required>
+          <span id="dobError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="gender">Gender</label>
+          <select id="gender" name="gender" required>
+            <option value="" disabled selected>Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+          <span id="genderError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="college">College Name</label>
+          <input type="text" id="college" name="college" placeholder="Enter college name" required>
+          <span id="collegeError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="phone">Phone Number</label>
+          <input type="text" id="phone" name="phone" placeholder="Enter phone number" required>
+          <span id="phoneError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter password" required>
+          <span id="passwordError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="role">Select Role</label>
+          <select id="role" name="role" required>
+            <option value="" disabled selected>Select Role</option>
+            <option value="admin">Admin</option>
+            <option value="organizer">Organizer</option>
+            <option value="coordinator">Coordinator</option>
+            <option value="player">Player</option>
+          </select>
+          <span id="roleError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="aicf_id">AICF ID (Optional)</label>
+          <input type="text" id="aicf_id" name="aicf_id" placeholder="Enter AICF ID">
+          <span id="aicf_idError" class="error"></span>
+        </div>
+
+        <div>
+          <label for="fide_id">FIDE ID (Optional)</label>
+          <input type="text" id="fide_id" name="fide_id" placeholder="Enter FIDE ID">
+          <span id="fide_idError" class="error"></span>
+        </div>
+
+        <div class="full-width">
+          <button type="submit">Create Account</button>
+        </div>
+      </form>
+
+      <div class="login-box">
+        <p>Already have an account?</p>
+        <button onclick="window.location.href='/login'">Login</button>
       </div>
-
-      <div>
-        <label for="email">Email ID</label>
-        <input type="email" id="email" name="email" placeholder="Enter your email" required>
-        <span id="emailError" class="error"></span>
-      </div>
-
-      <div>
-        <label for="dob">Date of Birth</label>
-        <input type="date" id="dob" name="dob" required>
-        <span id="dobError" class="error"></span>
-      </div>
-
-      <div>
-        <label for="gender">Gender</label>
-        <select id="gender" name="gender" required>
-          <option value="" disabled selected>Select Gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="college">College Name</label>
-        <input type="text" id="college" name="college" placeholder="Enter college name" required>
-        <span id="collegeError" class="error"></span>
-      </div>
-
-      <div>
-        <label for="phone">Phone Number</label>
-        <input type="text" id="phone" name="phone" placeholder="Enter phone number" required>
-        <span id="phoneError" class="error"></span>
-      </div>
-
-      <div>
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="Enter password" required>
-        <span id="passwordError" class="error"></span>
-      </div>
-
-      <div>
-        <label for="role">Select Role</label>
-        <select id="role" name="role" required>
-          <option value="" disabled selected>Select Role</option>
-          <option value="admin">Admin</option>
-          <option value="organizer">Organizer</option>
-          <option value="coordinator">Coordinator</option>
-          <option value="player">Player</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="aicf_id">AICF ID (Optional)</label>
-        <input type="text" id="aicf_id" name="aicf_id" placeholder="Enter AICF ID">
-      </div>
-
-      <div>
-        <label for="fide_id">FIDE ID (Optional)</label>
-        <input type="text" id="fide_id" name="fide_id" placeholder="Enter FIDE ID">
-      </div>
-
-      <div class="full-width">
-        <button type="submit">Create Account</button>
-      </div>
-    </form>
-
-    <div class="login-box">
-      <p>Already have an account?</p>
-      <button onclick="redirectToLogin()">Login</button>
     </div>
-  </div>
-</main>
+  </main>
 
-<footer>
+  <footer>
     <div class="footer-content">
       <p><i class="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
       <div class="footer-socials">
@@ -350,11 +352,154 @@ footer {
     </div>
   </footer>
 
-<script>
-  function redirectToLogin() {
-    window.location.href = "/login";
-  }
-</script>
+  <script>
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      let isValid = true;
 
+      // Clear previous errors
+      document.querySelectorAll('.error').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+        el.parentElement.querySelector('input, select').classList.remove('error-input');
+      });
+      document.getElementById('serverError').style.display = 'none';
+      document.getElementById('serverError').textContent = '';
+
+      // Collect form data
+      const formData = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        dob: document.getElementById('dob').value,
+        gender: document.getElementById('gender').value,
+        college: document.getElementById('college').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        password: document.getElementById('password').value,
+        role: document.getElementById('role').value,
+        aicf_id: document.getElementById('aicf_id').value.trim(),
+        fide_id: document.getElementById('fide_id').value.trim()
+      };
+
+      // Client-side validation
+      if (!formData.name || !/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(formData.name)) {
+        document.getElementById('nameError').textContent = 'Valid full name is required (letters and single spaces only)';
+        document.getElementById('nameError').style.display = 'block';
+        document.getElementById('name').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
+        document.getElementById('emailError').textContent = 'Valid email is required';
+        document.getElementById('emailError').style.display = 'block';
+        document.getElementById('email').classList.add('error-input');
+        isValid = false;
+      } else if (/[A-Z]/.test(formData.email)) {
+        document.getElementById('emailError').textContent = 'Email should only contain lowercase letters';
+        document.getElementById('emailError').style.display = 'block';
+        document.getElementById('email').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!formData.dob) {
+        document.getElementById('dobError').textContent = 'Date of Birth is required';
+        document.getElementById('dobError').style.display = 'block';
+        document.getElementById('dob').classList.add('error-input');
+        isValid = false;
+      } else {
+        const birthDate = new Date(formData.dob);
+        if (isNaN(birthDate)) {
+          document.getElementById('dobError').textContent = 'Invalid date format';
+          document.getElementById('dobError').style.display = 'block';
+          document.getElementById('dob').classList.add('error-input');
+          isValid = false;
+        } else {
+          const age = Math.floor((Date.now() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+          if (age < 16) {
+            document.getElementById('dobError').textContent = 'You must be at least 16 years old';
+            document.getElementById('dobError').style.display = 'block';
+            document.getElementById('dob').classList.add('error-input');
+            isValid = false;
+          }
+        }
+      }
+
+      if (!formData.gender || !['male', 'female', 'other'].includes(formData.gender)) {
+        document.getElementById('genderError').textContent = 'Gender is required';
+        document.getElementById('genderError').style.display = 'block';
+        document.getElementById('gender').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!formData.college || !/^[A-Za-z\s']+$/.test(formData.college)) {
+        document.getElementById('collegeError').textContent = 'College name must contain only letters, spaces, or apostrophes';
+        document.getElementById('collegeError').style.display = 'block';
+        document.getElementById('college').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!formData.phone || !/^[0-9]{10}$/.test(formData.phone)) {
+        document.getElementById('phoneError').textContent = 'Valid 10-digit phone number is required';
+        document.getElementById('phoneError').style.display = 'block';
+        document.getElementById('phone').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!formData.password || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(formData.password)) {
+        document.getElementById('passwordError').textContent = 'Password must be at least 8 characters with one uppercase, one lowercase, and one special character';
+        document.getElementById('passwordError').style.display = 'block';
+        document.getElementById('password').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!formData.role || !['admin', 'organizer', 'coordinator', 'player'].includes(formData.role)) {
+        document.getElementById('roleError').textContent = 'Valid role is required';
+        document.getElementById('roleError').style.display = 'block';
+        document.getElementById('role').classList.add('error-input');
+        isValid = false;
+      }
+
+      if (!isValid) {
+        document.getElementById('serverError').style.display = 'block';
+        document.getElementById('serverError').textContent = 'Please correct the errors in the form';
+        return;
+      }
+
+     try {
+      console.log('Sending data:', JSON.stringify(formData));
+    const res = await fetch('/api/signup', { // Updated from '/auth/signup' to '/api/signup'
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    const data = await res.json();
+    console.log('Server response:', data); // Add this to debug
+    if (data.success) {
+      document.getElementById('serverError').style.display = 'block';
+      document.getElementById('serverError').className = 'server-error success';
+      document.getElementById('serverError').textContent = data.message;
+      setTimeout(() => {
+        window.location.href = data.redirectUrl;
+      }, 1000);
+    } else {
+      document.getElementById('serverError').style.display = 'block';
+      document.getElementById('serverError').textContent = data.message;
+    }
+  } catch (err) {
+    console.error('Signup error:', err);
+    document.getElementById('serverError').style.display = 'block';
+    document.getElementById('serverError').textContent = 'Failed to connect to server';
+  }
+});
+
+    // Real-time validation
+    ['name', 'email', 'dob', 'gender', 'college', 'phone', 'password', 'role', 'aicf_id', 'fide_id'].forEach(id => {
+      document.getElementById(id).addEventListener('input', function() {
+        this.parentElement.querySelector('.error').textContent = '';
+        this.parentElement.querySelector('.error').style.display = 'none';
+        this.classList.remove('error-input');
+        document.getElementById('serverError').style.display = 'none';
+      });
+    });
+  </script>
 </body>
 </html>
