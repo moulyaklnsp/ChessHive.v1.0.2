@@ -132,7 +132,23 @@
 <body>
   <div class="container">
     <h2>Player Growth Analytics</h2>
-
+<!-- ✅ Compare Player Section -->
+<div class="form-container" style="background:white;padding:1.5rem;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.1);margin-bottom:2rem;">
+  <h3 style="text-align:center;color:var(--sea-green);font-family:'Cinzel',serif;margin-bottom:1rem;">
+    <i class="fas fa-user-compare"></i> Compare with Another Player
+  </h3>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;">
+    <input id="compareInput" type="text" placeholder="Enter player name or email"
+           style="flex:1;min-width:250px;padding:0.8rem;border:2px solid var(--sea-green);
+                  border-radius:8px;font-size:1rem;">
+    <button id="compareBtn" 
+            style="background:var(--sea-green);color:white;padding:0.8rem 1.5rem;border:none;
+                   border-radius:8px;cursor:pointer;font-family:'Cinzel',serif;font-weight:bold;">
+      Compare
+    </button>
+  </div>
+  <div id="compareResult" style="margin-top:1.5rem;text-align:center;"></div>
+</div>
     <!-- ✅ Stats Section -->
     <div class="stats" id="statsSection">
       <div class="stat-card">
@@ -167,6 +183,89 @@
   </div>
 
   <script>
+    // ✅ Compare Player Functionality
+document.getElementById('compareBtn').addEventListener('click', async () => {
+  const searchValue = document.getElementById('compareInput').value.trim();
+  const resultDiv = document.getElementById('compareResult');
+
+  if (!searchValue) {
+    resultDiv.innerHTML = `<p style="color:#c62828;">Please enter a player name or email to compare.</p>`;
+    return;
+  }
+
+  resultDiv.innerHTML = `<p style="color:var(--sea-green);">Fetching player data...</p>`;
+
+  try {
+    const res = await fetch(`/player/api/compare?query=${encodeURIComponent(searchValue)}`, { credentials: 'same-origin' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Player not found.');
+
+    // Display comparison summary
+    const myRating = parseInt(document.getElementById('rating').textContent) || 0;
+    const myWinRate = parseFloat(document.getElementById('winRate').textContent) || 0;
+    const opponent = data.player;
+
+    resultDiv.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;text-align:center;margin-top:1rem;">
+        <div style="background:rgba(46,139,87,0.1);padding:1rem;border-radius:8px;">
+          <h4 style="font-family:'Cinzel',serif;color:var(--sea-green);">You</h4>
+          <p><strong>Rating:</strong> ${myRating}</p>
+          <p><strong>Win Rate:</strong> ${myWinRate}%</p>
+        </div>
+        <div style="background:rgba(135,206,235,0.1);padding:1rem;border-radius:8px;">
+          <h4 style="font-family:'Cinzel',serif;color:var(--sky-blue);">${opponent.name}</h4>
+          <p><strong>Rating:</strong> ${opponent.rating}</p>
+          <p><strong>Win Rate:</strong> ${opponent.winRate}%</p>
+        </div>
+      </div>
+    `;
+
+    // Update chart with both players
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    const existingChart = Chart.getChart('growthChart');
+    if (existingChart) existingChart.destroy();
+
+    const response = await fetch('/player/api/growth_analytics', { credentials: 'same-origin' });
+    const myData = await response.json();
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: myData.chartLabels,
+        datasets: [
+          {
+            label: 'Your Rating',
+            data: myData.ratingHistory,
+            borderColor: '#2E8B57',
+            backgroundColor: 'rgba(46,139,87,0.2)',
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: `${opponent.name}'s Rating`,
+            data: opponent.ratingHistory || [opponent.rating],
+            borderColor: '#87CEEB',
+            backgroundColor: 'rgba(135,206,235,0.2)',
+            fill: true,
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('Comparison error:', err);
+    resultDiv.innerHTML = `<p style="color:#c62828;">${err.message}</p>`;
+  }
+});
+
     async function loadAnalytics() {
       try {
         const response = await fetch('/player/api/growth_analytics', { credentials: 'same-origin' });

@@ -11,7 +11,6 @@ const coordinatorRouter = require('./coordinator_app');
 const playerRouter = require('./player_app');
 
 const utils = require('./utils');
-
 const { ObjectId } = require('mongodb');
 
 const app = express();
@@ -31,7 +30,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(authrouter);
 
-// Role Middleware
+// ---------- Role Middleware ----------
 const isAdmin = (req, res, next) => { 
   if (req.session.userRole === 'admin') next(); 
   else res.status(403).send('Unauthorized'); 
@@ -53,23 +52,25 @@ const isAdminOrOrganizer = (req, res, next) => {
   else res.status(403).json({ success: false, message: 'Unauthorized' }); 
 };
 
-// Mount Role-Specific Routers
+// ---------- Mount Routers ----------
 app.use('/admin', isAdmin, adminRouter);
 app.use('/organizer', isOrganizer, organizerRouter);
 app.use('/coordinator', isCoordinator, coordinatorRouter);
 app.use('/player', isPlayer, playerRouter.router);
 
-// nk i have change this route to serve index.html directly
+// ---------- Serve index.html ----------
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views', 'index.html'));
+  res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// ---------- LOGIN ----------
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const db = await connectDB();
   const user = await db.collection('users').findOne({ email, password });
+
   if (!user) {
     console.log('Login failed: Invalid credentials for', email);
     return res.redirect('/login?error-message=Invalid credentials');
@@ -78,6 +79,7 @@ app.post('/login', async (req, res) => {
     console.log('Login failed: Account deleted for', email);
     return res.redirect(`/login?error-message=Account has been deleted&deletedUserId=${user._id}&deletedUserRole=${user.role}`);
   }
+
   req.session.userID = user._id;
   req.session.userEmail = user.email;
   req.session.userRole = user.role;
@@ -85,114 +87,82 @@ app.post('/login', async (req, res) => {
   req.session.playerName = user.name;
   req.session.userCollege = user.college;
   req.session.collegeName = user.college;
+
   console.log(`User logged in: ${email} as ${user.role}`);
+
   switch (user.role) {
     case 'admin':
-      return res.sendFile(path.join(__dirname, 'views', 'admin', 'admin_dashboard.html'), (err) => {
-        if (err) {
-          console.error('Error sending admin_dashboard.html:', err);
-          return res.redirect('/?error-message=Server Error');
-        }
-      });
+      return res.sendFile(path.join(__dirname, 'views', 'admin', 'admin_dashboard.html'));
     case 'organizer':
-      return res.sendFile(path.join(__dirname, 'views', 'organizer', 'organizer_dashboard.html'), (err) => {
-        if (err) {
-          console.error('Error sending organizer_dashboard.html:', err);
-          return res.redirect('/?error-message=Server Error');
-        }
-      });
+      return res.sendFile(path.join(__dirname, 'views', 'organizer', 'organizer_dashboard.html'));
     case 'coordinator':
-      return res.sendFile(path.join(__dirname, 'views', 'coordinator', 'coordinator_dashboard.html'), (err) => {
-        if (err) {
-          console.error('Error sending coordinator_dashboard.html:', err);
-          return res.redirect('/?error-message=Server Error');
-        }
-      });
-    case 'player': return res.redirect('/player/player_dashboard?success-message=Player Login Successful');
-    default: return res.redirect('/?error-message=Invalid Role');
+      return res.sendFile(path.join(__dirname, 'views', 'coordinator', 'coordinator_dashboard.html'));
+    case 'player':
+      return res.redirect('/player/player_dashboard?success-message=Player Login Successful');
+    default:
+      return res.redirect('/?error-message=Invalid Role');
   }
 });
 
-app.post('/player/restore/:id', async (req, res) => {
+// ---------- RESTORE PLAYER ----------
+app.post('/players/restore/:id', async (req, res) => {
   const { id } = req.params;
   const db = await connectDB();
-  
   try {
     const result = await db.collection('users').updateOne(
       { _id: new ObjectId(id), role: 'player' },
-      { $set: { isDeleted: 0 } }
+      { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
     );
-    
-    if (result.matchedCount === 0) {
-      console.log('Restore failed: Player not found:', id);
-      return res.redirect('/login?error-message=Player not found');
-    }
-    
-    console.log(`Player account restored: ${id}`);
-    res.redirect('/login?success-message=Account restored successfully');
-  } catch (err) {
-    if (err.code === 121) {
-      console.log('Restore failed due to validation error:', err.errInfo);
-      return res.redirect('/login?error-message=Account restoration failed due to validation error');
-    }
-    console.error('Unexpected error:', err);
-    res.redirect('/login?error-message=An unexpected error occurred');
-  }
-});
-app.post('/player/restore/:id', async (req, res) => {
-  const { id } = req.params;
-  const db = await connectDB();
-  
-  try {
-    const result = await db.collection('users').updateOne(
-      { _id: new ObjectId(id), role: 'player' },
-      { $set: { isDeleted: 0 } }
-    );
-    
+
     if (result.matchedCount === 0) {
       console.log('Restore failed: Player not found:', id);
       return res.status(404).json({ message: 'Player not found' });
     }
-    
+
     console.log(`Player account restored: ${id}`);
+    await db.collection('logs').insertOne({
+      action: 'player_restore',
+      userId: id,
+      success: true,
+      timestamp: new Date()
+    });
+
     res.json({ message: 'Player account restored successfully' });
   } catch (err) {
-    if (err.code === 121) {
-      console.log('Restore failed due to validation error:', err.errInfo);
-      return res.status(400).json({ message: 'Account restoration failed due to validation error' });
-    }
-    console.error('Unexpected error:', err);
-    res.status(500).json({ message: 'An unexpected error occurred' });
+    console.error('Restore error:', err);
+    await db.collection('logs').insertOne({
+      action: 'player_restore',
+      userId: id,
+      success: false,
+      error: err.message,
+      timestamp: new Date()
+    });
+
+    if (err.code === 121)
+      return res.status(400).json({ message: 'Validation error during restore' });
+
+    res.status(500).json({ message: 'Unexpected server error' });
   }
 });
 
-// Restore Coordinator Account
+// ---------- RESTORE COORDINATOR ----------
 app.post('/coordinators/restore/:id', async (req, res) => {
   const { id } = req.params;
   const { email, password } = req.body;
   const db = await connectDB();
-  
+
   try {
-    const user = await db.collection('users').findOne({
-      _id: new ObjectId(id),
-      role: 'coordinator',
-      email,
-      password,
-      isDeleted: 1
-    });
-    
     const result = await db.collection('users').updateOne(
       { _id: new ObjectId(id), role: 'coordinator' },
       { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
     );
-    
+
     if (result.matchedCount === 0) {
       console.log('Restore failed: Coordinator not found:', id);
       return res.status(404).json({ message: 'Coordinator not found' });
     }
-    
+
     console.log(`Coordinator account restored: ${id}, ${email}`);
-    // Log the restore attempt
     await db.collection('logs').insertOne({
       action: 'coordinator_restore',
       userId: id,
@@ -200,11 +170,10 @@ app.post('/coordinators/restore/:id', async (req, res) => {
       success: true,
       timestamp: new Date()
     });
-    
+
     res.json({ message: 'Coordinator account restored successfully' });
   } catch (err) {
     console.error('Restore error:', err);
-    // Log the failed attempt
     await db.collection('logs').insertOne({
       action: 'coordinator_restore',
       userId: id,
@@ -213,78 +182,95 @@ app.post('/coordinators/restore/:id', async (req, res) => {
       error: err.message,
       timestamp: new Date()
     });
-    
-    if (err.code === 121) {
-      return res.status(400).json({ message: 'Account restoration failed due to validation error' });
-    }
-    res.status(500).json({ message: 'An unexpected error occurred' });
+    res.status(500).json({ message: 'Unexpected server error' });
   }
 });
 
+// ---------- RESTORE ORGANIZER ----------
 app.post('/organizers/restore/:id', async (req, res) => {
-    console.log('Restore request received:', req.params, req.body);
-    const { id } = req.params;
-    const { email, password } = req.body;
-    const db = await connectDB();
-    
-    try {
-        const user = await db.collection('users').findOne({
-            _id: new ObjectId(id),
-            role: 'organizer',
-            email,
-            password,
-            isDeleted: 1
-        });
-        
-        const result = await db.collection('users').updateOne(
-            { _id: new ObjectId(id), role: 'organizer' },
-            { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
-        );
-        
-        if (result.matchedCount === 0) {
-            console.log('Restore failed: organizer not found:', id);
-            return res.status(404).json({ message: 'organizer not found' });
-        }
-        
-        console.log(`organizer account restored: ${id}, ${email}`);
-        await db.collection('logs').insertOne({
-            action: 'organizer_restore',
-            userId: id,
-            email,
-            success: true,
-            timestamp: new Date()
-        });
-        
-        res.json({ message: 'organizer account restored successfully' });
-    } catch (err) {
-        console.error('Restore error:', err);
-        await db.collection('logs').insertOne({
-            action: 'organizer_restore',
-            userId: id,
-            email,
-            success: false,
-            error: err.message,
-            timestamp: new Date()
-        });
-        
-        if (err.code === 121) {
-            return res.status(400).json({ message: 'Account restoration failed due to validation error' });
-        }
-        res.status(500).json({ message: 'An unexpected error occurred' });
+  const { id } = req.params;
+  const { email } = req.body;
+  const db = await connectDB();
+
+  try {
+    const result = await db.collection('users').updateOne(
+      { _id: new ObjectId(id), role: 'organizer' },
+      { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
+    );
+
+    if (result.matchedCount === 0) {
+      console.log('Restore failed: Organizer not found:', id);
+      return res.status(404).json({ message: 'Organizer not found' });
     }
+
+    console.log(`Organizer account restored: ${id}, ${email}`);
+    await db.collection('logs').insertOne({
+      action: 'organizer_restore',
+      userId: id,
+      email,
+      success: true,
+      timestamp: new Date()
+    });
+
+    res.json({ message: 'Organizer account restored successfully' });
+  } catch (err) {
+    console.error('Restore error:', err);
+    await db.collection('logs').insertOne({
+      action: 'organizer_restore',
+      userId: id,
+      email,
+      success: false,
+      error: err.message,
+      timestamp: new Date()
+    });
+    res.status(500).json({ message: 'Unexpected server error' });
+  }
 });
-// DELETE route for coordinators
+
+// ---------- DELETE PLAYER ----------
+app.delete('/players/remove/:email', isAdminOrOrganizer, async (req, res) => {
+  console.log('DELETE /players/remove/:email called with email:', req.params.email);
+  try {
+    const role = req.session.userRole || 'admin';
+    const { email } = req.params;
+    const db = await connectDB();
+
+    const result = await db.collection('users').deleteOne({ email, role: 'player' });
+    if (result.deletedCount === 0) {
+      console.log('Remove player failed: Not found:', email);
+      return res.redirect(`/${role}/player_management?error=` + encodeURIComponent('Player not found'));
+    }
+
+    console.log(`Player removed: ${email}`);
+    await db.collection('logs').insertOne({
+      action: 'player_delete',
+      email,
+      role,
+      success: true,
+      timestamp: new Date()
+    });
+
+    res.redirect(`/${role}/player_management?success=` + encodeURIComponent('Player removed successfully'));
+  } catch (error) {
+    console.error('Error removing player:', error);
+    res.redirect(`/${role}/player_management?error=` + encodeURIComponent('An error occurred while removing the player'));
+  }
+});
+
+// ---------- DELETE COORDINATOR ----------
 app.delete('/coordinators/remove/:email', isAdminOrOrganizer, async (req, res) => {
   console.log('DELETE /coordinators/remove/:email called with email:', req.params.email);
   try {
-    const role = req.session.userRole || 'admin'; // Fallback to 'admin' if undefined
+    const role = req.session.userRole || 'admin';
     const { email } = req.params;
     const db = await connectDB();
+
     const result = await db.collection('users').deleteOne({ email, role: 'coordinator' });
     if (result.deletedCount === 0) {
       console.log('Remove coordinator failed: Not found:', email);
       return res.redirect(`/${role}/coordinator_management?error=` + encodeURIComponent('Coordinator not found'));
     }
+
     console.log(`Coordinator removed: ${email}`);
     res.redirect(`/${role}/coordinator_management?success=` + encodeURIComponent('Coordinator removed successfully'));
   } catch (error) {
@@ -293,17 +279,19 @@ app.delete('/coordinators/remove/:email', isAdminOrOrganizer, async (req, res) =
   }
 });
 
-// DELETE route for organizers (for completeness)
+// ---------- DELETE ORGANIZER ----------
 app.delete('/organizers/remove/:email', isAdmin, async (req, res) => {
   console.log('DELETE /organizers/remove/:email called with email:', req.params.email);
   try {
     const { email } = req.params;
     const db = await connectDB();
+
     const result = await db.collection('users').deleteOne({ email, role: 'organizer' });
     if (result.deletedCount === 0) {
       console.log('Remove organizer failed: Not found:', email);
       return res.redirect('/admin/organizer_management?error=' + encodeURIComponent('Organizer not found'));
     }
+
     console.log(`Organizer removed: ${email}`);
     res.redirect('/admin/organizer_management?success=' + encodeURIComponent('Organizer removed successfully'));
   } catch (error) {
@@ -312,17 +300,20 @@ app.delete('/organizers/remove/:email', isAdmin, async (req, res) => {
   }
 });
 
+// ---------- DELETE TOURNAMENT ----------
 app.delete('/tournaments/remove/:tournamentId', isCoordinator, async (req, res) => {
   console.log('DELETE /tournaments/remove/:tournamentId called with tournamentId:', req.params.tournamentId);
   try {
     const role = req.session.userRole || 'admin';
     const { tournamentId } = req.params;
     const db = await connectDB();
+
     const result = await db.collection('tournaments').deleteOne({ _id: new ObjectId(tournamentId) });
     if (result.deletedCount === 0) {
       console.log('Remove tournament failed: Not found:', tournamentId);
       return res.redirect(`/${role}/tournament_management?error=` + encodeURIComponent('Tournament not found'));
     }
+
     console.log(`Tournament removed: ${tournamentId}`);
     res.redirect(`/${role}/tournament_management?success=` + encodeURIComponent('Tournament removed successfully'));
   } catch (error) {
@@ -331,40 +322,18 @@ app.delete('/tournaments/remove/:tournamentId', isCoordinator, async (req, res) 
   }
 });
 
-
-// this is the catch-all route to render any page dynamically but we can send the data or file at a time so i made two routes one for page and other for the data 
-// wherever  page getting fetched from here get the the data in the same page via route
-
-
-
-// old one 
-
-// app.get('/:page', (req, res) => {
-//   const { page } = req.params;
-//   try {
-//     const messages = utils.getMessages(req);
-//     res.render(page, { ...messages, deletedUserId: req.query.deletedUserId || null });
-//   } catch (err) {
-//     console.error('Page render error:', err);
-//     res.status(404).send(`Page not found: ${page}`);
-//   }
-// });
-
-
-
-
+// ---------- Dynamic Page Renderer ----------
 app.get('/:page', (req, res) => {
-
   const { page } = req.params;
-  const k =`${page}.html`
-  console.log('Requested page:', k);
-  const filePath = path.join(__dirname, 'views', k);
+  const filePath = path.join(__dirname, 'views', `${page}.html`);
+  console.log('Requested page:', filePath);
+
   res.sendFile(filePath, (err) => {
     if (err) res.status(404).send(`Page not found: ${page}`);
   });
 });
 
-// API route to get dynamic data
+// ---------- API Data Fetch ----------
 app.get('/api/:pageData', (req, res) => {
   const messages = utils.getMessages(req);
   res.json({
@@ -373,9 +342,7 @@ app.get('/api/:pageData', (req, res) => {
   });
 });
 
-
-
-
+// ---------- 404 Handler ----------
 app.use((req, res) => res.status(404).redirect('/?error-message=Page not found'));
 
 connectDB().catch(err => console.error('Database connection failed:', err));

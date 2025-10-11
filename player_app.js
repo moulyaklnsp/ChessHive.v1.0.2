@@ -539,6 +539,156 @@ router.get('/api/profile', async (req, res) => {
   });
 });
 
+router.delete('/api/deleteAccount', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({
+      email: req.session.userEmail,
+      role: 'player'
+    });
+
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const playerId = user._id;
+
+    // 🔹 Soft delete using integer flag (1)
+    await db.collection('users').updateOne(
+      { _id: playerId },
+      { $set: { isDeleted: 1, deletedAt: new Date() } }
+    );
+
+    await db.collection('player_stats').updateOne(
+      { player_id: playerId },
+      { $set: { isDeleted: 1, deletedAt: new Date() } }
+    );
+
+    await db.collection('user_balances').updateOne(
+      { user_id: playerId },
+      { $set: { isDeleted: 1, deletedAt: new Date() } }
+    );
+
+    await db.collection('subscriptionstable').updateOne(
+      { username: req.session.userEmail },
+      { $set: { isDeleted: 1, deletedAt: new Date() } }
+    );
+
+    await db.collection('sales').updateMany(
+      { buyer: user.name },
+      { $set: { isDeleted: 1, deletedAt: new Date() } }
+    );
+
+    req.session.destroy(() => {
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Account deleted successfully (soft delete)' });
+    });
+  } catch (err) {
+    console.error('Error deleting account:', err);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+
+router.post('/players/restore/:id', async (req, res) => {
+  const db = await connectDB();
+  const playerId = req.params.id;
+  const { email, password } = req.body;
+
+  try {
+    const user = await db.collection('users').findOne({ 
+      _id: new ObjectId(playerId), 
+      role: 'player' 
+    });
+
+    if (!user) return res.status(404).json({ message: 'Player account not found.' });
+
+    if (user.isDeleted === 0) {
+      return res.status(400).json({ message: 'Account is already active.' });
+    }
+
+    if (user.email !== email || user.password !== password) {
+      return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+
+    // 🔹 Restore by setting isDeleted back to 0
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(playerId) },
+      { $set: { isDeleted: 0 }, $unset: { deletedAt: "" } }
+    );
+
+    await db.collection('player_stats').updateOne(
+      { player_id: new ObjectId(playerId) },
+      { $set: { isDeleted: 0 } }
+    );
+
+    await db.collection('user_balances').updateOne(
+      { user_id: new ObjectId(playerId) },
+      { $set: { isDeleted: 0 } }
+    );
+
+    await db.collection('subscriptionstable').updateOne(
+      { username: user.email },
+      { $set: { isDeleted: 0 } }
+    );
+
+    await db.collection('sales').updateMany(
+      { buyer: user.name },
+      { $set: { isDeleted: 0 } }
+    );
+
+    return res.status(200).json({ message: 'Player account restored successfully! You can now log in.' });
+  } catch (err) {
+    console.error('Error restoring player:', err);
+    return res.status(500).json({ message: 'Failed to restore player account.' });
+  }
+});
+router.get('/api/compare', async (req, res) => {
+  const db = await connectDB();
+  const query = req.query.query?.trim();
+
+  if (!query) {
+    return res.status(400).json({ error: 'Please provide a name or email to compare.' });
+  }
+
+  try {
+    const player = await db.collection('users').findOne({
+      $or: [{ email: query }, { name: query }],
+      role: 'player',
+      isDeleted: { $ne: 1 }
+    });
+
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found.' });
+    }
+
+    const stats = await db.collection('player_stats').findOne({
+      player_id: player._id,
+      isDeleted: { $ne: 1 }
+    });
+
+    // Dummy rating history (replace with your real match history data)
+    const ratingHistory = Array.from({ length: 10 }, (_, i) => 
+      (stats?.rating || 400) + Math.floor(Math.random() * 100 - 50)
+    );
+
+    res.json({
+      player: {
+        name: player.name,
+        email: player.email,
+        rating: stats?.rating || 400,
+        winRate: stats?.winRate || 0,
+        ratingHistory
+      }
+    });
+  } catch (err) {
+    console.error('Error comparing players:', err);
+    res.status(500).json({ error: 'Failed to compare players.' });
+  }
+});
+
 router.post('/api/add-funds', async (req, res) => {
   if (!req.session.userEmail) {
     return res.status(401).json({ error: 'Please log in' });
@@ -623,6 +773,7 @@ router.get('/api/pairings', async (req, res) => {
   res.json({ roundNumber: totalRounds, allRounds });
 });
 
+
 router.get('/api/rankings', async (req, res) => {
   const tournamentId = req.query.tournament_id;
   if (!tournamentId) {
@@ -687,23 +838,6 @@ router.get('/api/rankings', async (req, res) => {
   res.json({ rankings, tournamentId });
 });
 
-router.post('/api/delete', async (req, res) => {
-  if (!req.session.userEmail) {
-    return res.status(401).json({ error: 'Please log in' });
-  }
-  const db = await connectDB();
-  const result = await db.collection('users').updateOne(
-    { email: req.session.userEmail, role: 'player' },
-    { $set: { isDeleted: 1 } }
-  );
-  if (result.matchedCount === 0) {
-    return res.status(404).json({ error: 'Player not found' });
-  }
-  req.session.destroy((err) => {
-    if (err) console.error('Session destroy error:', err);
-  });
-  res.json({ success: 'Account deleted successfully' });
-});
 
 router.post('/api/approve-team-request', async (req, res) => {
   if (!req.session.userEmail) {
