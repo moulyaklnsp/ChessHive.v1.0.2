@@ -188,7 +188,7 @@ router.get('/api/tournaments', async (req, res) => {
       console.log('User not found for tournaments fetch');
       return res.status(401).json({ error: 'User not logged in' });
     }
-    const username = user.name || req.session.userEmail;
+    const username = req.session.username || user.name || req.session.userEmail;
     
     console.log('Fetching tournaments for username:', username);
     
@@ -220,7 +220,7 @@ router.post('/api/tournaments', async (req, res) => {
       console.log('User not found in DB');
       return res.status(401).json({ success: false, message: 'User not logged in' });
     }
-    const username = user.name || req.session.userEmail;
+    const username = req.session.username || user.name || req.session.userEmail;
     const college = user.college;
 
     const tournament = {
@@ -667,6 +667,125 @@ router.get('/api/rankings', async (req, res) => {
     console.error('Error fetching rankings:', error);
     res.status(500).json({ error: 'Failed to fetch rankings' });
   }
+});
+router.post('/api/tournaments/:id/request-feedback', async (req, res) => {
+  console.log('Route hit: /api/tournaments/:id/request-feedback', 'ID:', req.params.id, 'Session:', req.session);
+  try {
+    const tournamentId = req.params.id;
+    if (!ObjectId.isValid(tournamentId)) {
+      console.error('Invalid tournament ID:', tournamentId);
+      return res.status(400).json({ error: 'Invalid tournament ID' });
+    }
+
+    const coordinator = req.session.username;
+    console.log('Coordinator username:', coordinator);
+    if (!coordinator) {
+      console.error('No coordinator username in session');
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const db = await connectDB();
+    console.log('Database connected');
+    const tid = new ObjectId(tournamentId);
+
+    const tournament = await db.collection('tournaments').findOne({ 
+      _id: tid, 
+      coordinator 
+    });
+    console.log('Tournament found:', tournament);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found or you are not authorized' });
+    }
+
+    // Ensure tournament is completed (use local timezone for consistency)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tDate = new Date(tournament.date);
+    tDate.setHours(0, 0, 0, 0);
+    console.log('Tournament date:', tDate, 'Today:', today);
+    if (tDate >= today) {
+      return res.status(400).json({ error: 'Feedback can only be requested for completed tournaments' });
+    }
+
+    // Check if feedback was already requested
+    if (tournament.feedback_requested) {
+      return res.status(400).json({ error: 'Feedback already requested for this tournament' });
+    }
+
+    // Get all unique enrolled players
+    const individualPlayers = await db.collection('tournament_players').find({ tournament_id: tid }).toArray();
+    const teamEnrollments = await db.collection('enrolledtournaments_team').find({ tournament_id: tid }).toArray();
+    console.log('Individual players:', individualPlayers.length, 'Team enrollments:', teamEnrollments.length);
+    const playerUsernames = new Set([
+      ...individualPlayers.map(p => p.username),
+      ...teamEnrollments.flatMap(t => [t.player1_name, t.player2_name, t.player3_name].filter(Boolean))
+    ]);
+
+    // Get user_ids for players
+    const players = await db.collection('users').find({ name: { $in: Array.from(playerUsernames) }, role: 'player' }).toArray();
+    console.log('Players found:', players.length);
+    const notifications = players.map(player => ({
+      user_id: player._id,
+      type: 'feedback_request',
+      tournament_id: tid,
+      read: false,
+      date: new Date()
+    }));
+
+    // Insert notifications only if there are players
+    if (notifications.length > 0) {
+      await db.collection('notifications').insertMany(notifications);
+      console.log('Notifications inserted:', notifications.length);
+    } else {
+      console.log('No players enrolled, skipping notification insertion');
+    }
+
+    // Update tournament regardless of notifications
+    const result = await db.collection('tournaments').updateOne(
+      { _id: tid },
+      { $set: { feedback_requested: true } }
+    );
+    console.log('Update result:', result);
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Feedback requested successfully' });
+    } else {
+      res.status(400).json({ error: 'Failed to request feedback' });
+    }
+  } catch (error) {
+    console.error('Error requesting feedback:', error.stack);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Keep the existing /api/feedbacks and /feedback_view routes
+router.get('/api/feedbacks', async (req, res) => {
+  try {
+    const { tournament_id } = req.query;
+    if (!tournament_id) return res.status(400).json({ error: 'Tournament ID required' });
+
+    const db = await connectDB();
+    const tid = new ObjectId(tournament_id);
+    const feedbacks = await db.collection('feedbacks').find({ tournament_id: tid }).toArray();
+
+    res.json({ feedbacks });
+  } catch (error) {
+    console.error('Error fetching feedbacks:', error);
+    res.status(500).json({ error: 'Failed to fetch feedbacks' });
+  }
+});
+
+router.get('/feedback_view', async (req, res) => {
+  if (!req.session.userEmail || req.session.userRole !== 'coordinator') {
+    return res.redirect("/?error-message=Please log in as a coordinator");
+  }
+  const filePath = path.join(__dirname, 'views', 'coordinator', 'feedback_view.html');
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error sending feedback_view.html:', err);
+      res.status(500).send('Error loading page');
+    }
+  });
 });
 
 // ==================== PAGE RENDERING ROUTES ====================
