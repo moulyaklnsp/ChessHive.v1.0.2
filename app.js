@@ -24,6 +24,7 @@ app.use(session({
 }));
 
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // For parsing JSON from API requests
 app.use(methodOverride('_method'));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
@@ -65,42 +66,169 @@ app.get('/', (req, res) => {
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// ---------- LOGIN ----------
-app.post('/login', async (req, res) => {
+// API endpoint for login
+app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-  const db = await connectDB();
-  const user = await db.collection('users').findOne({ email, password });
 
-  if (!user) {
-    console.log('Login failed: Invalid credentials for', email);
-    return res.redirect('/login?error-message=Invalid credentials');
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email, password });
+    if (!user) {
+      console.log('Login failed: Invalid credentials for', email);
+      return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    }
+    if (user.isDeleted) {
+      console.log('Login failed: Account deleted for', email);
+      return res.status(403).json({
+        success: false,
+        message: 'Account has been deleted',
+        deletedUserId: user._id.toString(),
+        deletedUserRole: user.role
+      });
+    }
+    req.session.userID = user._id;
+    req.session.userEmail = user.email;
+    req.session.userRole = user.role;
+    req.session.username = user.name;
+    req.session.playerName = user.name;
+    req.session.userCollege = user.college;
+    req.session.collegeName = user.college;
+    console.log(`User logged in: ${email} as ${user.role}`);
+
+    let redirectUrl = '';
+    switch (user.role) {
+      case 'admin':
+        redirectUrl = '/admin/admin_dashboard';
+        break;
+      case 'organizer':
+        redirectUrl = '/organizer/organizer_dashboard';
+        break;
+      case 'coordinator':
+        redirectUrl = '/coordinator/coordinator_dashboard';
+        break;
+      case 'player':
+        redirectUrl = '/player/player_dashboard?success-message=Player Login Successful';
+        break;
+      default:
+        return res.status(400).json({ success: false, message: 'Invalid Role' });
+    }
+    res.json({ success: true, redirectUrl });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred' });
   }
-  if (user.isDeleted) {
-    console.log('Login failed: Account deleted for', email);
-    return res.redirect(`/login?error-message=Account has been deleted&deletedUserId=${user._id}&deletedUserRole=${user.role}`);
+});
+
+// API endpoint for signup
+app.post('/api/signup', async (req, res) => {
+  const {
+    name, email, dob, gender, college, phone, password, role, aicf_id, fide_id
+  } = req.body;
+
+  // Log the incoming data for debugging
+  console.log('Received data:', req.body);
+
+  try {
+    // Validate dob
+    console.log(dob);
+    if (!dob || isNaN(new Date(dob).getTime())) {
+      throw new Error('Invalid date of birth');
+    }
+
+    const newUser = {
+      name: name || '',
+      email: email || '',
+      password: password || '', // Hash this in production
+      role: role || '',
+      isDeleted: 0, // Required field
+      dob: new Date(dob), // Convert to Date
+      gender: gender || '',
+      college: college || '',
+      phone: phone || '',
+      AICF_ID: aicf_id || '', // Default to empty string if not provided
+      FIDE_ID: fide_id || ''  // Default to empty string if not provided
+    };
+
+    const db = await connectDB();
+    const result = await db.collection('users').insertOne(newUser);
+    if (result.insertedId) {
+      console.log(`User signed up: ${email} as ${role}`);
+      res.json({
+        success: true,
+        message: 'Signup successful! Redirecting to login...',
+        redirectUrl: '/login'
+      });
+    } else {
+      res.json({ success: false, message: 'Failed to create user' });
+    }
+  } catch (err) {
+    console.error('Signup error:', err);
+    if (err.code === 121) {
+      res.status(400).json({ success: false, message: 'Data validation failed. Please check your input.' });
+    } else if (err.code === 11000) {
+      res.status(400).json({ success: false, message: 'Email already exists.' });
+    } else {
+      res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+    }
+  }
+});
+
+// API endpoint for contact us
+app.post('/api/contactus', async (req, res) => {
+  const { name, email, message } = req.body || {};
+  console.log("Raw req.body:", req.body);
+  console.log("Destructured:", { name, email, message });
+  let errors = {};
+
+  // Validate name
+  if (!name || !/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(name)) {
+    errors.name = "Name should only contain letters";
   }
 
-  req.session.userID = user._id;
-  req.session.userEmail = user.email;
-  req.session.userRole = user.role;
-  req.session.username = user.name;
-  req.session.playerName = user.name;
-  req.session.userCollege = user.college;
-  req.session.collegeName = user.college;
+  // Validate email
+  if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    errors.email = "Please enter a valid email address";
+  }
 
-  console.log(`User logged in: ${email} as ${user.role}`);
+  // Validate message
+  if (!message || message.trim() === '') {
+    errors.message = "Message cannot be empty";
+  } else {
+    const wordCount = message.trim().split(/\s+/).length;
+    if (wordCount > 200) {
+      errors.message = "Message cannot exceed 200 words";
+    }
+  }
 
-  switch (user.role) {
-    case 'admin':
-      return res.sendFile(path.join(__dirname, 'views', 'admin', 'admin_dashboard.html'));
-    case 'organizer':
-      return res.sendFile(path.join(__dirname, 'views', 'organizer', 'organizer_dashboard.html'));
-    case 'coordinator':
-      return res.sendFile(path.join(__dirname, 'views', 'coordinator', 'coordinator_dashboard.html'));
-    case 'player':
-      return res.redirect('/player/player_dashboard?success-message=Player Login Successful');
-    default:
-      return res.redirect('/?error-message=Invalid Role');
+  // If there are any validation errors, return them
+  if (Object.keys(errors).length > 0) {
+    console.log('Contact us validation errors:', errors);
+    return res.status(400).json({ success: false, message: 'Validation failed', errors });
+  }
+
+  // Connect to database and check if user is a registered player (commented out as per original)
+  try {
+    const db = await connectDB();
+    // const user = await db.collection('users').findOne({ name, email, role: 'player', isDeleted: 0 });
+    // if (!user) {
+    //   return res.status(403).json({ success: false, message: 'Only registered players can submit messages. Please sign up or use a player account.' });
+    // }
+
+    // Insert the message into the database
+    await db.collection('contact').insertOne({ name, email, message, submission_date: new Date() });
+    console.log('Contact message submitted:', { name, email });
+
+    // Log current contact table contents
+    const contacts = await db.collection('contact').find().toArray();
+    console.log("\n=== Current Contact Table Contents ===");
+    console.log("Total rows:", contacts.length);
+    console.table(contacts);
+    console.log("=====================================\n");
+
+    res.json({ success: true, message: 'Message sent successfully!' });
+  } catch (err) {
+    console.error('Contact error:', err);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred' });
   }
 });
 
