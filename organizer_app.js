@@ -331,7 +331,6 @@ router.get('/api/college-stats', async (req, res) => {
   }
 });
 
-// Remove organizer API
 router.delete('/api/organizers/:email', async (req, res) => {
   try {
     const db = await connectDB();
@@ -351,6 +350,69 @@ router.delete('/api/organizers/:email', async (req, res) => {
   } catch (error) {
     console.error('Error removing organizer:', error);
     res.status(500).json({ success: false, error: 'Failed to remove organizer' });
+  }
+});
+// new sales analysis endpoints for organizer
+router.get('/api/sales/monthly', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = parseInt(req.query.month) || now.getMonth() + 1;
+
+    const startOfMonth = new Date(year, month - 1, 1);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const salesData = await db.collection('sales').aggregate([
+      { $match: { purchase_date: { $gte: startOfMonth, $lte: endOfMonth } } },
+      {
+        $group: {
+          _id: { $dayOfMonth: "$purchase_date" },
+          totalSales: { $sum: "$price" },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id": 1 } }
+    ]).toArray();
+
+    res.json(salesData);
+  } catch (error) {
+    console.error("Error fetching monthly sales:", error);
+    res.status(500).json({ error: "Failed to fetch monthly sales" });
+  }
+});
+router.get('/api/sales/yearly', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+
+    const salesData = await db.collection('sales').aggregate([
+      { $match: { purchase_date: { $gte: startOfYear, $lte: endOfYear } } },
+      {
+        $group: {
+          _id: { $month: "$purchase_date" },
+          totalSales: { $sum: "$price" },
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray();
+
+    const fullYear = [];
+    for (let m = 1; m <= 12; m++) {
+      const found = salesData.find(r => r._id === m);
+      fullYear.push({
+        _id: m,
+        totalSales: found ? found.totalSales : 0,
+        count: found ? found.count : 0
+      });
+    }
+
+    res.json(fullYear);
+  } catch (error) {
+    console.error("Error fetching yearly sales:", error);
+    res.status(500).json({ error: "Failed to fetch yearly sales" });
   }
 });
 
