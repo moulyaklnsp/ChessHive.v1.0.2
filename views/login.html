@@ -436,6 +436,75 @@ footer {
         successDiv.innerHTML = `<p class="success">${decodeURIComponent(successMessage)}</p>`;
     }
 
+     // Client-side validation and login submission
+  const loginForm = document.querySelector('form[action="/login"]');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const errorMessageDiv = document.getElementById('dynamic-error');
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let isValid = true;
+
+    // Clear previous error messages
+    errorMessageDiv.innerHTML = '';
+
+    // Validate email
+    const email = emailInput.value.trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      errorMessageDiv.innerHTML += '<p class="error">Email is required.</p>';
+      isValid = false;
+    } else if (!emailPattern.test(email)) {
+      errorMessageDiv.innerHTML += '<p class="error">Please enter a valid email address.</p>';
+      isValid = false;
+    }
+
+    // Validate password
+    const password = passwordInput.value.trim();
+    if (!password) {
+      errorMessageDiv.innerHTML += '<p class="error">Password is required.</p>';
+      isValid = false;
+    } else if (password.length < 6) {
+      errorMessageDiv.innerHTML += '<p class="error">Password must be at least 6 characters long.</p>';
+      isValid = false;
+    }
+
+    if (!isValid) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      console.log('Server response:', data);
+
+      if (data.success) {
+        window.location.href = data.redirectUrl;
+      } else {
+        errorMessageDiv.innerHTML = `<p class="error">${data.message}</p>`;
+        if (data.deletedUserId && data.deletedUserRole) {
+          const restoreForm = data.deletedUserRole === 'coordinator'
+            ? document.getElementById('coordinator-restore-form')
+            : data.deletedUserRole === 'organizer'
+            ? document.getElementById('organizer-restore-form')
+            : null;
+          if (restoreForm) {
+            restoreForm.style.display = 'block';
+            restoreForm.querySelector('input[name="id"]').value = data.deletedUserId;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      errorMessageDiv.innerHTML = '<p class="error">Failed to connect to server.</p>';
+    }
+  });
+
     const restoreForms = document.querySelectorAll('.restore-form');
     const restoreMessage = document.getElementById('restore-message');
     let timeoutId = null;
