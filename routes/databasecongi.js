@@ -95,10 +95,33 @@ async function initializeCollections(db) {
         added_by: { bsonType: 'string' },
         type: { bsonType: 'string' },
         no_of_rounds: { bsonType: 'int' },
-        time: { bsonType: 'string' }
+        time: { bsonType: 'string' },
+        coordinator: { bsonType: 'string' },
+        feedback_requested: { bsonType: 'bool' }
       }
     }
   });
+
+  // Ensure existing tournaments have feedback_requested set to false
+  await db.collection('tournaments').updateMany(
+    { feedback_requested: { $exists: false } },
+    { $set: { feedback_requested: false } }
+  );
+
+  // Feedbacks collection
+  await initializeCollection('feedbacks', {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['tournament_id', 'username', 'rating', 'submitted_date'],
+      properties: {
+        tournament_id: { bsonType: 'objectId' },
+        username: { bsonType: 'string' },
+        rating: { bsonType: 'int', minimum: 1, maximum: 5 },
+        comments: { bsonType: 'string' },
+        submitted_date: { bsonType: 'date' }
+      }
+    }
+  }, [[{ tournament_id: 1, username: 1 }, { unique: true }]]);
 
   // User Balances collection
   await initializeCollection('user_balances', {
@@ -157,6 +180,20 @@ async function initializeCollections(db) {
       }
     }
   });
+
+  await initializeCollection('notifications', {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['user_id', 'type', 'tournament_id', 'read', 'date'],
+      properties: {
+        user_id: { bsonType: 'objectId' },
+        type: { bsonType: 'string', enum: ['feedback_request'] }, // Can expand for other types later
+        tournament_id: { bsonType: 'objectId' },
+        read: { bsonType: 'bool' },
+        date: { bsonType: 'date' }
+      }
+    }
+  }, [[{ user_id: 1 }, {}]]);
 
   // Meetings collection
   await initializeCollection('meetingsdb', {
