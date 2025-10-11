@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sales Analysis - ChessHive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --sea-green: #2E8B57;
+            --cream: #FFFDD0;
+            --sky-blue: #87CEEB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Playfair Display', serif;
+            background-color: var(--cream);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--sea-green);
+            margin-bottom: 1rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        h2::before {
+            content: '📈';
+            font-size: 2.5rem;
+        }
+
+        .controls {
+            display:flex;
+            justify-content: space-between;
+            align-items: center;
+            gap:1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter {
+            display:flex;
+            gap:0.5rem;
+            align-items:center;
+            font-family:'Cinzel', serif;
+        }
+
+        .filter button {
+            background: white;
+            border-radius: 8px;
+            padding: 0.5rem 0.9rem;
+            border: 1px solid rgba(0,0,0,0.08);
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--sea-green);
+            transition: all .15s ease;
+        }
+        .filter button.active {
+            background: var(--sea-green);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--sea-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-family: 'Cinzel', serif;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            height: 420px;
+            overflow: hidden;
+        }
+
+        .chart-scroll {
+  width: 100%;
+  height: 420px;       /* set height you want */
+  overflow-x: auto;    /* horizontal scroll for months */
+  overflow-y: auto;    /* vertical scroll for labels if needed */
+  padding-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+        canvas {
+            display: block;
+            height: 360px !important; /* leave the same visual height */
+        }
+
+        .back-container {
+            text-align: right;
+        }
+
+        .back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--sea-green);
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+        }
+
+        .back:hover {
+            background: #236B43;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .note {
+            color: #555;
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-wrapper {
+                height: 360px;
+            }
+        }
+    </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Sales Analysis</h2>
+
+    <div class="controls">
+      <div class="filter">
+        <span style="font-weight:700; color:var(--sea-green); margin-right:6px;">View:</span>
+        <button id="monthlyBtn" class="active">Monthly</button>
+        <button id="yearlyBtn">Yearly</button>
+      </div>
+
+      <div class="filter">
+        <label for="monthSelect" style="font-weight:700; color:var(--sea-green);">Month:</label>
+        <select id="monthSelect" style="padding:0.4rem; border-radius:8px; border:1px solid rgba(0,0,0,0.1);">
+          <option value="">Current</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </div>
+
+      <div style="text-align:right;">
+        <small class="note">Default: current month (last 10 days visible). Scroll horizontally to see older days/months.</small>
+      </div>
+    </div>
+
+    <div class="stats" id="statsSection">
+      <div class="stat-card">
+        <div class="stat-value" id="totalSales">--</div>
+        <div class="stat-label">Total Sales (visible range)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="avgSale">--</div>
+        <div class="stat-label">Average Sale</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="txnCount">--</div>
+        <div class="stat-label">Transactions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="topDay">--</div>
+        <div class="stat-label">Top Day</div>
+      </div>
+    </div>
+
+    <div class="chart-wrapper">
+      <div class="chart-scroll" id="chartScroll">
+        <canvas id="salesChart"></canvas>
+      </div>
+    </div>
+
+    <div class="back-container" style="margin-bottom: 1rem;">
+      <a href="/organizer/store_monitoring" class="back">
+        <i class="fas fa-arrow-left"></i> Back to Store Monitor
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const monthlyBtn = document.getElementById('monthlyBtn');
+    const yearlyBtn = document.getElementById('yearlyBtn');
+    const monthSelect = document.getElementById('monthSelect');
+    const chartScroll = document.getElementById('chartScroll');
+    const statsEls = {
+      totalSales: document.getElementById('totalSales'),
+      avgSale: document.getElementById('avgSale'),
+      txnCount: document.getElementById('txnCount'),
+      topDay: document.getElementById('topDay')
+    };
+    let salesChart = null;
+
+    const MONTHLY_ROUTE = '/organizer/api/sales/monthly';
+    const YEARLY_ROUTE  = '/organizer/api/sales/yearly';
+
+    function formatCurrency(n) { return '₹' + (n === null || n === undefined ? '--' : n.toFixed(2)); }
+    function formatNumber(n) { return n === null || n === undefined ? '--' : n; }
+    function nextFrame(){ return new Promise(r => requestAnimationFrame(r)); }
+
+    function createOrUpdateChart(labels, dataPoints, labelText = 'Sales') {
+      const ctx = document.getElementById('salesChart').getContext('2d');
+      const dataset = dataPoints.map(v => v ?? 0);
+
+      if (salesChart) {
+        salesChart.data.labels = labels;
+        salesChart.data.datasets[0].data = dataset;
+        salesChart.data.datasets[0].label = labelText;
+        salesChart.update();
+        return;
+      }
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+      gradient.addColorStop(0, "rgba(46,139,87,0.6)");
+      gradient.addColorStop(1, "rgba(46,139,87,0.05)");
+
+      salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: labelText,
+            data: dataset,
+            borderColor: '#2E8B57',
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#2E8B57',
+            pointBorderColor: '#FFF',
+            pointBorderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { color: '#2E8B57' }, grid: { color: 'rgba(46,139,87,0.12)' } },
+            x: { ticks: { color: '#2E8B57' }, grid: { color: 'rgba(46,139,87,0.12)' } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `₹${ctx.raw?.toFixed(2) ?? 0}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function computeStats(data, labels) {
+      const vals = data.filter(v => typeof v === 'number');
+      const total = vals.reduce((a, b) => a + b, 0);
+      const avg = vals.length ? total / vals.length : 0;
+      const topIdx = vals.indexOf(Math.max(...vals));
+      statsEls.totalSales.textContent = formatCurrency(total);
+      statsEls.avgSale.textContent = formatCurrency(avg);
+      statsEls.txnCount.textContent = formatNumber(vals.length);
+      statsEls.topDay.textContent = topIdx >= 0 ? labels[topIdx] : '--';
+    }
+
+    async function loadYearly() {
+      yearlyBtn.classList.add('active');
+      monthlyBtn.classList.remove('active');
+      monthSelect.value = "";
+
+      try {
+        const res = await fetch(YEARLY_ROUTE);
+        const agg = await res.json();
+        const now = new Date();
+        const labels = Array.from({length: 12}, (_, m) =>
+          new Date(now.getFullYear(), m, 1).toLocaleString('default', { month: 'short' })
+        );
+        const data = agg.map(m => m.totalSales ?? 0);
+
+        createOrUpdateChart(labels, data, 'Monthly Sales');
+        computeStats(data, labels);
+        await nextFrame();
+        const currentMonth = now.getMonth();
+        chartScroll.scrollLeft = Math.max(0, (currentMonth - 2) * 100);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load yearly sales');
+      }
+    }
+
+    async function loadMonthly(selectedMonth = null) {
+      monthlyBtn.classList.add('active');
+      yearlyBtn.classList.remove('active');
+
+      try {
+        const route = selectedMonth ? `${MONTHLY_ROUTE}?month=${selectedMonth}` : MONTHLY_ROUTE;
+        const res = await fetch(route);
+        const agg = await res.json();
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = selectedMonth ? selectedMonth - 1 : now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'short' });
+
+        const labels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1} ${monthName}`);
+        const map = Object.fromEntries(agg.map(r => [r._id, r.totalSales]));
+        const data = labels.map((_, i) => map[i + 1] ?? 0);
+
+        createOrUpdateChart(labels, data, `Daily Sales - ${monthName}`);
+        computeStats(data, labels);
+
+        await nextFrame();
+        chartScroll.scrollLeft = Math.max(0, (labels.length - 10) * 100);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load monthly sales');
+      }
+    }
+
+    monthlyBtn.addEventListener('click', () => loadMonthly());
+    yearlyBtn.addEventListener('click', () => loadYearly());
+    monthSelect.addEventListener('change', e => {
+      const val = e.target.value ? parseInt(e.target.value) : null;
+      loadMonthly(val);
+    });
+
+    loadMonthly();
+  </script>
+</body>
+</html>
