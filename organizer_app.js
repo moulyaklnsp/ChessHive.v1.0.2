@@ -466,7 +466,9 @@ router.get('/:subpage?', async (req, res) => {
       case 'college_stats':
         sendOrganizerPage(res, 'college_stats');
         break;
-
+      case 'sales_analysis':
+        sendOrganizerPage(res, 'sales_analysis');
+        break; 
       default:
         console.log('Organizer subpage not found:', subpage);
         return res.redirect('/organizer/organizer_dashboard?error-message=Page not found');
