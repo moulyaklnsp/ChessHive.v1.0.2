@@ -490,6 +490,8 @@ footer {
         if (data.deletedUserId && data.deletedUserRole) {
           const restoreForm = data.deletedUserRole === 'coordinator'
             ? document.getElementById('coordinator-restore-form')
+            : data.deletedUserRole === 'player'
+            ? document.getElementById('player-restore-form')
             : data.deletedUserRole === 'organizer'
             ? document.getElementById('organizer-restore-form')
             : null;

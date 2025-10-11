@@ -201,12 +201,8 @@
     </div>
 
     <script>
-        // ================================
-        // 🧠 Load Coordinator Profile (Client-side)
-        // ================================
         async function loadCoordinatorProfile() {
             try {
-                // 🔹 API: GET /coordinator/api/profile
                 // Expected response: { name, email, college }
                 const res = await fetch('/coordinator/api/profile');
                 const data = await res.json();
@@ -221,24 +217,19 @@
                 document.getElementById('coordinatorCollege').textContent = 'Error';
             }
         }
-
-        // ================================
-        // 🗑️ Delete Account (Client-side)
-        // ================================
         async function deleteAccount() {
-            if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+            if (!confirm('Are you sure you want to delete your account?')) {
                 return;
             }
             try {
-                // 🔹 API: DELETE /coordinator/api/profile
                 const res = await fetch('/coordinator/api/profile', {
                     method: 'DELETE'
                 });
                 const data = await res.json();
 
                 if (data.success) {
-                    alert('Account deleted successfully. You will be redirected to the login page.');
-                    window.location.href = '/?message=Account deleted';
+                    alert('Account deleted successfully.You will be redirected to login page');
+                    window.location.href = '/login?message=Account deleted';
                 } else {
                     alert('Failed to delete account: ' + (data.message || 'Unknown error'));
                 }
@@ -250,15 +241,6 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', loadCoordinatorProfile);
-
-        // ================================
-        // 📋 API required in coordinator_app.js:
-        // ================================
-        // GET /coordinator/api/profile
-        // Returns JSON: { name, email, college }
-        // DELETE /coordinator/api/profile
-        // Marks user as deleted (isDeleted: 1), returns JSON: { success, message }
-        // ================================
     </script>
 </body>
 </html>
