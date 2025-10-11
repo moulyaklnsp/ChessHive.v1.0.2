@@ -1111,6 +1111,95 @@ router.get('/api/growth_analytics', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch analytics' });
   }
 });
+router.get('/api/notifications', async (req, res) => {
+  if (!req.session.userEmail) return res.status(401).json({ error: 'Please log in' });
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const notifications = await db.collection('notifications').aggregate([
+      { $match: { user_id: user._id } },
+      { $lookup: { from: 'tournaments', localField: 'tournament_id', foreignField: '_id', as: 'tournament' } },
+      { $unwind: '$tournament' },
+      { $project: { 
+        _id: 1, 
+        type: 1, 
+        read: 1, 
+        date: 1, 
+        tournamentName: '$tournament.name',
+        tournament_id: '$tournament._id' // Include tournament_id
+      } }
+    ]).toArray();
+
+    // Convert ObjectId to string
+    const formattedNotifications = notifications.map(n => ({
+      ...n,
+      _id: n._id.toString(),
+      tournament_id: n.tournament_id.toString()
+    }));
+    console.log('Sending notifications:', formattedNotifications); // Debug log
+    res.json({ notifications: formattedNotifications });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications', details: error.message });
+  }
+});
+
+// New API: Submit feedback
+router.post('/api/submit-feedback', async (req, res) => {
+  if (!req.session.userEmail) return res.status(401).json({ error: 'Please log in' });
+
+  const { tournamentId, rating, comments } = req.body;
+  if (!tournamentId || !rating) return res.status(400).json({ error: 'Tournament ID and rating required' });
+  if (!ObjectId.isValid(tournamentId)) {
+            console.error('Invalid tournamentId:', tournamentId);
+            return res.status(400).json({ error: 'Invalid tournament ID' });
+          }
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    // Check if already submitted
+    const existing = await db.collection('feedbacks').findOne({ tournament_id: new ObjectId(tournamentId), username: user.name });
+    if (existing) return res.status(400).json({ error: 'Feedback already submitted' });
+
+    await db.collection('feedbacks').insertOne({
+      tournament_id: new ObjectId(tournamentId),
+      username: user.name,
+      rating: parseInt(rating),
+      comments: comments || '',
+      submitted_date: new Date()
+    });
+
+    res.json({ success: true, message: 'Feedback submitted' });
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    res.status(500).json({ error: 'Failed to submit feedback' });
+  }
+});
+
+// New API: Mark notification as read
+router.post('/api/mark-notification-read', async (req, res) => {
+  if (!req.session.userEmail) return res.status(401).json({ error: 'Please log in' });
+
+  const { notificationId } = req.body;
+  if (!notificationId) return res.status(400).json({ error: 'Notification ID required' });
+
+  try {
+    const db = await connectDB();
+    await db.collection('notifications').updateOne(
+      { _id: new ObjectId(notificationId) },
+      { $set: { read: true } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking read:', error);
+    res.status(500).json({ error: 'Failed to mark as read' });
+  }
+});
 // Single route for rendering HTML pages
 router.get('/:subpage?', (req, res) => {
   const subpage = req.params.subpage || 'player_dashboard';
