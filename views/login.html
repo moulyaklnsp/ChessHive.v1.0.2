@@ -185,108 +185,106 @@
             color: var(--text-dark);
             opacity: 0.2;
         }
-header {
-  background-color: var(--sea-green);
-  color: var(--cream);
-  padding: 1rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
 
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
+        header {
+            background-color: var(--sea-green);
+            color: var(--cream);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
 
-.logo-section i {
-  font-size: 1.8rem;
-}
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
 
-.logo-section h1 {
-  font-family: 'Cinzel', serif;
-  font-size: 1.8rem;
-  font-weight: 700;
-}
+        .logo-section i {
+            font-size: 1.8rem;
+        }
 
-.main-nav {
-  display: flex;
-  align-items: center;
-}
+        .logo-section h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
 
-.nav-links {
-  display: flex;
-  list-style: none;
-  gap: 1.5rem;
-}
+        .main-nav {
+            display: flex;
+            align-items: center;
+        }
 
-.nav-links a {
-  text-decoration: none;
-  color: var(--cream);
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: color 0.3s ease;
-}
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+        }
 
-.nav-links a:hover {
-  color: var(--sky-blue);
-}
+        .nav-links a {
+            text-decoration: none;
+            color: var(--cream);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: color 0.3s ease;
+        }
 
-/* FOOTER */
-footer {
-  background-color: var(--sea-green);
-  color: var(--cream);
-  padding: 1.5rem 2rem;
-}
+        .nav-links a:hover {
+            color: var(--sky-blue);
+        }
 
-.footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
+        footer {
+            background-color: var(--sea-green);
+            color: var(--cream);
+            padding: 1.5rem 2rem;
+        }
 
-.footer-content p {
-  margin: 0;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
 
-.footer-socials {
-  display: flex;
-  gap: 1rem;
-}
+        .footer-content p {
+            margin: 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
 
-.footer-socials a {
-  text-decoration: none;
-  background-color: rgba(255, 255, 255, 0.15);
-  color: var(--cream);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: background 0.3s ease;
-}
+        .footer-socials {
+            display: flex;
+            gap: 1rem;
+        }
 
-.footer-socials a:hover {
-  background-color: rgba(255, 255, 255, 0.25);
-}
+        .footer-socials a {
+            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: var(--cream);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background 0.3s ease;
+        }
 
-/* Responsive */
-@media(max-width:768px) {
-  header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-}
+        .footer-socials a:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+        }
 
+        @media(max-width:768px) {
+            header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
 
         @media (max-width: 768px) {
             .form-container-login {
@@ -304,21 +302,20 @@ footer {
     </style>
 </head>
 <body>
-   
-     <header>
-    <div class="logo-section">
-      <i class="fas fa-chess-rook"></i>
-      <h1>CHESS HIVE</h1>
-    </div>
-    <nav class="main-nav">
-      <ul class="nav-links">
-        <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
-        <li><a href="/about"><i class="fas fa-info-circle"></i> About</a></li>
-        <li><a href="/login"><i class="fas fa-users"></i> Join Community</a></li>
-        <li><a href="/contactus"><i class="fas fa-envelope"></i> Contact Us</a></li>
-      </ul>
-    </nav>
-  </header>
+    <header>
+        <div class="logo-section">
+            <i class="fas fa-chess-rook"></i>
+            <h1>CHESS HIVE</h1>
+        </div>
+        <nav class="main-nav">
+            <ul class="nav-links">
+                <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="/about"><i class="fas fa-info-circle"></i> About</a></li>
+                <li><a href="/login"><i class="fas fa-users"></i> Join Community</a></li>
+                <li><a href="/contactus"><i class="fas fa-envelope"></i> Contact Us</a></li>
+            </ul>
+        </nav>
+    </header>
 
     <main>
         <div class="form-container-login">
@@ -348,7 +345,6 @@ footer {
                 </a>
             </div>
 
-            <!-- Restore forms (hidden by default, shown via JS) -->
             <form id="coordinator-restore-form" class="restore-form" data-role="coordinators" style="display: none;">
                 <input type="hidden" name="id" id="coordinator-id">
                 <div>
@@ -376,207 +372,232 @@ footer {
             </form>
 
             <form id="player-restore-form" class="restore-form" data-role="players" style="display: none;">
-  <input type="hidden" name="id" id="player-id">
-  <div>
-    <label for="restore-email-player">Confirm Email</label>
-    <input type="email" id="restore-email-player" name="email" required placeholder="Enter your email">
-  </div>
-  <div>
-    <label for="restore-password-player">Confirm Password</label>
-    <input type="password" id="restore-password-player" name="password" required placeholder="Enter your password">
-  </div>
-  <button type="submit">Restore Player Account</button>
-</form>
+                <input type="hidden" name="id" id="player-id">
+                <div>
+                    <label for="restore-email-player">Confirm Email</label>
+                    <input type="email" id="restore-email-player" name="email" required placeholder="Enter your email">
+                </div>
+                <div>
+                    <label for="restore-password-player">Confirm Password</label>
+                    <input type="password" id="restore-password-player" name="password" required placeholder="Enter your password">
+                </div>
+                <button type="submit">Restore Player Account</button>
+            </form>
         </div>
     </main>
 
     <footer>
-    <div class="footer-content">
-      <p><i class="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
-      <div class="footer-socials">
-        <a href="#"><i class="fab fa-facebook-f"></i> Facebook</a>
-        <a href="#"><i class="fab fa-twitter"></i> Twitter</a>
-        <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
-      </div>
-    </div>
-  </footer>
+        <div class="footer-content">
+            <p><i class="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
+            <div class="footer-socials">
+                <a href="#"><i class="fab fa-facebook-f"></i> Facebook</a>
+                <a href="#"><i class="fab fa-twitter"></i> Twitter</a>
+                <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
+            </div>
+        </div>
+    </footer>
 
     <script>
-    // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const errorMessage = urlParams.get('error-message');
-    const successMessage = urlParams.get('success-message');
-    const deletedUserId = urlParams.get('deletedUserId');
-    const deletedUserRole = urlParams.get('deletedUserRole');
-    console.log('URL Params:', { errorMessage, deletedUserId, deletedUserRole }); // Debug URL params
-
-    // Display error or success message
-    const errorDiv = document.getElementById('dynamic-error');
-    const successDiv = document.getElementById('dynamic-success');
-    if (errorMessage) {
-        errorDiv.innerHTML = `<p class="error">${decodeURIComponent(errorMessage)}</p>`;
-        if (errorMessage.includes('Account has been deleted') && deletedUserId && deletedUserRole) {
-  console.log('Showing restore form for role:', deletedUserRole);
-  const restoreForm = deletedUserRole === 'coordinator'
-      ? document.getElementById('coordinator-restore-form')
-      : deletedUserRole === 'organizer'
-      ? document.getElementById('organizer-restore-form')
-      : deletedUserRole === 'player'
-      ? document.getElementById('player-restore-form')
-      : null;
-
-  if (restoreForm) {
-    restoreForm.style.display = 'block';
-    restoreForm.querySelector('input[name="id"]').value = deletedUserId;
-  } else {
-    console.log('No matching restore form found for role:', deletedUserRole);
-  }
-}
-    } else if (successMessage) {
-        successDiv.innerHTML = `<p class="success">${decodeURIComponent(successMessage)}</p>`;
-    }
-
-     // Client-side validation and login submission
-  const loginForm = document.querySelector('form[action="/login"]');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const errorMessageDiv = document.getElementById('dynamic-error');
-
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    let isValid = true;
-
-    // Clear previous error messages
-    errorMessageDiv.innerHTML = '';
-
-    // Validate email
-    const email = emailInput.value.trim();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email) {
-      errorMessageDiv.innerHTML += '<p class="error">Email is required.</p>';
-      isValid = false;
-    } else if (!emailPattern.test(email)) {
-      errorMessageDiv.innerHTML += '<p class="error">Please enter a valid email address.</p>';
-      isValid = false;
-    }
-
-    // Validate password
-    const password = passwordInput.value.trim();
-    if (!password) {
-      errorMessageDiv.innerHTML += '<p class="error">Password is required.</p>';
-      isValid = false;
-    } else if (password.length < 6) {
-      errorMessageDiv.innerHTML += '<p class="error">Password must be at least 6 characters long.</p>';
-      isValid = false;
-    }
-
-    if (!isValid) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await response.json();
-      console.log('Server response:', data);
-
-      if (data.success) {
-        window.location.href = data.redirectUrl;
-      } else {
-        errorMessageDiv.innerHTML = `<p class="error">${data.message}</p>`;
-        if (data.deletedUserId && data.deletedUserRole) {
-          const restoreForm = data.deletedUserRole === 'coordinator'
-            ? document.getElementById('coordinator-restore-form')
-            : data.deletedUserRole === 'player'
-            ? document.getElementById('player-restore-form')
-            : data.deletedUserRole === 'organizer'
-            ? document.getElementById('organizer-restore-form')
-            : null;
-          if (restoreForm) {
-            restoreForm.style.display = 'block';
-            restoreForm.querySelector('input[name="id"]').value = data.deletedUserId;
-          }
+        // Fetch session email
+        async function getSessionEmail() {
+            try {
+                const response = await fetch('/api/session', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                return data.userEmail || null;
+            } catch (err) {
+                console.error('Error fetching session email:', err);
+                return null;
+            }
         }
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      errorMessageDiv.innerHTML = '<p class="error">Failed to connect to server.</p>';
-    }
-  });
 
-    const restoreForms = document.querySelectorAll('.restore-form');
-    const restoreMessage = document.getElementById('restore-message');
-    let timeoutId = null;
+        // Function to show restore form if session email matches deleted_by
+        function showRestoreForm(deletedUserId, deletedUserRole, deletedBy, sessionEmail) {
+            if (!deletedUserId || !deletedUserRole || !deletedBy || !sessionEmail) {
+                console.log('Missing required data:', { deletedUserId, deletedUserRole, deletedBy, sessionEmail });
+                return;
+            }
 
-    function clearMessage() {
-        if (timeoutId) {
-            clearTimeout(timeoutId);
+            if (sessionEmail !== deletedBy) {
+                console.log('Session email does not match deleted_by:', { sessionEmail, deletedBy });
+                return;
+            }
+
+            const restoreForm = deletedUserRole === 'coordinator'
+                ? document.getElementById('coordinator-restore-form')
+                : deletedUserRole === 'organizer'
+                ? document.getElementById('organizer-restore-form')
+                : deletedUserRole === 'player'
+                ? document.getElementById('player-restore-form')
+                : null;
+
+            if (restoreForm) {
+                restoreForm.style.display = 'block';
+                restoreForm.querySelector('input[name="id"]').value = deletedUserId;
+                console.log('Restore form shown for role:', deletedUserRole);
+            } else {
+                console.log('No matching restore form found for role:', deletedUserRole);
+            }
         }
-        timeoutId = setTimeout(() => {
-            restoreMessage.innerHTML = '';
-            timeoutId = null;
-        }, 3000);
-    }
 
-    restoreForms.forEach(form => {
-        const restoreButton = form.querySelector('button');
-        if (!restoreButton) return;
+        // Parse URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorMessage = urlParams.get('error-message');
+        const successMessage = urlParams.get('success-message');
+        const deletedUserId = urlParams.get('deletedUserId');
+        const deletedUserRole = urlParams.get('deletedUserRole');
+        const deletedBy = urlParams.get('deletedBy');
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
+        // Display error or success message
+        const errorDiv = document.getElementById('dynamic-error');
+        const successDiv = document.getElementById('dynamic-success');
+        if (errorMessage) {
+            errorDiv.innerHTML = `<p class="error">${decodeURIComponent(errorMessage)}</p>`;
+            if (errorMessage.includes('Account has been deleted') && deletedUserId && deletedUserRole && deletedBy) {
+                getSessionEmail().then(sessionEmail => {
+                    showRestoreForm(deletedUserId, deletedUserRole, deletedBy, sessionEmail);
+                });
+            }
+        } else if (successMessage) {
+            successDiv.innerHTML = `<p class="success">${decodeURIComponent(successMessage)}</p>`;
+        }
 
-            // Show loading state
-            restoreButton.disabled = true;
-            restoreButton.textContent = 'Restoring...';
-            restoreMessage.innerHTML = '';
+        // Client-side validation and login submission
+        const loginForm = document.querySelector('form[action="/login"]');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessageDiv = document.getElementById('dynamic-error');
 
-            const formData = new FormData(form);
-            const id = formData.get('id');
-            const role = form.dataset.role;
-            console.log('Extracted role:', role);
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let isValid = true;
 
-            const url = `http://localhost:3000/${role}/restore/${id}`;
-            console.log('Fetching URL:', url);
+            // Clear previous error messages
+            errorMessageDiv.innerHTML = '';
+
+            // Validate email
+            const email = emailInput.value.trim();
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email) {
+                errorMessageDiv.innerHTML += '<p class="error">Email is required.</p>';
+                isValid = false;
+            } else if (!emailPattern.test(email)) {
+                errorMessageDiv.innerHTML += '<p class="error">Please enter a valid email address.</p>';
+                isValid = false;
+            }
+
+            // Validate password
+            const password = passwordInput.value.trim();
+            if (!password) {
+                errorMessageDiv.innerHTML += '<p class="error">Password is required.</p>';
+                isValid = false;
+            } else if (password.length < 6) {
+                errorMessageDiv.innerHTML += '<p class="error">Password must be at least 6 characters long.</p>';
+                isValid = false;
+            }
+
+            if (!isValid) {
+                return;
+            }
 
             try {
-                const response = await fetch(url, {
+                const response = await fetch('/api/login', {
                     method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
                 });
+                const data = await response.json();
+                console.log('Server response:', data);
 
-                console.log('Response status:', response.status);
-                let data;
-                if (!response.ok) {
-                    data = { message: await response.text() };
+                if (data.success) {
+                    window.location.href = data.redirectUrl;
                 } else {
-                    data = await response.json();
+                    errorMessageDiv.innerHTML = `<p class="error">${data.message}</p>`;
+                    if (data.deletedUserId && data.deletedUserRole && data.deleted_by) {
+                        getSessionEmail().then(sessionEmail => {
+                            showRestoreForm(data.deletedUserId, data.deletedUserRole, data.deleted_by, data.sessionEmail);
+                        });
+                    }
                 }
-                console.log('Response data:', data);
-
-                if (!response.ok) {
-                    restoreMessage.innerHTML = `<p class="error">${data.message || 'Failed to restore account'}</p>`;
-                    console.log("1 - Error case");
-                } else {
-                    restoreMessage.innerHTML = `<p class="success">${data.message}</p>`;
-                    form.style.display = 'none';
-                    console.log("2 - Success case");
-                }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                restoreMessage.innerHTML = `<p class="error">Network error or server unavailable: ${error.message}</p>`;
-            } finally {
-                restoreButton.disabled = false;
-                restoreButton.textContent = `Restore ${role === 'coordinators' ? 'Coordinator' : 'Organizer'} Account`;
-                clearMessage();
+            } catch (err) {
+                console.error('Login error:', err);
+                errorMessageDiv.innerHTML = '<p class="error">Failed to connect to server.</p>';
             }
         });
-    });
-</script>
+
+        // Restore form submission handling
+        const restoreForms = document.querySelectorAll('.restore-form');
+        const restoreMessage = document.getElementById('restore-message');
+        let timeoutId = null;
+
+        function clearMessage() {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            timeoutId = setTimeout(() => {
+                restoreMessage.innerHTML = '';
+                timeoutId = null;
+            }, 3000);
+        }
+
+        restoreForms.forEach(form => {
+            const restoreButton = form.querySelector('button');
+            if (!restoreButton) return;
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                // Show loading state
+                restoreButton.disabled = true;
+                restoreButton.textContent = 'Restoring...';
+                restoreMessage.innerHTML = '';
+
+                const formData = new FormData(form);
+                const id = formData.get('id');
+                const role = form.dataset.role;
+                console.log('Extracted role:', role);
+
+                const url = `http://localhost:3000/${role}/restore/${id}`;
+                console.log('Fetching URL:', url);
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    console.log('Response status:', response.status);
+                    let data;
+                    if (!response.ok) {
+                        data = { message: await response.text() };
+                    } else {
+                        data = await response.json();
+                    }
+                    console.log('Response data:', data);
+
+                    if (!response.ok) {
+                        restoreMessage.innerHTML = `<p class="error">${data.message || 'Failed to restore account'}</p>`;
+                        console.log("1 - Error case");
+                    } else {
+                        restoreMessage.innerHTML = `<p class="success">${data.message}</p>`;
+                        form.style.display = 'none';
+                        console.log("2 - Success case");
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    restoreMessage.innerHTML = `<p class="error">Network error or server unavailable: ${error.message}</p>`;
+                } finally {
+                    restoreButton.disabled = false;
+                    restoreButton.textContent = `Restore ${role === 'coordinators' ? 'Coordinator' : role === 'organizers' ? 'Organizer' : 'Player'} Account`;
+                    clearMessage();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
