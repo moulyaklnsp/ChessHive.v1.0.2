@@ -439,6 +439,40 @@
   </a>
 
   <script>
+    // Filter function
+function filterTournaments(searchInputId, selectId, tableId) {
+  const searchInput = document.getElementById(searchInputId);
+  const filterType = document.getElementById(selectId);
+  const tableBody = document.getElementById(tableId);
+
+  function applyFilter() {
+    const filterText = searchInput.value.toLowerCase().trim();
+    const filterBy = filterType.value;
+
+    Array.from(tableBody.querySelectorAll('tr')).forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 5) return; // skip empty message rows
+
+      let match = false;
+      if (filterBy === 'name') {
+        match = cells[0].textContent.toLowerCase().includes(filterText);
+      } else if (filterBy === 'location') {
+        match = cells[2].textContent.toLowerCase().includes(filterText);
+      } else if (filterBy === 'status') {
+        match = cells[4].textContent.toLowerCase().includes(filterText);
+      }
+
+      row.style.display = match || filterText === '' ? '' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', applyFilter);
+  filterType.addEventListener('change', applyFilter);
+}
+
+filterTournaments('searchIndividual', 'searchIndividualType', 'individualTournamentsTable');
+filterTournaments('searchTeam', 'searchTeamType', 'teamTournamentsTable');
+
 document.addEventListener('DOMContentLoaded', async () => {
   const walletBalanceEl = document.getElementById('walletBalance');
   const subscriptionMessageEl = document.getElementById('subscriptionMessage');

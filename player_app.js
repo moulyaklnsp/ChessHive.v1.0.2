@@ -757,68 +757,89 @@ router.get('/api/pairings', async (req, res) => {
 });
 
 
+// Rankings API
 router.get('/api/rankings', async (req, res) => {
-  const tournamentId = req.query.tournament_id;
-  if (!tournamentId) {
-    return res.status(400).json({ error: 'Tournament ID is required' });
-  }
-
-  const db = await connectDB();
-  const rows = await db.collection('tournament_players').find({ tournament_id: new ObjectId(tournamentId) }).toArray();
-  if (rows.length === 0) {
-    return res.json({ rankings: [], tournamentId });
-  }
-
-  let storedPairings = await db.collection('tournament_pairings').findOne({ tournament_id: new ObjectId(tournamentId) });
-  let rankings = [];
-
-  if (!storedPairings) {
-    const totalRounds = 5;
-    let players = rows.map(row => new Player(row._id, row.username, row.college, row.gender));
-    const allRounds = swissPairing(players, totalRounds);
-
-    await db.collection('tournament_pairings').insertOne({
-      tournament_id: new ObjectId(tournamentId),
-      totalRounds: totalRounds,
-      rounds: allRounds.map(round => ({
-        round: round.round,
-        pairings: round.pairings.map(pairing => ({
-          player1: { id: pairing.player1.id, username: pairing.player1.username, score: pairing.player1.score },
-          player2: { id: pairing.player2.id, username: pairing.player2.username, score: pairing.player2.score },
-          result: pairing.result
-        })),
-        byePlayer: round.byePlayer ? {
-          id: round.byePlayer.id,
-          username: round.byePlayer.username,
-          score: round.byePlayer.score
-        } : null
-      }))
-    });
-
-    rankings = players.sort((a, b) => b.score - a.score);
-  } else {
-    let playersMap = new Map();
-    rows.forEach(row => {
-      playersMap.set(row._id.toString(), new Player(row._id, row.username, row.college, row.gender));
-    });
-
-    storedPairings.rounds.forEach(round => {
-      round.pairings.forEach(pairing => {
-        const player1 = playersMap.get(pairing.player1.id.toString());
-        const player2 = playersMap.get(pairing.player2.id.toString());
-        player1.score = pairing.player1.score;
-        player2.score = pairing.player2.score;
+  try {
+    const tournamentId = req.query.tournament_id;
+    if (!tournamentId) {
+      return res.status(400).json({ error: 'Tournament ID is required' });
+    }
+    const db = await connectDB();
+    const tid = new ObjectId(tournamentId);
+    const rows = await db.collection('tournament_players').find({ tournament_id: tid }).toArray();
+    if (rows.length === 0) {
+      return res.json({ rankings: [], tournamentId });
+    }
+    let storedPairings = await db.collection('tournament_pairings').findOne({ tournament_id: tid });
+    let rankings = [];
+    if (!storedPairings) {
+      const totalRounds = 5;
+      let players = rows.map(row => new Player(row._id, row.username, row.college, row.gender));
+      const allRounds = swissPairing(players, totalRounds);
+      await db.collection('tournament_pairings').insertOne({
+        tournament_id: tid,
+        totalRounds: totalRounds,
+        rounds: allRounds.map(round => ({
+          round: round.round,
+          pairings: round.pairings.map(pairing => ({
+            player1: {
+              id: pairing.player1.id,
+              username: pairing.player1.username,
+              score: pairing.player1.score
+            },
+            player2: {
+              id: pairing.player2.id,
+              username: pairing.player2.username,
+              score: pairing.player2.score
+            },
+            result: pairing.result
+          })),
+          byePlayer: round.byePlayer ? {
+            id: round.byePlayer.id,
+            username: round.byePlayer.username,
+            score: round.byePlayer.score
+          } : null
+        }))
       });
-      if (round.byePlayer) {
-        const byePlayer = playersMap.get(round.byePlayer.id.toString());
-        byePlayer.score = round.byePlayer.score;
-      }
-    });
-
-    rankings = Array.from(playersMap.values()).sort((a, b) => b.score - a.score);
+      rankings = players.sort((a, b) => b.score - a.score).map((p, index) => ({
+        rank: index + 1,
+        playerName: p.username,
+        score: p.score
+      }));
+    } else {
+      let playersMap = new Map();
+      rows.forEach(row => {
+        playersMap.set(row._id.toString(), {
+          id: row._id.toString(),
+          username: row.username,
+          score: 0
+        });
+      });
+      storedPairings.rounds.forEach(round => {
+        round.pairings.forEach(pairing => {
+          const player1 = playersMap.get(pairing.player1.id.toString());
+          const player2 = playersMap.get(pairing.player2.id.toString());
+          if (player1) player1.score = pairing.player1.score;
+          if (player2) player2.score = pairing.player2.score;
+        });
+        if (round.byePlayer) {
+          const byePlayer = playersMap.get(round.byePlayer.id.toString());
+          if (byePlayer) byePlayer.score = round.byePlayer.score;
+        }
+      });
+      rankings = Array.from(playersMap.values())
+        .sort((a, b) => b.score - a.score)
+        .map((p, index) => ({
+          rank: index + 1,
+          playerName: p.username,
+          score: p.score
+        }));
+    }
+    res.json({ rankings, tournamentId });
+  } catch (error) {
+    console.error('Error fetching rankings:', error);
+    res.status(500).json({ error: 'Failed to fetch rankings' });
   }
-
-  res.json({ rankings, tournamentId });
 });
 
 
