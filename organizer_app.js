@@ -65,22 +65,15 @@ router.get('/api/profile', async (req, res) => {
   }
 });
 
+// Coordinators API
 router.get('/api/coordinators', async (req, res) => {
   try {
     const db = await connectDB();
     const coordinators = await db.collection('users')
-      .find({ 
-        role: 'coordinator',
-        isDeleted: { $ne: 1 }
-      })
-      .project({ 
-        name: 1, 
-        email: 1, 
-        college: 1 
-      })
+      .find({ role: 'coordinator' })
+      .project({ name: 1, email: 1, college: 1, isDeleted: 1 })
       .toArray();
 
-    console.log('Fetched coordinators:', coordinators.length);
     res.json(coordinators);
   } catch (error) {
     console.error('Error fetching coordinators:', error);
@@ -88,25 +81,57 @@ router.get('/api/coordinators', async (req, res) => {
   }
 });
 
+// Remove Coordinator API
 router.delete('/api/coordinators/:email', async (req, res) => {
   try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'organizer') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const db = await connectDB();
-    const email = decodeURIComponent(req.params.email);
-    
     const result = await db.collection('users').updateOne(
-      { email: email, role: 'coordinator' },
-      { $set: { isDeleted: 1 } }
+      { email: email, role: 'coordinator', isDeleted: { $ne: 1 } },
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: req.session.userEmail } }
     );
 
     if (result.modifiedCount > 0) {
-      console.log('Coordinator removed:', email);
       res.json({ success: true, message: 'Coordinator removed successfully' });
     } else {
-      res.status(404).json({ success: false, message: 'Coordinator not found' });
+      res.status(404).json({ error: 'Coordinator not found' });
     }
   } catch (error) {
     console.error('Error removing coordinator:', error);
-    res.status(500).json({ success: false, error: 'Failed to remove coordinator' });
+    res.status(500).json({ error: 'Failed to remove coordinator' });
+  }
+});
+
+// Restore Coordinator API
+router.patch('/api/coordinators/restore/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'organizer') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection('users').updateOne(
+      { email: email, role: 'coordinator', isDeleted: 1 },
+      { $set: { isDeleted: 0, restored_date: new Date(), restored_by: req.session.userEmail } }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.json({ success: true, message: 'Coordinator restored successfully' });
+    } else {
+      res.status(404).json({ error: 'Coordinator not found or already restored' });
+    }
+  } catch (error) {
+    console.error('Error restoring coordinator:', error);
+    res.status(500).json({ error: 'Failed to restore coordinator' });
   }
 });
 
@@ -335,10 +360,15 @@ router.delete('/api/organizers/:email', async (req, res) => {
   try {
     const db = await connectDB();
     const email = decodeURIComponent(req.params.email);
-    
+
+    // Auth check
+    if (!req.session.userEmail || req.session.userRole !== 'organizer') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const result = await db.collection('users').updateOne(
-      { email: email, role: 'organizer' },
-      { $set: { isDeleted: 1 } }
+      { email: email, role: 'organizer', isDeleted: { $ne: 1 } },
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: req.session.userEmail } }
     );
 
     if (result.modifiedCount > 0) {
