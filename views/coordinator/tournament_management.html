@@ -541,9 +541,6 @@
     </div>
 
     <script>
-    // ===============================
-    // 🧠 Client-side Tournament Management JS
-    // ===============================
 
     const tournamentsTable = document.getElementById('tournamentsTable');
     const messagesContainer = document.getElementById('messagesContainer');
@@ -553,7 +550,6 @@
 
     async function fetchTournaments() {
         try {
-            // 🔹 API: GET /coordinator/api/tournaments
             const res = await fetch('/coordinator/api/tournaments');
             if (!res.ok) throw new Error(`Failed: ${res.status}`);
             const data = await res.json();
@@ -729,10 +725,10 @@
                 errors.tournamentDate = 'Invalid date format.';
                 isValid = false;
             } 
-            /*else if (inputDate < today) {
+            else if (inputDate < today) {
                 errors.tournamentDate = 'Date cannot be in the past.';
                 isValid = false;
-            }*/
+            }
         }
 
         // Time
