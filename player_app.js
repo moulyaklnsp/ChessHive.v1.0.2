@@ -555,32 +555,11 @@ router.delete('/api/deleteAccount', async (req, res) => {
 
     const playerId = user._id;
 
-    // 🔹 Soft delete using integer flag (1)
+    // Soft delete in users collection (includes deleted_by and deletedAt)
     await db.collection('users').updateOne(
       { _id: playerId },
-      { $set: { isDeleted: 1, deletedAt: new Date() } }
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: req.session.userEmail } }
     );
-
-    await db.collection('player_stats').updateOne(
-      { player_id: playerId },
-      { $set: { isDeleted: 1, deletedAt: new Date() } }
-    );
-
-    await db.collection('user_balances').updateOne(
-      { user_id: playerId },
-      { $set: { isDeleted: 1, deletedAt: new Date() } }
-    );
-
-    await db.collection('subscriptionstable').updateOne(
-      { username: req.session.userEmail },
-      { $set: { isDeleted: 1, deletedAt: new Date() } }
-    );
-
-    await db.collection('sales').updateMany(
-      { buyer: user.name },
-      { $set: { isDeleted: 1, deletedAt: new Date() } }
-    );
-
     req.session.destroy(() => {
       res.clearCookie('connect.sid');
       res.json({ message: 'Account deleted successfully (soft delete)' });
