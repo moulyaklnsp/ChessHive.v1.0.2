@@ -1,457 +1,502 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Coordinator Management - ChessHive</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <style>
-    :root {
-      --sea-green: #2E8B57;
-      --cream: #FFFDD0;
-      --sky-blue: #87CEEB;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinator Management - ChessHive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --sea-green: #2E8B57;
+            --cream: #FFFDD0;
+            --sky-blue: #87CEEB;
+        }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    body {
-      font-family: 'Playfair Display', serif;
-      background-color: var(--cream);
-      color: var(--sea-green);
-      min-height: 100vh;
-      padding: 2rem;
-    }
+        body {
+            font-family: 'Playfair Display', serif;
+            background-color: var(--cream);
+            color: var(--sea-green);
+            min-height: 100vh;
+            padding: 2rem;
+        }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
 
-    h2 {
-      font-family: 'Cinzel', serif;
-      font-size: 2.5rem;
-      color: var(--sea-green);
-      margin-bottom: 2rem;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-    }
+        h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--sea-green);
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
 
-    h2::before {
-      content: '👥';
-      font-size: 2.5rem;
-    }
+        h2::before {
+            content: '♟️';
+            font-size: 2rem;
+        }
 
-    .controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
+        .management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
 
-    .search-box {
-      flex: 1;
-      max-width: 400px;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      position: relative;
-    }
+        .table-div {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
 
-    .search-box select {
-      padding: 0.8rem;
-      border: 2px solid var(--sea-green);
-      border-radius: 8px;
-      font-size: 1rem;
-      font-family: 'Playfair Display', serif;
-      background-color: var(--cream);
-      color: var(--sea-green);
-      transition: all 0.3s ease;
-      cursor: pointer;
-      width: 150px;
-    }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
 
-    .search-box select:focus {
-      outline: none;
-      border-color: var(--sky-blue);
-      box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
-    }
+        th {
+            background-color: var(--sea-green);
+            color: var(--cream);
+            padding: 1.2rem;
+            text-align: left;
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+        }
 
-    .search-box input {
-      flex: 1;
-      padding: 0.8rem 1rem 0.8rem 2.5rem;
-      border: 2px solid var(--sea-green);
-      border-radius: 8px;
-      font-size: 1rem;
-      font-family: 'Playfair Display', serif;
-      transition: all 0.3s ease;
-      background-color: var(--cream);
-      color: var(--sea-green);
-    }
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(46, 139, 87, 0.2);
+        }
 
-    .search-box input::placeholder {
-      color: rgba(46, 139, 87, 0.6);
-      font-style: italic;
-    }
+        tr:hover {
+            background-color: rgba(135, 206, 235, 0.1);
+        }
 
-    .search-box i {
-      position: absolute;
-      left: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--sea-green);
-      font-size: 1.2rem;
-    }
+        .controls {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-bottom: 2 Sistine Chapel frescoes, Michelangelo, 1508-1512
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
 
-    .search-box input:focus {
-      outline: none;
-      border-color: var(--sky-blue);
-      box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
-    }
+        .search-box {
+            flex: 1;
+            max-width: 300px;
+            position: relative;
+        }
 
-    .table-div {
-      background: white;
-      border-radius: 15px;
-      padding: 2rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      overflow-x: auto;
-    }
+        .search-box input {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 2.5rem;
+            border: 2px solid var(--sea-green);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Playfair Display', serif;
+            transition: all 0.3s ease;
+            background-color: white;
+            color: var(--sea-green);
+        }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 2rem;
-    }
+        .search-box input::placeholder {
+            color: rgba(46, 139, 87, 0.6);
+            font-style: italic;
+        }
 
-    th {
-      background-color: var(--sea-green);
-      color: var(--cream);
-      padding: 1.2rem;
-      text-align: left;
-      font-family: 'Cinzel', serif;
-    }
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--sea-green);
+            font-size: 1.2rem;
+        }
 
-    td {
-      padding: 1rem;
-      border-bottom: 1px solid rgba(46, 139, 87, 0.2);
-    }
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--sky-blue);
+            box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
+        }
 
-    tr:hover {
-      background-color: rgba(135, 206, 235, 0.1);
-    }
+        .attribute-select {
+            padding: 0.8rem;
+            border: 2px solid var(--sea-green);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Playfair Display', serif;
+            background-color: white;
+            color: var(--sea-green);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
 
-    .action-buttons {
-      display: flex;
-      gap: 0.5rem;
-    }
+        .attribute-select:focus {
+            outline: none;
+            border-color: var(--sky-blue);
+            box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
+        }
 
-    button {
-      background-color: #ff6b6b;
-      color: white;
-      border: none;
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-family: 'Cinzel', serif;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
+        button:hover {
+            background-color: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
 
-    .add-btn {
-      background-color: var(--sea-green);
-    }
+        .restore-btn {
+            background-color: var(--sky-blue);
+            color: var(--sea-green);
+        }
 
-    .export-btn {
-      background-color: var(--sky-blue);
-      color: var(--sea-green);
-    }
+        .restore-btn:hover {
+            background-color: #6CB4D1;
+        }
 
-    .back-container {
-      margin-top: 2rem;
-      text-align: right;
-    }
+        .back-container {
+            margin-top: 2rem;
+            text-align: right;
+        }
 
-    .back {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background-color: var(--sea-green);
-      color: var(--cream);
-      text-decoration: none;
-      padding: 0.8rem 1.5rem;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-      font-family: 'Cinzel', serif;
-      font-weight: bold;
-    }
+        .back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--sea-green);
+            color: var(--cream);
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+        }
 
-    .back:hover {
-      background-color: #236B43;
-      transform: translateY(-2px);
-    }
+        .back:hover {
+            background-color: #236B43;
+            transform: translateY(-2px);
+        }
 
-    .empty-message {
-      text-align: center;
-      padding: 2rem;
-      color: var(--sea-green);
-      font-style: italic;
-    }
+        .empty-message {
+            text-align: center;
+            padding: 2rem;
+            color: var(--sea-green);
+            font-style: italic;
+        }
 
-    .more-container {
-      text-align: center;
-      margin: 1rem 0;
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-    }
+        .searchBarContainer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 20px auto;
+        }
 
-    .more, .hide {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background-color: var(--sky-blue);
-      color: var(--sea-green);
-      text-decoration: none;
-      padding: 0.8rem 1.5rem;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-      font-family: 'Cinzel', serif;
-      font-weight: bold;
-      cursor: pointer;
-    }
+        .searchBarContainer select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
 
-    .more:hover, .hide:hover {
-      background-color: #5f9ece;
-      transform: translateY(-2px);
-    }
+        .searchBarContainer select:focus {
+            outline: none;
+            border-color: #007bff;
+        }
 
-    .searchBarContainer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  max-width: 500px;
-  margin: 20px auto;
-}
+        .searchBarContainer input {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
 
-/* Dropdown styling */
-.searchBarContainer select {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-}
+        .searchBarContainer input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
 
-.searchBarContainer select:focus {
-  outline: none;
-  border-color: #007bff;
-}
+        .more-container {
+            text-align: center;
+            margin: 1rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
 
-/* Input styling */
-.searchBarContainer input {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  transition: border-color 0.3s ease;
-}
+        .more, .hide {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--sky-blue);
+            color: var(--sea-green);
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-.searchBarContainer input:focus {
-  outline: none;
-  border-color: #007bff;
-}
+        .more:hover, .hide:hover {
+            background-color: #5f9ece;
+            transform: translateY(-2px);
+        }
 
-    @media (max-width: 768px) {
-      .controls {
-        flex-direction: column;
-      }
+        .row-counter {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--sea-green);
+            background-color: rgba(46, 139, 87, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: inline-block;
+            width: auto;
+            margin-left: auto;
+            margin-right: auto;
+        }
 
-      .search-box {
-        max-width: 100%;
-        flex-direction: column;
-      }
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
 
-      .search-box select {
-        width: 100%;
-        margin-bottom: 0.5rem;
-      }
+            .search-box {
+                max-width: 100%;
+            }
 
-      .search-box input {
-        width: 100%;
-      }
+            td, th {
+                padding: 0.8rem;
+            }
 
-      td, th {
-        padding: 0.8rem;
-      }
+            .back-container {
+                text-align: center;
+            }
 
-      .action-buttons {
-        flex-direction: column;
-      }
+            .more-container {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
 
-      .back-container {
-        text-align: center;
-      }
-
-      .more-container {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-    }
-  </style>
+            .row-counter {
+                font-size: 1rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Coordinator Management</h2>
-
-    <div class="table-div">
-      <div class="searchBarContainer"></div>
-      <table>
-        <thead>
-          <tr>
-            <th><i class="fas fa-user"></i> Name</th>
-            <th><i class="fas fa-envelope"></i> Email</th>
-            <th><i class="fas fa-university"></i> Assigned College</th>
-            <th><i class="fas fa-cogs"></i> Actions</th>
-          </tr>
-        </thead>
-        <tbody id="coordinatorTable">
-          <!-- Coordinators will be loaded dynamically -->
-        </tbody>
-      </table>
-
-      <div class="more-container">
-        <a href="#" class="more" id="moreLink" style="display:none;">
-          <i class="fas fa-chevron-down"></i> More
-        </a>
-        <a href="#" class="hide" id="hideLink" style="display:none;">
-          <i class="fas fa-chevron-up"></i> Hide
-        </a>
-      </div>
-
-      <!-- Back Button -->
-      <div class="back-container">
-        <a href="/organizer/organizer_dashboard" class="back">
-          <i class="fas fa-arrow-left"></i> Back to Dashboard
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/searchbar.js"></script> 
-  <script>
-    async function loadCoordinators() {
-      try {
-        const res = await fetch('/organizer/api/coordinators');
-        const coordinators = await res.json();
-        renderCoordinators(coordinators);
-      } catch (err) {
-        console.error('Error loading coordinators:', err);
-      }
-    }
-
-    function renderCoordinators(coordinators) {
-      const table = document.getElementById('coordinatorTable');
-      table.innerHTML = '';
-
-      if (!coordinators || coordinators.length === 0) {
-        table.innerHTML = `
-          <tr>
-            <td colspan="4" class="empty-message">
-              <i class="fas fa-info-circle"></i> No coordinators available.
-            </td>
-          </tr>`;
-        return;
-      }
-
-      coordinators.forEach((coordinator, index) => {
-        const row = document.createElement('tr');
-        if (index >= 5) row.style.display = 'none';
-        row.className = 'coordinator-row';
-        row.innerHTML = `
-          <td>${coordinator.name}</td>
-          <td>${coordinator.email}</td>
-          <td>${coordinator.college}</td>
-          <td>
-            <div class="action-buttons">
-              <button onclick="removeCoordinator('${coordinator.email}', this)">
-                <i class="fas fa-user-minus"></i> Remove
-              </button>
+    <div class="container">
+        <h2>Coordinator Management</h2>
+        
+        <div class="table-div">
+            <div class="row-counter" id="coordinatorsCounter">0 / 0</div>
+            <div class="searchBarContainer"></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-user"></i> Name</th>
+                        <th><i class="fas fa-envelope"></i> Email</th>
+                        <th><i class="fas fa-university"></i> Assigned College</th>
+                        <th><i class="fas fa-cog"></i> Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="coordinatorTable">
+                    <tr>
+                        <td colspan="4" class="empty-message">
+                            <i class="fas fa-info-circle"></i> Loading coordinators...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="more-container">
+                <a href="#" class="more" id="coordinatorsMoreLink" style="display:none;">
+                    <i class="fas fa-chevron-down"></i> More
+                </a>
+                <a href="#" class="hide" id="coordinatorsHideLink" style="display:none;">
+                    <i class="fas fa-chevron-up"></i> Hide
+                </a>
             </div>
-          </td>
-        `;
-        table.appendChild(row);
-      });
+            <div class="back-container">
+                <a href="/organizer/organizer_dashboard" class="back">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
 
-      // More/Hide toggle
-      const moreBtn = document.getElementById('moreLink');
-      const hideBtn = document.getElementById('hideLink');
-      if (coordinators.length > 5) {
-        moreBtn.style.display = 'inline-flex';
-        hideBtn.style.display = 'none';
+    <script src="/js/searchbar.js"></script>
+    <script>
+        async function fetchCoordinators() {
+            const tbody = document.getElementById('coordinatorTable');
+            const counter = document.getElementById('coordinatorsCounter');
+            const moreLink = document.getElementById('coordinatorsMoreLink');
+            const hideLink = document.getElementById('coordinatorsHideLink');
 
-        moreBtn.onclick = (e) => {
-          e.preventDefault();
-          table.querySelectorAll('.coordinator-row').forEach(row => row.style.display = '');
-          moreBtn.style.display = 'none';
-          hideBtn.style.display = 'inline-flex';
-        };
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Loading coordinators...</td></tr>';
 
-        hideBtn.onclick = (e) => {
-          e.preventDefault();
-          table.querySelectorAll('.coordinator-row').forEach((row, idx) => {
-            if (idx >= 5) row.style.display = 'none';
-          });
-          moreBtn.style.display = 'inline-flex';
-          hideBtn.style.display = 'none';
-        };
-      } else {
-        moreBtn.style.display = 'none';
-        hideBtn.style.display = 'none';
-      }
-    }
+            try {
+                const res = await fetch('/organizer/api/coordinators');
+                const coordinators = await res.json();
+                console.log('Coordinators array:', coordinators);
 
-    async function removeCoordinator(email, btn) {
-      if (!confirm(`Are you sure you want to remove coordinator ${email}?`)) return;
-      try {
-        const res = await fetch(`/organizer/api/coordinators/${encodeURIComponent(email)}`, {
-          method: 'DELETE'
-        });
-        const data = await res.json();
-        if (data.success) {
-          btn.closest('tr').remove();
-        } else {
-          alert('Failed to remove coordinator.');
+                if (!Array.isArray(coordinators) || !coordinators.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No coordinators available.</td></tr>';
+                    counter.textContent = '0 / 0';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                coordinators.forEach((coordinator, index) => {
+                    const tr = document.createElement('tr');
+                    tr.classList.add('coordinator-row');
+                    tr.dataset.isDeleted = coordinator.isDeleted ? '1' : '0';
+                    if (index >= 5) tr.style.display = 'none';
+
+                    const buttonClass = coordinator.isDeleted ? 'restore-btn' : '';
+                    const buttonText = coordinator.isDeleted ? 'Restore' : 'Remove';
+                    const buttonIcon = coordinator.isDeleted ? 'fas fa-user-plus' : 'fas fa-user-minus';
+                    const buttonAction = coordinator.isDeleted ? `restoreCoordinator('${coordinator.email}', this)` : `removeCoordinator('${coordinator.email}', this)`;
+
+                    tr.innerHTML = `
+                        <td>${coordinator.name}</td>
+                        <td>${coordinator.email}</td>
+                        <td>${coordinator.college}</td>
+                        <td>
+                            <button class="${buttonClass}" onclick="${buttonAction}">
+                                <i class="${buttonIcon}"></i> ${buttonText}
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                counter.textContent = `${Math.min(5, coordinators.length)} / ${coordinators.length}`;
+                moreLink.style.display = coordinators.length > 5 ? 'inline-flex' : 'none';
+                hideLink.style.display = 'none';
+
+                // More/Hide functionality
+                let visibleRows = 5;
+                const rowsPerPage = 5;
+                const rows = document.querySelectorAll('.coordinator-row');
+
+                moreLink.onclick = e => {
+                    e.preventDefault();
+                    for (let i = visibleRows; i < Math.min(visibleRows + rowsPerPage, rows.length); i++) {
+                        rows[i].style.display = '';
+                    }
+                    visibleRows += rowsPerPage;
+                    counter.textContent = `${Math.min(visibleRows, rows.length)} / ${rows.length}`;
+                    moreLink.style.display = visibleRows < rows.length ? 'inline-flex' : 'none';
+                    hideLink.style.display = visibleRows > 5 ? 'inline-flex' : 'none';
+                };
+
+                hideLink.onclick = e => {
+                    e.preventDefault();
+                    rows.forEach((row, index) => {
+                        row.style.display = index < 5 ? '' : 'none';
+                    });
+                    visibleRows = 5;
+                    counter.textContent = `5 / ${rows.length}`;
+                    moreLink.style.display = rows.length > 5 ? 'inline-flex' : 'none';
+                    hideLink.style.display = 'none';
+                };
+
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-message"><i class="fas fa-exclamation-triangle"></i> Failed to load coordinators.</td></tr>';
+                counter.textContent = '0 / 0';
+            }
         }
-      } catch (err) {
-        console.error('Error removing coordinator:', err);
-      }
-    }
 
-    // Initial load
-    loadCoordinators();
-  </script>
+        async function removeCoordinator(email, button) {
+            if (!confirm(`Are you sure you want to remove ${email}?`)) return;
+            try {
+                const res = await fetch(`/organizer/api/coordinators/${encodeURIComponent(email)}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    const row = button.closest('tr');
+                    row.dataset.isDeleted = '1';
+                    button.className = 'restore-btn';
+                    button.innerHTML = '<i class="fas fa-user-plus"></i> Restore';
+                    button.onclick = () => restoreCoordinator(email, button);
+                    alert('Coordinator removed successfully.');
+                } else {
+                    alert('Failed to remove coordinator.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error removing coordinator.');
+            }
+        }
+
+        async function restoreCoordinator(email, button) {
+            if (!confirm(`Are you sure you want to restore ${email}?`)) return;
+            try {
+                const res = await fetch(`/organizer/api/coordinators/restore/${encodeURIComponent(email)}`, {
+                    method: 'PATCH'
+                });
+                if (res.ok) {
+                    const row = button.closest('tr');
+                    row.dataset.isDeleted = '0';
+                    button.className = '';
+                    button.innerHTML = '<i class="fas fa-user-minus"></i> Remove';
+                    button.onclick = () => removeCoordinator(email, button);
+                    alert('Coordinator restored successfully.');
+                } else {
+                    alert('Failed to restore coordinator.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error restoring coordinator.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchCoordinators);
+    </script>
 </body>
 </html>
