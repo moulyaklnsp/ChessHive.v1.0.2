@@ -239,7 +239,8 @@ app.post('/players/restore/:id', async (req, res) => {
   try {
     const result = await db.collection('users').updateOne(
       { _id: new ObjectId(id), role: 'player' },
-      { $set: { isDeleted: 0, deleted_date: null, deleted_by: null } }
+      { $set: { isDeleted: 0 },
+        $unset: { deleted_date: "", deleted_by: "" } }
     );
 
     if (result.matchedCount === 0) {
