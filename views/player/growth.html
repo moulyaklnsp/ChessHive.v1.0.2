@@ -132,7 +132,7 @@
 <body>
   <div class="container">
     <h2>Player Growth Analytics</h2>
-<!-- ✅ Compare Player Section -->
+
 <div class="form-container" style="background:white;padding:1.5rem;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.1);margin-bottom:2rem;">
   <h3 style="text-align:center;color:var(--sea-green);font-family:'Cinzel',serif;margin-bottom:1rem;">
     <i class="fas fa-user-compare"></i> Compare with Another Player
@@ -149,7 +149,6 @@
   </div>
   <div id="compareResult" style="margin-top:1.5rem;text-align:center;"></div>
 </div>
-    <!-- ✅ Stats Section -->
     <div class="stats" id="statsSection">
       <div class="stat-card">
         <div class="stat-value" id="gamesPlayed">--</div>
@@ -169,12 +168,10 @@
       </div>
     </div>
 
-    <!-- ✅ Chart Section -->
     <div class="chart-container">
       <canvas id="growthChart"></canvas>
     </div>
 
-    <!-- ✅ Back Button -->
     <div class="back-container">
       <a href="/player/player_dashboard" class="back">
         <i class="fas fa-arrow-left"></i> Back to Dashboard
@@ -183,7 +180,6 @@
   </div>
 
   <script>
-    // ✅ Compare Player Functionality
 document.getElementById('compareBtn').addEventListener('click', async () => {
   const searchValue = document.getElementById('compareInput').value.trim();
   const resultDiv = document.getElementById('compareResult');
@@ -215,7 +211,8 @@ document.getElementById('compareBtn').addEventListener('click', async () => {
         <div style="background:rgba(135,206,235,0.1);padding:1rem;border-radius:8px;">
           <h4 style="font-family:'Cinzel',serif;color:var(--sky-blue);">${opponent.name}</h4>
           <p><strong>Rating:</strong> ${opponent.rating}</p>
-          <p><strong>Win Rate:</strong> ${opponent.winRate}%</p>
+          <p><strong>Win Rate:</strong> ${Math.round(opponent.winRate)}%</p>
+
         </div>
       </div>
     `;
