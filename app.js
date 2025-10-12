@@ -83,7 +83,9 @@ app.post('/api/login', async (req, res) => {
         success: false,
         message: 'Account has been deleted',
         deletedUserId: user._id.toString(),
-        deletedUserRole: user.role
+        deletedUserRole: user.role,
+        deleted_by: user.deleted_by || null,
+        sessionEmail: email
       });
     }
     req.session.userID = user._id;
