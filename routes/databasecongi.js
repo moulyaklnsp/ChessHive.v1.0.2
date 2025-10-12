@@ -62,7 +62,9 @@ async function initializeCollections(db) {
         college: { bsonType: 'string' },
         phone: { bsonType: 'string' },
         AICF_ID: { bsonType: 'string' },
-        FIDE_ID: { bsonType: 'string' }
+        FIDE_ID: { bsonType: 'string' },
+        deleted_by: { bsonType: 'string' },
+        deleted_date: { bsonType: 'date' }
       }
     }
   }, [[{ email: 1 }, { unique: true }]]);
