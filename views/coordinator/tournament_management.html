@@ -575,76 +575,78 @@
         setTimeout(() => { messagesContainer.innerHTML = ''; }, 4000);
     }
 
-    function renderTournaments() {
-        tournamentsTable.innerHTML = '';
+   function renderTournaments() {
+    tournamentsTable.innerHTML = '';
 
-        if (!tournaments.length) {
-            tournamentsTable.innerHTML = `
-                <tr>
-                    <td colspan="10" class="empty-message">
-                        <i class="fas fa-info-circle"></i> No tournaments available.
-                    </td>
-                </tr>
-            `;
-            document.getElementById('tournamentsPagination').style.display = 'none';
-            return;
-        }
+    // Filter out tournaments with "Removed" status
+    const activeTournaments = tournaments.filter(tournament => tournament.status !== 'Removed');
 
-        tournaments.forEach((tournament, index) => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Normalize to start of day
-            const tDate = new Date(tournament.date);
-            tDate.setHours(0, 0, 0, 0); // Normalize to start of day
-            let status = tournament.status || 'Pending';
-            let statusClass = 'status-pending';
-
-            if (status === 'Approved') {
-                if (tDate < today) {
-                    console.log(`${tDate.toDateString()} < ${today.toDateString()}`);
-                    status = 'Completed';
-                    statusClass = 'status-completed';
-                } else if (tDate.toDateString() === today.toDateString()) {
-                    status = 'Ongoing';
-                    statusClass = 'status-ongoing';
-                } else {
-                    status = 'Yet to Start';
-                    statusClass = 'status-yet-to-start';
-                }
-            }
-
-            const tr = document.createElement('tr');
-            tr.className = 'tournament-row';
-            tr.style.display = index < visibleRows ? '' : 'none';
-              tr.innerHTML = `
-                    <td>${tournament.name}</td>
-                    <td>${tDate.toLocaleDateString()}</td>
-                    <td>${tournament.time}</td>
-                    <td>${tournament.location}</td>
-                    <td>₹${tournament.entry_fee}</td>
-                    <td>${tournament.type}</td>
-                    <td>${tournament.noOfRounds}</td>
-                    <td class="${statusClass}"><i class="fas fa-circle"></i> ${status}</td>
-                    <td>
-                        ${tournament.status==='Approved' ? `<a href="/coordinator/enrolled_players?tournament_id=${tournament._id}" class="btn"><i class="fas fa-users"></i> Players</a>
-                        ${tournament.type==='Individual'? `<a href="/coordinator/pairings?tournament_id=${tournament._id}&rounds=${tournament.noOfRounds}" class="btn"><i class="fas fa-chess-board"></i> Pairings</a>
-                        <a href="/coordinator/rankings?tournament_id=${tournament._id}" class="btn"><i class="fas fa-medal"></i> Rankings</a>` : ''}` : ''}
-                    </td>
-                    <td>
-                        <button class="btn btn-remove" onclick="removeTournament('${tournament._id}')"><i class="fas fa-trash"></i> Remove</button>
-                        ${status === 'Completed' ? 
-                          (tournament.feedback_requested ? 
-                            `<a href="/coordinator/feedback_view?tournament_id=${tournament._id}" target="_blank" class="btn"><i class="fas fa-eye"></i> View Feedback</a>` : 
-                            `<button class="btn" onclick="requestFeedback('${tournament._id}')"><i class="fas fa-comment-dots"></i> Ask Feedback</button>`) : ''}
-                    </td>
-                `;
-                tournamentsTable.appendChild(tr);
-        });
-
-        // Show/hide pagination
-        const pagination = document.getElementById('tournamentsPagination');
-        pagination.style.display = tournaments.length > 5 ? 'flex' : 'none';
+    if (!activeTournaments.length) {
+        tournamentsTable.innerHTML = `
+            <tr>
+                <td colspan="10" class="empty-message">
+                    <i class="fas fa-info-circle"></i> No tournaments available.
+                </td>
+            </tr>
+        `;
+        document.getElementById('tournamentsPagination').style.display = 'none';
+        return;
     }
 
+    activeTournaments.forEach((tournament, index) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        const tDate = new Date(tournament.date);
+        tDate.setHours(0, 0, 0, 0); // Normalize to start of day
+        let status = tournament.status || 'Pending';
+        let statusClass = 'status-pending';
+
+        if (status === 'Approved') {
+            if (tDate < today) {
+                console.log(`${tDate.toDateString()} < ${today.toDateString()}`);
+                status = 'Completed';
+                statusClass = 'status-completed';
+            } else if (tDate.toDateString() === today.toDateString()) {
+                status = 'Ongoing';
+                statusClass = 'status-ongoing';
+            } else {
+                status = 'Yet to Start';
+                statusClass = 'status-yet-to-start';
+            }
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = 'tournament-row';
+        tr.style.display = index < visibleRows ? '' : 'none';
+        tr.innerHTML = `
+            <td>${tournament.name}</td>
+            <td>${tDate.toLocaleDateString()}</td>
+            <td>${tournament.time}</td>
+            <td>${tournament.location}</td>
+            <td>₹${tournament.entry_fee}</td>
+            <td>${tournament.type}</td>
+            <td>${tournament.noOfRounds}</td>
+            <td class="${statusClass}"><i class="fas fa-circle"></i> ${status}</td>
+            <td>
+                ${tournament.status === 'Approved' ? `<a href="/coordinator/enrolled_players?tournament_id=${tournament._id}" class="btn"><i class="fas fa-users"></i> Players</a>
+                ${tournament.type === 'Individual' ? `<a href="/coordinator/pairings?tournament_id=${tournament._id}&rounds=${tournament.noOfRounds}" class="btn"><i class="fas fa-chess-board"></i> Pairings</a>
+                <a href="/coordinator/rankings?tournament_id=${tournament._id}" class="btn"><i class="fas fa-medal"></i> Rankings</a>` : ''}` : ''}
+            </td>
+            <td>
+                <button class="btn btn-remove" onclick="removeTournament('${tournament._id}')"><i class="fas fa-trash"></i> Remove</button>
+                ${status === 'Completed' ? 
+                  (tournament.feedback_requested ? 
+                    `<a href="/coordinator/feedback_view?tournament_id=${tournament._id}" target="_blank" class="btn"><i class="fas fa-eye"></i> View Feedback</a>` : 
+                    `<button class="btn" onclick="requestFeedback('${tournament._id}')"><i class="fas fa-comment-dots"></i> Ask Feedback</button>`) : ''}
+            </td>
+        `;
+        tournamentsTable.appendChild(tr);
+    });
+
+    // Show/hide pagination
+    const pagination = document.getElementById('tournamentsPagination');
+    pagination.style.display = activeTournaments.length > 5 ? 'flex' : 'none';
+}
      async function requestFeedback(id) {
             try {
                 const res = await fetch(`/coordinator/api/tournaments/${id}/request-feedback`, {

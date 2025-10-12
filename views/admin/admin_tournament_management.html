@@ -397,7 +397,7 @@
                 const response = await fetch('/admin/api/tournaments');
                 const data = await response.json();
                 const tournaments = Array.isArray(data.tournaments) ? data.tournaments : [];
-    console.log('Tournaments array:', tournaments); // Log the tournaments array
+                console.log('Tournaments array:', tournaments); // Log the tournaments array
 
                 if (!tournaments.length) {
                     tbody.innerHTML = '<tr><td colspan="7" class="empty-message"><i class="fas fa-info-circle"></i> No approved tournaments available.</td></tr>';

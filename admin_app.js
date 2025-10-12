@@ -47,7 +47,47 @@ router.get('/api/tournaments', async (req, res) => {
       .sort({ date: -1 })
       .toArray();
 
-    res.json({ tournaments });
+    // Get all tournament IDs
+    const tournamentIds = tournaments.map(t => t._id);
+
+    // Fetch individual enrollments
+    const individualCounts = await db.collection('tournament_players').aggregate([
+      { $match: { tournament_id: { $in: tournamentIds } } },
+      { $group: { _id: '$tournament_id', count: { $sum: 1 } } }
+    ]).toArray();
+
+    // Fetch team enrollments
+    const teamCounts = await db.collection('enrolledtournaments_team').aggregate([
+      { $match: { 
+        tournament_id: { $in: tournamentIds },
+        approved: 1  // Only count approved teams
+      } },
+      { $group: { _id: '$tournament_id', count: { $sum: 1 } } },
+      { $project: { count: { $multiply: ['$count', 3] } } }  // Each team has 3 players
+    ]).toArray();
+
+    // Create maps for quick lookup
+    const individualMap = {};
+    individualCounts.forEach(item => {
+      individualMap[item._id.toString()] = item.count || 0;
+    });
+
+    const teamMap = {};
+    teamCounts.forEach(item => {
+      teamMap[item._id.toString()] = item.count || 0;
+    });
+
+    // Add player_count to each tournament
+    const tournamentsWithCounts = tournaments.map(tournament => {
+      const indCount = individualMap[tournament._id.toString()] || 0;
+      const teamCount = teamMap[tournament._id.toString()] || 0;
+      return {
+        ...tournament,
+        player_count: indCount + teamCount
+      };
+    });
+
+    res.json({ tournaments: tournamentsWithCounts });
   } catch (error) {
     console.error('Error fetching tournaments:', error);
     res.status(500).json({ error: 'Failed to fetch tournaments' });

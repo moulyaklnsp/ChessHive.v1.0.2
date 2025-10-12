@@ -11,6 +11,8 @@
             --sea-green: #2E8B57;
             --cream: #FFFDD0;
             --sky-blue: #87CEEB;
+            --dark-green: #236B43;
+            --light-gray: #f9f9f9;
         }
 
         * {
@@ -125,7 +127,7 @@
         }
 
         button:hover {
-            background-color: #236B43;
+            background-color: var(--dark-green);
             transform: translateY(-2px);
         }
 
@@ -197,7 +199,7 @@
         }
 
         .back:hover {
-            background-color: #236B43;
+            background-color: var(--dark-green);
             transform: translateY(-2px);
         }
 
@@ -358,6 +360,37 @@
                 max-width: 100%;
             }
         }
+
+        .error-input {
+            border-color: #c62828;
+            box-shadow: 0 0 5px rgba(198, 40, 40, 0.3);
+        }
+
+        .error-message {
+            color: #c62828;
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+            display: none;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .success {
+            background-color: rgba(46, 139, 87, 0.1);
+            color: var(--sea-green);
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
     </style>
 </head>
 <body>
@@ -369,21 +402,25 @@
                 <div class="input-group">
                     <label><i class="fas fa-heading"></i> Meeting Title</label>
                     <input type="text" name="title" placeholder="Enter meeting title" required>
+                    <div class="error-message" id="titleError"></div>
                 </div>
                 
                 <div class="input-group">
                     <label><i class="fas fa-calendar"></i> Date</label>
                     <input type="date" name="date" required>
+                    <div class="error-message" id="dateError"></div>
                 </div>
                 
                 <div class="input-group">
                     <label><i class="fas fa-clock"></i> Time</label>
                     <input type="time" name="time" required>
+                    <div class="error-message" id="timeError"></div>
                 </div>
                 
                 <div class="input-group">
                     <label><i class="fas fa-link"></i> Meeting Link</label>
                     <input type="text" name="link" placeholder="Zoom/Google Meet link" required>
+                    <div class="error-message" id="linkError"></div>
                 </div>
 
                 <button type="submit">
@@ -451,26 +488,146 @@
 
     <script src="/js/searchbar.js"></script>
     <script>
+      // Store meetings data for local updates
+      let organizedMeetings = [];
+      let upcomingMeetings = [];
+
+      // Show message function
+      function showMessage(msg, type = 'success') {
+        const form = document.getElementById('meetingForm');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}
+        `;
+        form.prepend(messageDiv);
+        setTimeout(() => messageDiv.remove(), 4000);
+      }
+
+      // Validate form function
+      function validateForm(formData) {
+        let isValid = true;
+        const errors = {};
+
+        // Reset error styles
+        ['title', 'date', 'time', 'link'].forEach(field => {
+            const input = document.querySelector(`[name="${field}"]`);
+            const errorElement = document.getElementById(`${field}Error`);
+            input.classList.remove('error-input');
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        });
+
+        // Meeting Title
+        const title = formData.title.trim();
+        if (!title) {
+            errors.title = 'Meeting title is required.';
+            isValid = false;
+        } else if (title.length < 3) {
+            errors.title = 'Meeting title must be at least 3 characters long.';
+            isValid = false;
+        } else if (!/^[a-zA-Z0-9\s\-&]+$/.test(title)) {
+            errors.title = 'Meeting title can only contain letters, numbers, spaces, hyphens, and &.';
+            isValid = false;
+        }
+
+        // Date
+        const date = formData.date;
+        if (!date) {
+            errors.date = 'Date is required.';
+            isValid = false;
+        } else {
+            const inputDate = new Date(date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (isNaN(inputDate.getTime())) {
+                errors.date = 'Invalid date format.';
+                isValid = false;
+            } else if (inputDate < today) {
+                errors.date = 'Date cannot be in the past.';
+                isValid = false;
+            }
+        }
+
+        // Time
+        const time = formData.time.trim();
+        if (!time) {
+            errors.time = 'Time is required.';
+            isValid = false;
+        } else if (!/^\d{2}:\d{2}$/.test(time)) {
+            errors.time = 'Invalid time format (use HH:MM).';
+            isValid = false;
+        }
+
+        // Meeting Link
+        const link = formData.link.trim();
+        if (!link) {
+            errors.link = 'Meeting link is required.';
+            isValid = false;
+        } else if (!(link.startsWith('http://') || link.startsWith('https://'))) {
+            errors.link = 'Meeting link must be a valid http or https URL.';
+            isValid = false;
+        }
+
+        // Display errors
+        Object.keys(errors).forEach(field => {
+            const errorElement = document.getElementById(`${field}Error`);
+            const input = document.querySelector(`[name="${field}"]`);
+            errorElement.textContent = errors[field];
+            errorElement.style.display = 'block';
+            input.classList.add('error-input');
+        });
+
+        return isValid;
+      }
+
       // Submit new meeting via API
       document.getElementById('meetingForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const body = Object.fromEntries(formData.entries());
-        console.log('Scheduling meeting with data:', body);
+        const formData = {
+            title: e.target.title.value,
+            date: e.target.date.value,
+            time: e.target.time.value,
+            link: e.target.link.value
+        };
+
+        if (!validateForm(formData)) {
+            showMessage('Please correct the errors in the form.', 'error');
+            return;
+        }
+
+        console.log('Scheduling meeting with data:', formData);
         try {
           const res = await fetch('/organizer/api/meetings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(formData)
           });
-          const data = await res.json();
-          if (data.success) {
-            alert('Meeting scheduled successfully!');
-            loadMeetings(); // reload tables
-            e.target.reset();
+
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Failed to schedule meeting');
           }
+
+          const response = await res.json();
+          showMessage(response.message || 'Meeting scheduled successfully!', 'success');
+          e.target.reset();
+
+          // Add locally to organized meetings and re-render
+          const newMeeting = {
+            title: formData.title,
+            date: formData.date,
+            time: formData.time,
+            link: formData.link
+          };
+          organizedMeetings.unshift(newMeeting);
+          renderMeetings(organizedMeetings, 'organizedMeetingsTable', 'organizedMoreLink', 'organizedHideLink');
+
+          // Refresh from server
+          loadMeetings();
         } catch (err) {
           console.error('Error scheduling meeting:', err);
+          showMessage(`Failed to schedule meeting: ${err.message}`, 'error');
         }
       });
 
@@ -479,13 +636,13 @@
         try {
           // Organized
           const orgRes = await fetch('/organizer/api/meetings/organized');
-          const organized = await orgRes.json();
-          renderMeetings(organized, 'organizedMeetingsTable', 'organizedMoreLink', 'organizedHideLink');
+          organizedMeetings = await orgRes.json();
+          renderMeetings(organizedMeetings, 'organizedMeetingsTable', 'organizedMoreLink', 'organizedHideLink');
 
           // Upcoming
           const upRes = await fetch('/organizer/api/meetings/upcoming');
-          const upcoming = await upRes.json();
-          renderMeetings(upcoming, 'upcomingMeetingsTable', 'upcomingMoreLink', 'upcomingHideLink');
+          upcomingMeetings = await upRes.json();
+          renderMeetings(upcomingMeetings, 'upcomingMeetingsTable', 'upcomingMoreLink', 'upcomingHideLink');
 
         } catch (err) {
           console.error('Error loading meetings:', err);
@@ -498,7 +655,7 @@
         table.innerHTML = '';
         if (!meetings || meetings.length === 0) {
           table.innerHTML = `<tr><td colspan="4" class="empty-message">
-            <i class="fas fa-info-circle"></i> No metings available.
+            <i class="fas fa-info-circle"></i> No meetings available.
           </td></tr>`;
           return;
         }

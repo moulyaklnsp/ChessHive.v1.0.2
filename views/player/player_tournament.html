@@ -439,431 +439,501 @@
   </a>
 
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const walletBalanceEl = document.getElementById('walletBalance');
-      const subscriptionMessageEl = document.getElementById('subscriptionMessage');
-      const messageContainerEl = document.getElementById('messageContainer');
-      const individualTableBody = document.getElementById('individualTournamentsTable');
-      const teamTableBody = document.getElementById('teamTournamentsTable');
-      let isLoading = false;
+document.addEventListener('DOMContentLoaded', async () => {
+  const walletBalanceEl = document.getElementById('walletBalance');
+  const subscriptionMessageEl = document.getElementById('subscriptionMessage');
+  const messageContainerEl = document.getElementById('messageContainer');
+  const individualTableBody = document.getElementById('individualTournamentsTable');
+  const teamTableBody = document.getElementById('teamTournamentsTable');
+  let isLoading = false;
+  
+  // Track visible rows for pagination
+  let individualVisibleCount = 5;
+  let teamVisibleCount = 5;
+  const ROWS_PER_PAGE = 5;
 
-      // Display error or success message
-      function showMessage(message, isError = false) {
-        messageContainerEl.innerHTML = `<div style="padding: 15px; border-radius: 5px; margin-bottom: 20px; background-color: ${isError ? 'var(--red)' : 'var(--sky-blue)'}; color: ${isError ? 'white' : 'var(--sea-green)'}; font-weight: bold;">${message}</div>`;
+  // Display error or success message
+  function showMessage(message, isError = false) {
+    messageContainerEl.innerHTML = `<div style="padding: 15px; border-radius: 5px; margin-bottom: 20px; background-color: ${isError ? 'var(--red)' : 'var(--sky-blue)'}; color: ${isError ? 'white' : 'var(--sea-green)'}; font-weight: bold;">${message}</div>`;
+  }
+
+  // Fetch wallet & subscription status
+  async function loadWalletAndSubscription() {
+    try {
+      const res = await fetch('/player/api/profile', { credentials: 'same-origin' });
+      if (!res.ok) {
+        throw new Error(`HTTP error! Status: ${res.status}`);
+      }
+      const data = await res.json();
+      console.log('Profile API response:', data);
+      walletBalanceEl.textContent = data.player.walletBalance ?? 0;
+      const subscribed = data.player.subscription && new Date(data.player.subscription.end_date) > new Date();
+      if (!subscribed) {
+        subscriptionMessageEl.style.display = 'block';
+      }
+    } catch (err) {
+      console.error('Error loading wallet and subscription:', err);
+      showMessage('Failed to load wallet balance and subscription status.', true);
+      walletBalanceEl.textContent = 0;
+    }
+  }
+
+  // Fetch tournaments with retry
+  async function loadTournaments(retryCount = 3, delay = 1000) {
+    if (isLoading) return;
+    isLoading = true;
+    teamTableBody.classList.add('loading');
+    try {
+      for (let attempt = 1; attempt <= retryCount; attempt++) {
+        const res = await fetch('/player/api/tournaments', {
+          credentials: 'same-origin',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        console.log(`Tournaments API attempt ${attempt} status:`, res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP error! Status: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log('Tournaments API response (enrolledTeamTournaments):', JSON.stringify(data.enrolledTeamTournaments, null, 2));
+        renderTournaments(data);
+        break;
+      }
+    } catch (err) {
+      console.error(`Error loading tournaments (attempt ${attempt}):`, err);
+      if (attempt < retryCount) {
+        console.log(`Retrying after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        showMessage(`Failed to load tournaments: ${err.message}`, true);
+      }
+    } finally {
+      isLoading = false;
+      teamTableBody.classList.remove('loading');
+    }
+  }
+
+  // Render tournaments
+  function renderTournaments(data) {
+    const today = new Date();
+    const subscribed = data.currentSubscription && new Date(data.currentSubscription.end_date) > new Date();
+    const currentUser = data.username;
+
+    console.log('Tournament types:', data.tournaments.map(t => ({
+      name: t.name,
+      type: t.type || 'undefined',
+      _id: t._id
+    })));
+
+    const individualTournaments = data.tournaments
+      .filter(t => {
+        const type = t.type ? t.type.toLowerCase() : 'individual';
+        return type === 'individual' || type === 'solo';
+      })
+      .map(t => ({
+        ...t,
+        alreadyEnrolled: data.enrolledIndividualTournaments.some(e => e.tournament._id.toString() === t._id.toString()),
+        subscribed
+      }));
+
+    const teamTournaments = data.tournaments
+      .filter(t => {
+        const type = t.type ? t.type.toLowerCase() : null;
+        return type === 'team' || type === 'group';
+      })
+      .map(t => {
+        const enrollment = data.enrolledTeamTournaments.find(e => e.tournament._id.toString() === t._id.toString());
+        const teamData = {
+          ...t,
+          alreadyJoined: !!enrollment,
+          approved: enrollment ? enrollment.approved : false,
+          enrollmentId: enrollment ? enrollment._id : null,
+          needsApproval: enrollment && (
+            (enrollment.player1_name === currentUser && !enrollment.player1_approved) ||
+            (enrollment.player2_name === currentUser && !enrollment.player2_approved) ||
+            (enrollment.player3_name === currentUser && !enrollment.player3_approved)
+          ),
+          player1_name: enrollment ? enrollment.player1_name : null,
+          player2_name: enrollment ? enrollment.player2_name : null,
+          player3_name: enrollment ? enrollment.player3_name : null,
+          player1_approved: enrollment ? enrollment.player1_approved : false,
+          player2_approved: enrollment ? enrollment.player2_approved : false,
+          player3_approved: enrollment ? enrollment.player3_approved : false,
+          subscribed
+        };
+        console.log(`Team tournament ${t.name} enrollment:`, {
+          tournamentId: t._id,
+          alreadyJoined: teamData.alreadyJoined,
+          approved: teamData.approved,
+          needsApproval: teamData.needsApproval,
+          players: {
+            player1: { name: teamData.player1_name, approved: teamData.player1_approved },
+            player2: { name: teamData.player2_name, approved: teamData.player2_approved },
+            player3: { name: teamData.player3_name, approved: teamData.player3_approved }
+          }
+        });
+        return teamData;
+      });
+
+    console.log('Individual tournaments:', individualTournaments);
+    console.log('Team tournaments:', teamTournaments);
+
+    // Render Individual Tournaments with pagination tracking
+    individualTableBody.innerHTML = individualTournaments.length === 0 
+      ? '<tr><td colspan="6" class="empty-message">No individual tournaments available</td></tr>' 
+      : '';
+    individualTournaments.forEach((t, idx) => {
+      const row = document.createElement('tr');
+      row.style.display = idx < individualVisibleCount ? '' : 'none'; // Only show first N rows
+      const tournamentDate = new Date(t.date);
+      const status = tournamentDate.toDateString() === today.toDateString() ? 'Ongoing' : 'Yet to Start';
+      const statusClass = tournamentDate.toDateString() === today.toDateString() ? 'status-ongoing' : 'status-yet-to-start';
+      let actions = '';
+
+      if (!t.alreadyEnrolled) {
+        actions = `<form class="join-individual-form" data-tournament-id="${t._id}">
+                    <input type="hidden" name="tournamentId" value="${t._id}">
+                    <button type="submit" ${!subscribed ? 'disabled' : ''}>
+                      Join ${!subscribed ? '(SUBSCRIPTION REQUIRED)' : ''}
+                    </button>
+                  </form>`;
+      } else {
+        actions = `<span class="enrolled-text">ENROLLED</span><br/>
+                   <a href="/player/pairings?tournament_id=${t._id}&rounds=5" class="btn">
+                     <i class="fas fa-chess-board"></i> View Pairings
+                   </a>
+                   <a href="/player/rankings?tournament_id=${t._id}" class="btn">
+                     <i class="fas fa-medal"></i> Final Rankings
+                   </a>`;
       }
 
-      // Fetch wallet & subscription status
-      async function loadWalletAndSubscription() {
-        try {
-          const res = await fetch('/player/api/profile', { credentials: 'same-origin' });
-          if (!res.ok) {
-            throw new Error(`HTTP error! Status: ${res.status}`);
-          }
-          const data = await res.json();
-          console.log('Profile API response:', data);
-          walletBalanceEl.textContent = data.player.walletBalance ?? 0;
-          const subscribed = data.player.subscription && new Date(data.player.subscription.end_date) > new Date();
-          if (!subscribed) {
-            subscriptionMessageEl.style.display = 'block';
-          }
-        } catch (err) {
-          console.error('Error loading wallet and subscription:', err);
-          showMessage('Failed to load wallet balance and subscription status.', true);
-          walletBalanceEl.textContent = 0;
+      row.innerHTML = `
+        <td>${t.name}</td>
+        <td>${tournamentDate.toLocaleDateString()}</td>
+        <td>${t.location}</td>
+        <td>₹${t.entry_fee}</td>
+        <td class="${statusClass}">${status}</td>
+        <td>${actions}</td>
+      `;
+      individualTableBody.appendChild(row);
+    });
+
+    // Render Team Tournaments with pagination tracking
+    teamTableBody.innerHTML = teamTournaments.length === 0 
+      ? '<tr><td colspan="6" class="empty-message">No team tournaments available</td></tr>' 
+      : '';
+    teamTournaments.forEach((t, idx) => {
+      const row = document.createElement('tr');
+      row.style.display = idx < teamVisibleCount ? '' : 'none'; // Only show first N rows
+      const tournamentDate = new Date(t.date);
+      const status = tournamentDate.toDateString() === today.toDateString() ? 'Ongoing' : 'Yet to Start';
+      const statusClass = tournamentDate.toDateString() === today.toDateString() ? 'status-ongoing' : 'status-yet-to-start';
+      let actions = '';
+
+      if (!t.alreadyJoined) {
+        actions = `<button type="button" class="join-team-btn" data-form-id="join-form-${t._id}" ${!subscribed ? 'disabled' : ''}>
+                    Join ${!subscribed ? '(SUBSCRIPTION REQUIRED)' : ''}
+                   </button>
+                   <div id="join-form-${t._id}" class="join-form">
+                     <form class="team-join-form" data-tournament-id="${t._id}">
+                       <input type="hidden" name="tournamentId" value="${t._id}">
+                       <label>Player 1:</label><input type="text" name="player1" required>
+                       <label>Player 2:</label><input type="text" name="player2" required>
+                       <label>Player 3:</label><input type="text" name="player3" required>
+                       <button type="submit">Submit Team</button>
+                     </form>
+                   </div>`;
+      } else {
+        let statusText = t.approved 
+          ? `<span class="enrolled-text">ENROLLED</span>`
+          : `<span class="enrolled-text" style="color: var(--yellow); font-weight: bold;">PENDING APPROVAL</span>`;
+        let approvalButton = '';
+        if (t.needsApproval) {
+          approvalButton = `<button class="approve-team-btn" data-request-id="${t.enrollmentId}">Approve</button>`;
+        }
+        actions = `${statusText}${approvalButton ? `<br/>${approvalButton}` : ''}`;
+        if (t.approved) {
+          actions += `<br/>
+                      <a href="/player/pairings?tournament_id=${t._id}&rounds=5" class="btn">
+                        <i class="fas fa-chess-board"></i> View Pairings
+                      </a>
+                      <a href="/player/rankings?tournament_id=${t._id}" class="btn">
+                        <i class="fas fa-medal"></i> Final Rankings
+                      </a>`;
         }
       }
 
-      // Fetch tournaments with retry
-      async function loadTournaments(retryCount = 3, delay = 1000) {
-        if (isLoading) return;
-        isLoading = true;
-        teamTableBody.classList.add('loading');
-        try {
-          for (let attempt = 1; attempt <= retryCount; attempt++) {
-            const res = await fetch('/player/api/tournaments', {
-              credentials: 'same-origin',
-              headers: { 'Cache-Control': 'no-cache' }
-            });
-            console.log(`Tournaments API attempt ${attempt} status:`, res.status);
-            if (!res.ok) {
-              throw new Error(`HTTP error! Status: ${res.status}`);
-            }
-            const data = await res.json();
-            console.log('Tournaments API response (enrolledTeamTournaments):', JSON.stringify(data.enrolledTeamTournaments, null, 2));
-            renderTournaments(data);
-            break;
-          }
-        } catch (err) {
-          console.error(`Error loading tournaments (attempt ${attempt}):`, err);
-          if (attempt < retryCount) {
-            console.log(`Retrying after ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          } else {
-            showMessage(`Failed to load tournaments: ${err.message}`, true);
-          }
-        } finally {
-          isLoading = false;
-          teamTableBody.classList.remove('loading');
-        }
-      }
+      row.innerHTML = `
+        <td>${t.name}</td>
+        <td>${tournamentDate.toLocaleDateString()}</td>
+        <td>${t.location}</td>
+        <td>₹${t.entry_fee}</td>
+        <td class="${statusClass}">${status}</td>
+        <td>${actions}</td>
+      `;
+      teamTableBody.appendChild(row);
+    });
 
-      // Render tournaments
-      function renderTournaments(data) {
-        const today = new Date();
-        const subscribed = data.currentSubscription && new Date(data.currentSubscription.end_date) > new Date();
-        const currentUser = data.username;
+    // Update pagination visibility
+    updatePaginationVisibility(individualTournaments.length, 'individual');
+    updatePaginationVisibility(teamTournaments.length, 'team');
 
-        console.log('Tournament types:', data.tournaments.map(t => ({
-          name: t.name,
-          type: t.type || 'undefined',
-          _id: t._id
-        })));
+    bindTeamButtons();
+    bindJoinForms();
+    bindApproveButtons();
+  }
 
-        const individualTournaments = data.tournaments
-          .filter(t => {
-            const type = t.type ? t.type.toLowerCase() : 'individual';
-            return type === 'individual' || type === 'solo';
-          })
-          .map(t => ({
-            ...t,
-            alreadyEnrolled: data.enrolledIndividualTournaments.some(e => e.tournament._id.toString() === t._id.toString()),
-            subscribed
-          }));
+  // Update pagination button visibility
+  function updatePaginationVisibility(totalRows, type) {
+    const moreLinkId = type === 'individual' ? 'individualMoreLink' : 'teamMoreLink';
+    const hideLinkId = type === 'individual' ? 'individualHideLink' : 'teamHideLink';
+    const visibleCount = type === 'individual' ? individualVisibleCount : teamVisibleCount;
+    
+    const moreLink = document.getElementById(moreLinkId);
+    const hideLink = document.getElementById(hideLinkId);
+    
+    moreLink.style.display = visibleCount < totalRows ? 'inline-flex' : 'none';
+    hideLink.style.display = visibleCount > ROWS_PER_PAGE ? 'inline-flex' : 'none';
+  }
 
-        const teamTournaments = data.tournaments
-          .filter(t => {
-            const type = t.type ? t.type.toLowerCase() : null;
-            return type === 'team' || type === 'group';
-          })
-          .map(t => {
-            const enrollment = data.enrolledTeamTournaments.find(e => e.tournament._id.toString() === t._id.toString());
-            const teamData = {
-              ...t,
-              alreadyJoined: !!enrollment,
-              approved: enrollment ? enrollment.approved : false,
-              enrollmentId: enrollment ? enrollment._id : null,
-              needsApproval: enrollment && (
-                (enrollment.player1_name === currentUser && !enrollment.player1_approved) ||
-                (enrollment.player2_name === currentUser && !enrollment.player2_approved) ||
-                (enrollment.player3_name === currentUser && !enrollment.player3_approved)
-              ),
-              player1_name: enrollment ? enrollment.player1_name : null,
-              player2_name: enrollment ? enrollment.player2_name : null,
-              player3_name: enrollment ? enrollment.player3_name : null,
-              player1_approved: enrollment ? enrollment.player1_approved : false,
-              player2_approved: enrollment ? enrollment.player2_approved : false,
-              player3_approved: enrollment ? enrollment.player3_approved : false,
-              subscribed
-            };
-            console.log(`Team tournament ${t.name} enrollment:`, {
-              tournamentId: t._id,
-              alreadyJoined: teamData.alreadyJoined,
-              approved: teamData.approved,
-              needsApproval: teamData.needsApproval,
-              players: {
-                player1: { name: teamData.player1_name, approved: teamData.player1_approved },
-                player2: { name: teamData.player2_name, approved: teamData.player2_approved },
-                player3: { name: teamData.player3_name, approved: teamData.player3_approved }
-              }
-            });
-            return teamData;
-          });
+  // Pagination for individual tournaments - SHOW NEXT 5 ONLY
+  document.getElementById('individualMoreLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    const rows = document.querySelectorAll('#individualTable tbody tr');
+    const start = individualVisibleCount;
+    const end = Math.min(start + ROWS_PER_PAGE, rows.length);
+    
+    // Show next 5 rows
+    for (let i = start; i < end; i++) {
+      rows[i].style.display = '';
+    }
+    
+    individualVisibleCount = end;
+    
+    // Update button visibility
+    updatePaginationVisibility(rows.length, 'individual');
+  });
 
-        console.log('Individual tournaments:', individualTournaments);
-        console.log('Team tournaments:', teamTournaments);
+  // Hide individual tournaments - RESET TO FIRST 5
+  document.getElementById('individualHideLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    const rows = document.querySelectorAll('#individualTable tbody tr');
+    
+    // Hide all except first 5
+    rows.forEach((row, idx) => {
+      row.style.display = idx < ROWS_PER_PAGE ? '' : 'none';
+    });
+    
+    individualVisibleCount = ROWS_PER_PAGE;
+    
+    // Update button visibility
+    updatePaginationVisibility(rows.length, 'individual');
+  });
 
-        individualTableBody.innerHTML = individualTournaments.length === 0 
-          ? '<tr><td colspan="6" class="empty-message">No individual tournaments available</td></tr>' 
-          : '';
-        individualTournaments.forEach((t, idx) => {
-          const row = document.createElement('tr');
-          if (idx >= 5) row.style.display = 'none';
-          const tournamentDate = new Date(t.date);
-          const status = tournamentDate.toDateString() === today.toDateString() ? 'Ongoing' : 'Yet to Start';
-          const statusClass = tournamentDate.toDateString() === today.toDateString() ? 'status-ongoing' : 'status-yet-to-start';
-          let actions = '';
+  // Pagination for team tournaments - SHOW NEXT 5 ONLY
+  document.getElementById('teamMoreLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    const rows = document.querySelectorAll('#teamTable tbody tr');
+    const start = teamVisibleCount;
+    const end = Math.min(start + ROWS_PER_PAGE, rows.length);
+    
+    // Show next 5 rows
+    for (let i = start; i < end; i++) {
+      rows[i].style.display = '';
+    }
+    
+    teamVisibleCount = end;
+    
+    // Update button visibility
+    updatePaginationVisibility(rows.length, 'team');
+  });
 
-          if (!t.alreadyEnrolled) {
-            actions = `<form class="join-individual-form" data-tournament-id="${t._id}">
-                        <input type="hidden" name="tournamentId" value="${t._id}">
-                        <button type="submit" ${!subscribed ? 'disabled' : ''}>
-                          Join ${!subscribed ? '(SUBSCRIPTION REQUIRED)' : ''}
-                        </button>
-                      </form>`;
-          } else {
-            actions = `<span class="enrolled-text">ENROLLED</span><br/>
-                       <a href="/player/pairings?tournament_id=${t._id}&rounds=5" class="btn">
-                         <i class="fas fa-chess-board"></i> View Pairings
-                       </a>
-                       <a href="/player/rankings?tournament_id=${t._id}" class="btn">
-                         <i class="fas fa-medal"></i> Final Rankings
-                       </a>`;
-          }
+  // Hide team tournaments - RESET TO FIRST 5
+  document.getElementById('teamHideLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    const rows = document.querySelectorAll('#teamTable tbody tr');
+    
+    // Hide all except first 5
+    rows.forEach((row, idx) => {
+      row.style.display = idx < ROWS_PER_PAGE ? '' : 'none';
+    });
+    
+    teamVisibleCount = ROWS_PER_PAGE;
+    
+    // Update button visibility
+    updatePaginationVisibility(rows.length, 'team');
+  });
 
-          row.innerHTML = `
-            <td>${t.name}</td>
-            <td>${tournamentDate.toLocaleDateString()}</td>
-            <td>${t.location}</td>
-            <td>₹${t.entry_fee}</td>
-            <td class="${statusClass}">${status}</td>
-            <td>${actions}</td>
-          `;
-          individualTableBody.appendChild(row);
-        });
+  // Bind team join buttons
+  function bindTeamButtons() {
+    document.querySelectorAll('.join-team-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.join-form').forEach(f => f.classList.remove('active'));
+        const formId = btn.getAttribute('data-form-id');
+        const form = document.getElementById(formId);
+        if (form) form.classList.add('active');
+      });
+    });
+  }
 
-        teamTableBody.innerHTML = teamTournaments.length === 0 
-          ? '<tr><td colspan="6" class="empty-message">No team tournaments available</td></tr>' 
-          : '';
-        teamTournaments.forEach((t, idx) => {
-          const row = document.createElement('tr');
-          if (idx >= 5) row.style.display = 'none';
-          const tournamentDate = new Date(t.date);
-          const status = tournamentDate.toDateString() === today.toDateString() ? 'Ongoing' : 'Yet to Start';
-          const statusClass = tournamentDate.toDateString() === today.toDateString() ? 'status-ongoing' : 'status-yet-to-start';
-          let actions = '';
-
-          if (!t.alreadyJoined) {
-            actions = `<button type="button" class="join-team-btn" data-form-id="join-form-${t._id}" ${!subscribed ? 'disabled' : ''}>
-                        Join ${!subscribed ? '(SUBSCRIPTION REQUIRED)' : ''}
-                       </button>
-                       <div id="join-form-${t._id}" class="join-form">
-                         <form class="team-join-form" data-tournament-id="${t._id}">
-                           <input type="hidden" name="tournamentId" value="${t._id}">
-                           <label>Player 1:</label><input type="text" name="player1" required>
-                           <label>Player 2:</label><input type="text" name="player2" required>
-                           <label>Player 3:</label><input type="text" name="player3" required>
-                           <button type="submit">Submit Team</button>
-                         </form>
-                       </div>`;
-          } else {
-            let statusText = t.approved 
-              ? `<span class="enrolled-text">ENROLLED</span>`
-              : `<span class="enrolled-text" style="color: var(--yellow); font-weight: bold;">PENDING APPROVAL</span>`;
-            let approvalButton = '';
-            if (t.needsApproval) {
-              approvalButton = `<button class="approve-team-btn" data-request-id="${t.enrollmentId}">Approve</button>`;
-            }
-            actions = `${statusText}${approvalButton ? `<br/>${approvalButton}` : ''}`;
-            // if (t.approved) {
-            //   actions += `<br/>
-            //               <a href="/player/pairings?tournament_id=${t._id}&rounds=5" class="btn">
-            //                 <i class="fas fa-chess-board"></i> View Pairings
-            //               </a>
-            //               <a href="/player/rankings?tournament_id=${t._id}" class="btn">
-            //                 <i class="fas fa-medal"></i> Final Rankings
-            //               </a>`;
-            // }
-          }
-
-          row.innerHTML = `
-            <td>${t.name}</td>
-            <td>${tournamentDate.toLocaleDateString()}</td>
-            <td>${t.location}</td>
-            <td>₹${t.entry_fee}</td>
-            <td class="${statusClass}">${status}</td>
-            <td>${actions}</td>
-          `;
-          teamTableBody.appendChild(row);
-        });
-
-        document.getElementById('individualMoreLink').style.display = individualTournaments.length > 5 ? 'inline-flex' : 'none';
-        document.getElementById('teamMoreLink').style.display = teamTournaments.length > 5 ? 'inline-flex' : 'none';
-
-        bindTeamButtons();
-        bindJoinForms();
-        bindApproveButtons();
-      }
-
-      // Bind team join buttons
-      function bindTeamButtons() {
-        document.querySelectorAll('.join-team-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.join-form').forEach(f => f.classList.remove('active'));
-            const formId = btn.getAttribute('data-form-id');
-            const form = document.getElementById(formId);
-            if (form) form.classList.add('active');
-          });
-        });
-      }
-
-      // Bind join form submissions
-      function bindJoinForms() {
-        document.querySelectorAll('.join-individual-form').forEach(form => {
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (isLoading) return;
-            isLoading = true;
-            form.classList.add('loading');
-            const tournamentId = form.getAttribute('data-tournament-id');
-            try {
-              const res = await fetch('/player/api/join-individual', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({ tournamentId })
-              });
-              const result = await res.json();
-              if (res.ok) {
-                showMessage(result.message);
-                walletBalanceEl.textContent = result.walletBalance;
-                await loadTournaments();
-              } else {
-                showMessage(result.error || 'Failed to join tournament', true);
-              }
-            } catch (err) {
-              console.error('Error joining individual tournament:', err);
-              showMessage('Error joining tournament.', true);
-            } finally {
-              isLoading = false;
-              form.classList.remove('loading');
-            }
-          });
-        });
-
-        document.querySelectorAll('.team-join-form').forEach(form => {
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (isLoading) return;
-            isLoading = true;
-            form.classList.add('loading');
-            const tournamentId = form.getAttribute('data-tournament-id');
-            const formData = new FormData(form);
-            const data = {
-              tournamentId,
-              player1: formData.get('player1'),
-              player2: formData.get('player2'),
-              player3: formData.get('player3')
-            };
-            try {
-              const res = await fetch('/player/api/join-team', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify(data)
-              });
-              const result = await res.json();
-              if (res.ok) {
-                showMessage(result.message);
-                walletBalanceEl.textContent = result.walletBalance;
-                await loadTournaments();
-              } else {
-                showMessage(result.error || 'Failed to join team tournament', true);
-              }
-            } catch (err) {
-              console.error('Error joining team tournament:', err);
-              showMessage('Error joining team tournament.', true);
-            } finally {
-              isLoading = false;
-              form.classList.remove('loading');
-            }
-          });
-        });
-      }
-
-      // Bind approve buttons
-      function bindApproveButtons() {
-        document.querySelectorAll('.approve-team-btn').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            if (isLoading) return;
-            isLoading = true;
-            btn.classList.add('loading');
-            const requestId = btn.getAttribute('data-request-id');
-            try {
-              const res = await fetch('/player/api/approve-team-request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-                credentials: 'same-origin',
-                body: JSON.stringify({ requestId })
-              });
-              const result = await res.json();
-              console.log('Approve team request response:', result);
-              if (res.ok) {
-                showMessage('Team request approved successfully!');
-                setTimeout(async () => {
-                  await loadTournaments();
-                }, 1000); // Increased delay for backend update
-              } else {
-                showMessage(result.error || 'Failed to approve team request', true);
-              }
-            } catch (err) {
-              console.error('Error approving team request:', err);
-              showMessage('Error approving team request.', true);
-            } finally {
-              isLoading = false;
-              btn.classList.remove('loading');
-            }
-          });
-        });
-      }
-
-      // Add funds form submit
-      document.getElementById('addFundsForm').addEventListener('submit', async e => {
+  // Bind join form submissions
+  function bindJoinForms() {
+    document.querySelectorAll('.join-individual-form').forEach(form => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (isLoading) return;
         isLoading = true;
-        const form = e.target;
         form.classList.add('loading');
-        const amount = form.amount.value;
+        const tournamentId = form.getAttribute('data-tournament-id');
+        const row = form.closest('tr');
         try {
-          const res = await fetch('/player/api/add-funds', {
+          const res = await fetch('/player/api/join-individual', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ amount: parseInt(amount, 10) })
+            body: JSON.stringify({ tournamentId })
           });
           const result = await res.json();
           if (res.ok) {
+            showMessage(result.message);
             walletBalanceEl.textContent = result.walletBalance;
-            showMessage('Funds added successfully!');
+            // Update the row with new actions without refresh
+            row.querySelector('td:last-child').innerHTML = `
+              <span class="enrolled-text">ENROLLED</span><br/>
+              <a href="/player/pairings?tournament_id=${tournamentId}&rounds=5" class="btn">
+                <i class="fas fa-chess-board"></i> View Pairings
+              </a>
+              <a href="/player/rankings?tournament_id=${tournamentId}" class="btn">
+                <i class="fas fa-medal"></i> Final Rankings
+              </a>
+            `;
           } else {
-            showMessage(result.error || 'Failed to add funds', true);
+            showMessage(result.error || 'Failed to join tournament', true);
           }
         } catch (err) {
-          console.error('Error adding funds:', err);
-          showMessage('Error adding funds.', true);
+          console.error('Error joining individual tournament:', err);
+          showMessage('Error joining tournament.', true);
         } finally {
           isLoading = false;
           form.classList.remove('loading');
         }
       });
-
-      // Pagination for individual tournaments
-      document.getElementById('individualMoreLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('#individualTable tr').forEach(row => row.style.display = '');
-        document.getElementById('individualMoreLink').style.display = 'none';
-        document.getElementById('individualHideLink').style.display = 'inline-flex';
-      });
-
-      document.getElementById('individualHideLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('#individualTable tr').forEach((row, idx) => {
-          if (idx >= 5) row.style.display = 'none';
-        });
-        document.getElementById('individualMoreLink').style.display = 'inline-flex';
-        document.getElementById('individualHideLink').style.display = 'none';
-      });
-
-      // Pagination for team tournaments
-      document.getElementById('teamMoreLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('#teamTable tr').forEach(row => row.style.display = '');
-        document.getElementById('teamMoreLink').style.display = 'none';
-        document.getElementById('teamHideLink').style.display = 'inline-flex';
-      });
-
-      document.getElementById('teamHideLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('#teamTable tr').forEach((row, idx) => {
-          if (idx >= 5) row.style.display = 'none';
-        });
-        document.getElementById('teamMoreLink').style.display = 'inline-flex';
-        document.getElementById('teamHideLink').style.display = 'none';
-      });
-
-      await loadWalletAndSubscription();
-      await loadTournaments();
     });
-  </script>
+
+    document.querySelectorAll('.team-join-form').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (isLoading) return;
+        isLoading = true;
+        form.classList.add('loading');
+        const tournamentId = form.getAttribute('data-tournament-id');
+        const row = form.closest('tr').parentElement.closest('tr');
+        const formContainer = form.closest('.join-form');
+        const data = {
+          tournamentId,
+          player1: form.player1.value,
+          player2: form.player2.value,
+          player3: form.player3.value
+        };
+        try {
+          const res = await fetch('/player/api/join-team', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+          });
+          const result = await res.json();
+          if (res.ok) {
+            showMessage(result.message);
+            walletBalanceEl.textContent = result.walletBalance;
+            // Update the row with new status
+            row.querySelector('td:last-child').innerHTML = `
+              <span class="enrolled-text" style="color: var(--yellow); font-weight: bold;">PENDING APPROVAL</span>
+            `;
+            formContainer.classList.remove('active');
+          } else {
+            showMessage(result.error || 'Failed to join team tournament', true);
+          }
+        } catch (err) {
+          console.error('Error joining team tournament:', err);
+          showMessage('Error joining team tournament.', true);
+        } finally {
+          isLoading = false;
+          form.classList.remove('loading');
+        }
+      });
+    });
+  }
+
+  // Bind approve buttons
+  function bindApproveButtons() {
+    document.querySelectorAll('.approve-team-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (isLoading) return;
+        isLoading = true;
+        btn.classList.add('loading');
+        const requestId = btn.getAttribute('data-request-id');
+        try {
+          const res = await fetch('/player/api/approve-team-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ requestId })
+          });
+          const result = await res.json();
+          console.log('Approve team request response:', result);
+          if (res.ok) {
+            showMessage('Team request approved successfully!');
+            setTimeout(async () => {
+              await loadTournaments();
+            }, 1000); // Increased delay for backend update
+          } else {
+            showMessage(result.error || 'Failed to approve team request', true);
+          }
+        } catch (err) {
+          console.error('Error approving team request:', err);
+          showMessage('Error approving team request.', true);
+        } finally {
+          isLoading = false;
+          btn.classList.remove('loading');
+        }
+      });
+    });
+  }
+
+  // Add funds form submit
+  document.getElementById('addFundsForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (isLoading) return;
+    isLoading = true;
+    const form = e.target;
+    form.classList.add('loading');
+    const amount = form.amount.value;
+    try {
+      const res = await fetch('/player/api/add-funds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ amount: parseInt(amount, 10) })
+      });
+      const result = await res.json();
+      if (res.ok) {
+        walletBalanceEl.textContent = result.walletBalance;
+        showMessage('Funds added successfully!');
+      } else {
+        showMessage(result.error || 'Failed to add funds', true);
+      }
+    } catch (err) {
+      console.error('Error adding funds:', err);
+      showMessage('Error adding funds.', true);
+    } finally {
+      isLoading = false;
+      form.classList.remove('loading');
+    }
+  });
+
+  await loadWalletAndSubscription();
+  await loadTournaments();
+});
+</script>
 </body>
 </html>

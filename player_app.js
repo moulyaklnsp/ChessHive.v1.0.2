@@ -707,16 +707,19 @@ router.get('/api/pairings', async (req, res) => {
   const db = await connectDB();
   const rows = await db.collection('tournament_players').find({ tournament_id: new ObjectId(tournamentId) }).toArray();
   if (rows.length === 0) {
-    return res.json({ roundNumber: 1, allRounds: [] });
+    return res.json({ roundNumber: 1, allRounds: [], message: 'No players enrolled' });
   }
 
   let storedPairings = await db.collection('tournament_pairings').findOne({ tournament_id: new ObjectId(tournamentId) });
   let allRounds;
 
-  if (!storedPairings) {
+  // Regenerate pairings if no stored data or player count mismatch
+  if (!storedPairings || storedPairings.totalRounds !== totalRounds || rows.length !== (storedPairings.rounds[0]?.pairings?.length * 2 || 0) + (storedPairings.rounds[0]?.byePlayer ? 1 : 0)) {
+    console.log(`Regenerating pairings for ${rows.length} players`);
     let players = rows.map(row => new Player(row._id, row.username, row.college, row.gender));
     allRounds = swissPairing(players, totalRounds);
 
+    await db.collection('tournament_pairings').deleteOne({ tournament_id: new ObjectId(tournamentId) }); // Remove old pairings
     await db.collection('tournament_pairings').insertOne({
       tournament_id: new ObjectId(tournamentId),
       totalRounds: totalRounds,
@@ -735,6 +738,7 @@ router.get('/api/pairings', async (req, res) => {
       }))
     });
   } else {
+    console.log('Using existing stored pairings');
     allRounds = storedPairings.rounds.map(round => {
       const pairings = round.pairings.map(pairing => {
         const player1 = new Player(pairing.player1.id, pairing.player1.username);

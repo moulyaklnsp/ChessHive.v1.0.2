@@ -491,97 +491,62 @@ router.get('/api/enrolled-players', async (req, res) => {
 
 // Pairings API
 router.get('/api/pairings', async (req, res) => {
-  try {
-    const tournamentId = req.query.tournament_id;
-    const totalRounds = parseInt(req.query.rounds) || 5;
-    if (!tournamentId) {
-      return res.status(400).json({ error: 'Tournament ID is required' });
-    }
-    const db = await connectDB();
-    const tid = new ObjectId(tournamentId);
-    const rows = await db.collection('tournament_players').find({ tournament_id: tid }).toArray();
-    if (rows.length === 0) {
-      return res.json({ roundNumber: totalRounds, allRounds: [] });
-    }
-    let storedPairings = await db.collection('tournament_pairings').findOne({ tournament_id: tid });
-    let allRounds;
-    if (!storedPairings) {
-      let players = rows.map(row => new Player(row._id, row.username, row.college, row.gender));
-      const generatedRounds = swissPairing(players, totalRounds);
-      await db.collection('tournament_pairings').insertOne({
-        tournament_id: tid,
-        totalRounds: totalRounds,
-        rounds: generatedRounds.map(round => ({
-          round: round.round,
-          pairings: round.pairings.map(pairing => ({
-            player1: {
-              id: pairing.player1.id,
-              username: pairing.player1.username,
-              score: pairing.player1.score
-            },
-            player2: {
-              id: pairing.player2.id,
-              username: pairing.player2.username,
-              score: pairing.player2.score
-            },
-            result: pairing.result
-          })),
-          byePlayer: round.byePlayer ? {
-            id: round.byePlayer.id,
-            username: round.byePlayer.username,
-            score: round.byePlayer.score
-          } : null
-        }))
-      });
-      allRounds = generatedRounds.map(round => ({
+  const tournamentId = req.query.tournament_id;
+  const totalRounds = parseInt(req.query.rounds) || 5;
+  if (!tournamentId) {
+    return res.status(400).json({ error: 'Tournament ID is required' });
+  }
+
+  const db = await connectDB();
+  const rows = await db.collection('tournament_players').find({ tournament_id: new ObjectId(tournamentId) }).toArray();
+  if (rows.length === 0) {
+    return res.json({ roundNumber: 1, allRounds: [], message: 'No players enrolled' });
+  }
+
+  let storedPairings = await db.collection('tournament_pairings').findOne({ tournament_id: new ObjectId(tournamentId) });
+  let allRounds;
+
+  // Regenerate pairings if no stored data or player count mismatch
+  if (!storedPairings || storedPairings.totalRounds !== totalRounds || rows.length !== (storedPairings.rounds[0]?.pairings?.length * 2 || 0) + (storedPairings.rounds[0]?.byePlayer ? 1 : 0)) {
+    console.log(`Regenerating pairings for ${rows.length} players`);
+    let players = rows.map(row => new Player(row._id, row.username, row.college, row.gender));
+    allRounds = swissPairing(players, totalRounds);
+
+    await db.collection('tournament_pairings').deleteOne({ tournament_id: new ObjectId(tournamentId) }); // Remove old pairings
+    await db.collection('tournament_pairings').insertOne({
+      tournament_id: new ObjectId(tournamentId),
+      totalRounds: totalRounds,
+      rounds: allRounds.map(round => ({
         round: round.round,
-        pairings: round.pairings.map(p => ({
-          player1: {
-            id: p.player1.id.toString(),
-            username: p.player1.username,
-            score: p.player1.score
-          },
-          player2: {
-            id: p.player2.id.toString(),
-            username: p.player2.username,
-            score: p.player2.score
-          },
-          result: p.result
+        pairings: round.pairings.map(pairing => ({
+          player1: { id: pairing.player1.id, username: pairing.player1.username, score: pairing.player1.score },
+          player2: { id: pairing.player2.id, username: pairing.player2.username, score: pairing.player2.score },
+          result: pairing.result
         })),
         byePlayer: round.byePlayer ? {
-          id: round.byePlayer.id.toString(),
+          id: round.byePlayer.id,
           username: round.byePlayer.username,
           score: round.byePlayer.score
         } : null
-      }));
-    } else {
-      allRounds = storedPairings.rounds.map(roundData => ({
-        round: roundData.round,
-        pairings: roundData.pairings.map(pairingData => ({
-          player1: {
-            id: pairingData.player1.id.toString(),
-            username: pairingData.player1.username,
-            score: pairingData.player1.score
-          },
-          player2: {
-            id: pairingData.player2.id.toString(),
-            username: pairingData.player2.username,
-            score: pairingData.player2.score
-          },
-          result: pairingData.result
-        })),
-        byePlayer: roundData.byePlayer ? {
-          id: roundData.byePlayer.id.toString(),
-          username: roundData.byePlayer.username,
-          score: roundData.byePlayer.score
-        } : null
-      }));
-    }
-    res.json({ roundNumber: totalRounds, allRounds });
-  } catch (error) {
-    console.error('Error fetching pairings:', error);
-    res.status(500).json({ error: 'Failed to fetch pairings' });
+      }))
+    });
+  } else {
+    console.log('Using existing stored pairings');
+    allRounds = storedPairings.rounds.map(round => {
+      const pairings = round.pairings.map(pairing => {
+        const player1 = new Player(pairing.player1.id, pairing.player1.username);
+        player1.score = pairing.player1.score;
+        const player2 = new Player(pairing.player2.id, pairing.player2.username);
+        player2.score = pairing.player2.score;
+        return { player1, player2, result: pairing.result };
+      });
+      const byePlayer = round.byePlayer ? new Player(round.byePlayer.id, round.byePlayer.username) : null;
+      if (byePlayer) byePlayer.score = round.byePlayer.score;
+      return { round: round.round, pairings, byePlayer };
+    });
   }
+
+  res.json({ roundNumber: totalRounds, allRounds });
 });
 
 // Rankings API

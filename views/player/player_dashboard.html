@@ -433,308 +433,322 @@
     </div>
 
   <script>
-    
-  // --- Responsive sidebar ---
-  function isMobile() {
-    return window.innerWidth <= 768;
+// --- Responsive sidebar ---
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
+function updateMenuButtonVisibility() {
+  const menuBtn = document.getElementById("menuBtn");
+  const sidebar = document.getElementById("sidebar");
+  if (isMobile()) {
+    menuBtn.style.display = "block";
+    sidebar.style.left = "-100%";
+  } else {
+    menuBtn.style.display = "none";
+    sidebar.style.left = "0";
   }
+}
 
-  function updateMenuButtonVisibility() {
-    const menuBtn = document.getElementById("menuBtn");
-    const sidebar = document.getElementById("sidebar");
-    if (isMobile()) {
-      menuBtn.style.display = "block";
-      sidebar.style.left = "-100%";
-    } else {
-      menuBtn.style.display = "none";
-      sidebar.style.left = "0";
-    }
-  }
+function toggleSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.style.left = sidebar.style.left === "0px" ? "-100%" : "0px";
+}
 
-  function toggleSidebar() {
-    const sidebar = document.getElementById("sidebar");
-    sidebar.style.left = sidebar.style.left === "0px" ? "-100%" : "0px";
-  }
+function handleLogout() {
+  window.location.href = '/login';
+}
 
-  function handleLogout() {
-    window.location.href = '/login';
-  }
+document.getElementById("menuBtn").addEventListener("click", toggleSidebar);
+window.addEventListener("load", updateMenuButtonVisibility);
+window.addEventListener("resize", updateMenuButtonVisibility);
 
-  document.getElementById("menuBtn").addEventListener("click", toggleSidebar);
-  window.addEventListener("load", updateMenuButtonVisibility);
-  window.addEventListener("resize", updateMenuButtonVisibility);
-
-  // --- Enhanced Dynamic Data Loading ---
-  async function fetchWithRetry(url, retries = 3) {
-    for (let i = 0; i < retries; i++) {
-      try {
-        console.log(`Fetching ${url} (attempt ${i + 1}/${retries})`);
-        const res = await fetch(url, { credentials: 'same-origin' });
-        if (!res.ok) {
-          if (res.status === 401) {
-            alert('Session expired. Redirecting to login...');
-            window.location.href = '/login';
-            return null;
-          }
-          throw new Error(`HTTP ${res.status}: ${res.statusText} for ${url}`);
-        }
-        return await res.json();
-      } catch (err) {
-        console.error(`Fetch failed for ${url} (attempt ${i + 1}):`, err);
-        if (i === retries - 1) throw err;
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
-      }
-    }
-  }
-
-  async function loadPlayerDashboard() {
-    const errorDiv = document.createElement('div');
-    errorDiv.id = 'dashboard-error';
-    errorDiv.style.cssText = 'background: #ffdddd; color: #cc0000; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none;';
-    errorDiv.innerHTML = '<strong>Error loading data:</strong> <span id="error-msg"></span> <button id="retry-btn" class="approve-btn" style="background: var(--sea-green);">Retry</button>';
-    document.querySelector('.content').insertBefore(errorDiv, document.querySelector('h1'));
-
+// --- Enhanced Dynamic Data Loading ---
+async function fetchWithRetry(url, retries = 3) {
+  for (let i = 0; i < retries; i++) {
     try {
-      // Clear previous errors
-      errorDiv.style.display = 'none';
-
-      // Fetch dashboard data
-      console.log('Loading dashboard data...');
-      const data = await fetchWithRetry('/player/api/dashboard');
-      if (!data) return; // Stop if redirected to login
-
-      // Render player info
-      document.getElementById('welcome-player').textContent = `Welcome, ${data.playerName}!`;
-      document.getElementById('dashboard-heading').innerHTML = `<i class="fas fa-chess-king"></i> Welcome to ChessHive, ${data.playerName}!`;
-
-      // Render team requests, tournaments, and items
-      renderTeamRequests(data.teamRequests, data.playerName);
-      renderTournaments(data.latestTournaments);
-      renderItems(data.latestItems);
-
-      console.log('Dashboard loaded successfully!');
-
-    } catch (err) {
-      console.error('Dashboard load failed:', err);
-      const errorMsg = document.getElementById('error-msg');
-      errorMsg.textContent = err.message || 'Unknown error. Check console for details.';
-      errorDiv.style.display = 'block';
-      document.getElementById('retry-btn').addEventListener('click', loadPlayerDashboard);
-
-      // Mock data fallback for testing
-      const mockData = {
-        playerName: 'Test Player',
-        teamRequests: [
-          {
-            id: 'mock1',
-            tournamentName: 'Mock Team Battle',
-            captainName: 'Captain A',
-            player1_name: 'Player1',
-            player2_name: 'Test Player',
-            player3_name: 'Player3',
-            player1_approved: true,
-            player2_approved: false,
-            player3_approved: false
-          }
-        ],
-        latestTournaments: [
-          { name: 'October Online Blitz', date: '2025-10-15' },
-          { name: 'Weekly Rapid', date: '2025-10-12' }
-        ],
-        latestItems: [
-          { name: 'Chess Board Set', price: 1500 },
-          { name: 'E-Book: Advanced Tactics', price: 299 }
-        ]
-      };
-      console.log('Using mock data due to error');
-      document.getElementById('welcome-player').textContent = `Welcome, ${mockData.playerName}!`;
-      document.getElementById('dashboard-heading').innerHTML = `<i class="fas fa-chess-king"></i> Welcome to ChessHive, ${mockData.playerName}!`;
-      renderTeamRequests(mockData.teamRequests, mockData.playerName);
-      renderTournaments(mockData.latestTournaments);
-      renderItems(mockData.latestItems);
-    }
-  }
-
-  // --- Rendering functions ---
-  function renderTeamRequests(requests, currentUser) {
-    console.log('Rendering team requests:', requests);
-    const ul = document.getElementById('team-requests-list');
-    ul.innerHTML = '';
-
-    if (!requests.length) {
-      ul.innerHTML = '<li><i class="fas fa-info-circle"></i> No pending team requests.</li>';
-      return;
-    }
-
-    const pending = requests.filter(req => !(
-      (req.player1_name === currentUser && req.player1_approved) ||
-      (req.player2_name === currentUser && req.player2_approved) ||
-      (req.player3_name === currentUser && req.player3_approved)
-    ));
-
-    if (!pending.length) {
-      ul.innerHTML = '<li><i class="fas fa-info-circle"></i> No pending team requests requiring your approval.</li>';
-      return;
-    }
-
-    pending.forEach(req => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <i class="fas fa-users"></i>
-        <div class="tournament-info">
-          <strong>${req.tournamentName}</strong><br>
-          Captain: ${req.captainName} | Team: ${req.player1_name}, ${req.player2_name}, ${req.player3_name}
-        </div>
-        <button class="approve-btn" data-id="${req.id}">Approve</button>
-      `;
-      li.querySelector('.approve-btn').addEventListener('click', () => approveTeamRequest(req.id));
-      ul.appendChild(li);
-    });
-  }
-
-  async function approveTeamRequest(id) {
-    try {
-      console.log('Approving team request:', id);
-      const res = await fetch('/player/api/approve-team-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ requestId: id })
-      });
+      console.log(`Fetching ${url} (attempt ${i + 1}/${retries})`);
+      const res = await fetch(url, { credentials: 'same-origin' });
       if (!res.ok) {
         if (res.status === 401) {
           alert('Session expired. Redirecting to login...');
           window.location.href = '/login';
-          return;
+          return null;
         }
-        throw new Error(`Approval failed: HTTP ${res.status}`);
+        throw new Error(`HTTP ${res.status}: ${res.statusText} for ${url}`);
       }
-      alert('Team request approved!');
-      loadPlayerDashboard(); // Reload to update list
+      return await res.json();
     } catch (err) {
-      console.error('Approval error:', err);
-      alert(`Error approving team request: ${err.message}`);
+      console.error(`Fetch failed for ${url} (attempt ${i + 1}):`, err);
+      if (i === retries - 1) throw err;
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
     }
   }
+}
 
-  function renderTournaments(tournaments) {
-    console.log('Rendering tournaments:', tournaments);
-    const ul = document.getElementById('latest-tournaments-list');
-    ul.innerHTML = '';
-    if (!tournaments.length) {
-      ul.innerHTML = `<li><i class="fas fa-info-circle"></i> No tournaments available at the moment.</li>`;
-      return;
+async function loadPlayerDashboard() {
+  const errorDiv = document.createElement('div');
+  errorDiv.id = 'dashboard-error';
+  errorDiv.style.cssText = 'background: #ffdddd; color: #cc0000; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none;';
+  errorDiv.innerHTML = '<strong>Error loading data:</strong> <span id="error-msg"></span> <button id="retry-btn" class="approve-btn" style="background: var(--sea-green);">Retry</button>';
+  document.querySelector('.content').insertBefore(errorDiv, document.querySelector('h1'));
+
+  try {
+    // Clear previous errors
+    errorDiv.style.display = 'none';
+
+    // Fetch dashboard data
+    console.log('Loading dashboard data...');
+    const data = await fetchWithRetry('/player/api/dashboard');
+    if (!data) return; // Stop if redirected to login
+
+    // Render player info
+    document.getElementById('welcome-player').textContent = `Welcome, ${data.playerName}!`;
+    document.getElementById('dashboard-heading').innerHTML = `<i class="fas fa-chess-king"></i> Welcome to ChessHive, ${data.playerName}!`;
+
+    // Render team requests, tournaments, and items
+    renderTeamRequests(data.teamRequests, data.playerName);
+    renderTournaments(data.latestTournaments);
+    renderItems(data.latestItems);
+
+    console.log('Dashboard loaded successfully!');
+
+  } catch (err) {
+    console.error('Dashboard load failed:', err);
+    const errorMsg = document.getElementById('error-msg');
+    errorMsg.textContent = err.message || 'Unknown error. Check console for details.';
+    errorDiv.style.display = 'block';
+    document.getElementById('retry-btn').addEventListener('click', loadPlayerDashboard);
+
+    // Mock data fallback for testing
+    const mockData = {
+      playerName: 'Test Player',
+      teamRequests: [
+        {
+          id: 'mock1',
+          tournamentName: 'Mock Team Battle',
+          captainName: 'Captain A',
+          player1_name: 'Player1',
+          player2_name: 'Test Player',
+          player3_name: 'Player3',
+          player1_approved: true,
+          player2_approved: false,
+          player3_approved: false
+        }
+      ],
+      latestTournaments: [
+        { name: 'October Online Blitz', date: '2025-10-15' },
+        { name: 'Weekly Rapid', date: '2025-10-12' }
+      ],
+      latestItems: [
+        { name: 'Chess Board Set', price: 1500 },
+        { name: 'E-Book: Advanced Tactics', price: 299 }
+      ]
+    };
+    console.log('Using mock data due to error');
+    document.getElementById('welcome-player').textContent = `Welcome, ${mockData.playerName}!`;
+    document.getElementById('dashboard-heading').innerHTML = `<i class="fas fa-chess-king"></i> Welcome to ChessHive, ${mockData.playerName}!`;
+    renderTeamRequests(mockData.teamRequests, mockData.playerName);
+    renderTournaments(mockData.latestTournaments);
+    renderItems(mockData.latestItems);
+  }
+}
+
+// --- Rendering functions ---
+function renderTeamRequests(requests, currentUser) {
+  console.log('Rendering team requests:', requests);
+  const ul = document.getElementById('team-requests-list');
+  ul.innerHTML = '';
+
+  if (!requests.length) {
+    ul.innerHTML = '<li><i class="fas fa-info-circle"></i> No pending team requests.</li>';
+    return;
+  }
+
+  const pending = requests.filter(req => !(
+    (req.player1_name === currentUser && req.player1_approved) ||
+    (req.player2_name === currentUser && req.player2_approved) ||
+    (req.player3_name === currentUser && req.player3_approved)
+  ));
+
+  if (!pending.length) {
+    ul.innerHTML = '<li><i class="fas fa-info-circle"></i> No pending team requests requiring your approval.</li>';
+    return;
+  }
+
+  pending.forEach(req => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <i class="fas fa-users"></i>
+      <div class="tournament-info">
+        <strong>${req.tournamentName}</strong><br>
+        Captain: ${req.captainName} | Team: ${req.player1_name}, ${req.player2_name}, ${req.player3_name}
+      </div>
+      <button class="approve-btn" data-id="${req.id}">Approve</button>
+    `;
+    li.querySelector('.approve-btn').addEventListener('click', () => approveTeamRequest(req.id));
+    ul.appendChild(li);
+  });
+}
+
+async function approveTeamRequest(id) {
+  try {
+    console.log('Approving team request:', id);
+    const res = await fetch('/player/api/approve-team-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ requestId: id })
+    });
+    if (!res.ok) {
+      if (res.status === 401) {
+        alert('Session expired. Redirecting to login...');
+        window.location.href = '/login';
+        return;
+      }
+      throw new Error(`Approval failed: HTTP ${res.status}`);
     }
-    tournaments.forEach(t => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <i class="fas fa-chess-knight"></i>
-        <div class="tournament-info">
-          <strong>${t.name}</strong>
-          <div class="date-tag">
-            <i class="fas fa-calendar-alt"></i> ${t.date}
-          </div>
+    alert('Team request approved!');
+    loadPlayerDashboard(); // Reload to update list
+  } catch (err) {
+    console.error('Approval error:', err);
+    alert(`Error approving team request: ${err.message}`);
+  }
+}
+
+function renderTournaments(tournaments) {
+  console.log('Rendering tournaments:', tournaments);
+  const ul = document.getElementById('latest-tournaments-list');
+  ul.innerHTML = '';
+  if (!tournaments.length) {
+    ul.innerHTML = `<li><i class="fas fa-info-circle"></i> No tournaments available at the moment.</li>`;
+    return;
+  }
+  tournaments.forEach(t => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <i class="fas fa-chess-knight"></i>
+      <div class="tournament-info">
+        <strong>${t.name}</strong>
+        <div class="date-tag">
+          <i class="fas fa-calendar-alt"></i> ${t.date}
         </div>
-      `;
-      ul.appendChild(li);
-    });
-  }
+      </div>
+    `;
+    ul.appendChild(li);
+  });
+}
 
-  function renderItems(items) {
-    console.log('Rendering items:', items);
-    const ul = document.getElementById('latest-items-list');
+function renderItems(items) {
+  console.log('Rendering items:', items);
+  const ul = document.getElementById('latest-items-list');
+  ul.innerHTML = '';
+  if (!items.length) {
+    ul.innerHTML = `<li><i class="fas fa-info-circle"></i> No items available at the moment.</li>`;
+    return;
+  }
+  items.forEach(i => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <i class="fas fa-chess-pawn"></i>
+      <div class="item-info"><strong>${i.name}</strong></div>
+      <span class="price-tag"><i class="fas fa-tag"></i> ₹${i.price}</span>
+    `;
+    ul.appendChild(li);
+  });
+}
+
+// --- Notification handling ---
+async function updateUnreadCount() {
+  try {
+    const data = await fetchWithRetry('/player/api/notifications');
+    if (!data) return;
+    const unread = data.notifications.filter(n => !n.read).length;
+    document.getElementById('unreadCount').textContent = unread;
+  } catch (err) {
+    console.error('Failed to update unread count:', err);
+    document.getElementById('unreadCount').textContent = '0';
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const data = await fetchWithRetry('/player/api/notifications');
+    if (!data) return;
+
+    const ul = document.getElementById('notifications-list');
     ul.innerHTML = '';
-    if (!items.length) {
-      ul.innerHTML = `<li><i class="fas fa-info-circle"></i> No items available at the moment.</li>`;
-      return;
+    const unread = data.notifications.filter(n => !n.read).length;
+    document.getElementById('unreadCount').textContent = unread;
+
+    if (!data.notifications.length) {
+      ul.innerHTML = '<li>No notifications.</li>';
+    } else {
+      data.notifications.forEach(n => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>Feedback Request:</strong> ${n.tournamentName}<br>
+          Date: ${new Date(n.date).toLocaleDateString()}
+          ${!n.read ? '<button onclick="openFeedbackForm(\'' + n._id + '\', \'' + n.tournamentName + '\', \'' + n.tournament_id + '\')">Provide Feedback</button>' : '<span>(Read)</span>'}
+        `;
+        ul.appendChild(li);
+      });
     }
-    items.forEach(i => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <i class="fas fa-chess-pawn"></i>
-        <div class="item-info"><strong>${i.name}</strong></div>
-        <span class="price-tag"><i class="fas fa-tag"></i> ₹${i.price}</span>
-      `;
-      ul.appendChild(li);
-    });
+    document.getElementById('notifications-modal').style.display = 'flex';
+  } catch (err) {
+    console.error('Notifications load failed:', err);
+    const ul = document.getElementById('notifications-list');
+    ul.innerHTML = '<li>Error loading notifications.</li>';
   }
+}
 
-  // Initialize
-  window.addEventListener('DOMContentLoaded', loadPlayerDashboard);
-   document.getElementById('inboxIcon').addEventListener('click', loadNotifications);
+function openFeedbackForm(notificationId, tournamentName, tournamentId) {
+  document.getElementById('feedback-tournament-name').textContent = tournamentName;
+  document.getElementById('feedback-form').style.display = 'block';
+  document.getElementById('submit-feedback-btn').onclick = () => submitFeedback(notificationId, tournamentId);
+}
 
-        async function loadNotifications() {
-            try {
-                const data = await fetchWithRetry('/player/api/notifications');
-                if (!data) return;
+async function submitFeedback(notificationId, tournamentId) {
+  const rating = document.getElementById('feedback-rating').value;
+  const comments = document.getElementById('feedback-comments').value;
+  if (!rating) return alert('Rating required');
 
-                const ul = document.getElementById('notifications-list');
-                ul.innerHTML = '';
-                const unread = data.notifications.filter(n => !n.read).length;
-                document.getElementById('unreadCount').textContent = unread;
+  try {
+    const res = await fetch('/player/api/submit-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournamentId, rating, comments })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Feedback submitted!');
+      await fetch('/player/api/mark-notification-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId })
+      });
+      closeNotifications();
+      loadNotifications();
+    } else {
+      alert(data.error);
+    }
+  } catch (err) {
+    console.error('Submit feedback error:', err);
+    alert('Error submitting feedback');
+  }
+}
 
-                if (!data.notifications.length) {
-                    ul.innerHTML = '<li>No notifications.</li>';
-                } else {
-                    data.notifications.forEach(n => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `
-                            <strong>Feedback Request:</strong> ${n.tournamentName}<br>
-                            Date: ${new Date(n.date).toLocaleDateString()}
-                            ${!n.read ? '<button onclick="openFeedbackForm(\'' + n._id + '\', \'' + n.tournamentName + '\', \'' + n.tournament_id + '\')">Provide Feedback</button>' : '<span>(Read)</span>'}
-                        `;
-                        ul.appendChild(li);
-                    });
-                }
-                document.getElementById('notifications-modal').style.display = 'flex';
-            } catch (err) {
-                console.error('Notifications load failed:', err);
-            }
-        }
+function closeNotifications() {
+  document.getElementById('notifications-modal').style.display = 'none';
+  document.getElementById('feedback-form').style.display = 'none';
+}
 
-        function openFeedbackForm(notificationId, tournamentName, tournamentId) {
-            document.getElementById('feedback-tournament-name').textContent = tournamentName;
-            document.getElementById('feedback-form').style.display = 'block';
-            document.getElementById('submit-feedback-btn').onclick = () => submitFeedback(notificationId, tournamentId);
-        }
-
-        async function submitFeedback(notificationId, tournamentId) {
-            const rating = document.getElementById('feedback-rating').value;
-            const comments = document.getElementById('feedback-comments').value;
-            if (!rating) return alert('Rating required');
-
-            try {
-                const res = await fetch('/player/api/submit-feedback', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tournamentId, rating, comments })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('Feedback submitted!');
-                    await fetch('/player/api/mark-notification-read', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ notificationId })
-                    });
-                    closeNotifications();
-                    loadNotifications();
-                } else {
-                    alert(data.error);
-                }
-            } catch (err) {
-                console.error('Submit feedback error:', err);
-                alert('Error submitting feedback');
-            }
-        }
-
-        function closeNotifications() {
-            document.getElementById('notifications-modal').style.display = 'none';
-            document.getElementById('feedback-form').style.display = 'none';
-        }
-
-        // Load notifications on init (for unread count)
-        loadNotifications();
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  loadPlayerDashboard();
+  updateUnreadCount(); // Load unread count without opening modal
+});
+document.getElementById('inboxIcon').addEventListener('click', loadNotifications);
 </script>
 </body>
 </html>

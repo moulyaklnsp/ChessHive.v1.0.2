@@ -298,6 +298,25 @@
             display: none;
         }
 
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .success {
+            background-color: rgba(46, 139, 87, 0.1);
+            color: var(--sea-green);
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
         @media (max-width: 768px) {
             form {
                 grid-template-columns: 1fr;
@@ -401,70 +420,92 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // Store table configurations and their respective meeting data
     const tableConfig = [
-        { tableId: 'organizedMeetingsTable', moreBtnId: 'organizedMoreBtn', hideBtnId: 'organizedHideBtn', apiEndpoint: '/coordinator/api/meetings/organized', rowsPerPage: 5 },
-        { tableId: 'upcomingMeetingsTable', moreBtnId: 'upcomingMoreBtn', hideBtnId: 'upcomingHideBtn', apiEndpoint: '/coordinator/api/meetings/upcoming', rowsPerPage: 5 }
+        { 
+            tableId: 'organizedMeetingsTable', 
+            moreBtnId: 'organizedMoreBtn', 
+            hideBtnId: 'organizedHideBtn', 
+            apiEndpoint: '/coordinator/api/meetings/organized', 
+            rowsPerPage: 5,
+            meetings: [], // Store meetings data
+            visibleCount: 5 // Track visible rows
+        },
+        { 
+            tableId: 'upcomingMeetingsTable', 
+            moreBtnId: 'upcomingMoreBtn', 
+            hideBtnId: 'upcomingHideBtn', 
+            apiEndpoint: '/coordinator/api/meetings/upcoming', 
+            rowsPerPage: 5,
+            meetings: [], // Store meetings data
+            visibleCount: 5 // Track visible rows
+        }
     ];
 
-    tableConfig.forEach(config => {
+    // Function to render a specific table
+    function renderTable(config) {
         const tableBody = document.getElementById(config.tableId);
         const moreBtn = document.getElementById(config.moreBtnId);
         const hideBtn = document.getElementById(config.hideBtnId);
-        let meetings = [];
-        let visibleCount = config.rowsPerPage;
 
-        async function fetchMeetings() {
-            try {
-                const res = await fetch(config.apiEndpoint);
-                if (!res.ok) throw new Error('Failed to fetch meetings');
-                meetings = await res.json();
-                visibleCount = config.rowsPerPage;
-                renderTable();
-            } catch (err) {
-                console.error(err);
-                tableBody.innerHTML = `<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Could not load meetings.</td></tr>`;
-                moreBtn.style.display = 'none';
-                hideBtn.style.display = 'none';
-            }
+        tableBody.innerHTML = '';
+        if (config.meetings.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No meetings found.</td></tr>`;
+            moreBtn.style.display = 'none';
+            hideBtn.style.display = 'none';
+            return;
         }
 
-        function renderTable() {
-            tableBody.innerHTML = '';
-            if (meetings.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> No meetings found.</td></tr>`;
-                moreBtn.style.display = 'none';
-                hideBtn.style.display = 'none';
-                return;
-            }
+        config.meetings.forEach((meeting, index) => {
+            if (index >= config.visibleCount) return;
+            const tr = document.createElement('tr');
+            tr.className = 'meeting-row';
+            tr.innerHTML = `
+                <td>${meeting.title}</td>
+                <td>${new Date(meeting.date).toLocaleDateString()}</td>
+                <td>${meeting.time}</td>
+                <td><a href="${meeting.link}" target="_blank" class="join-link"><i class="fas fa-video"></i> Join</a></td>
+            `;
+            tableBody.appendChild(tr);
+        });
 
-            meetings.forEach((meeting, index) => {
-                if (index >= visibleCount) return;
-                const tr = document.createElement('tr');
-                tr.className = 'meeting-row';
-                tr.innerHTML = `
-                    <td>${meeting.title}</td>
-                    <td>${new Date(meeting.date).toLocaleDateString()}</td>
-                    <td>${meeting.time}</td>
-                    <td><a href="${meeting.link}" target="_blank" class="join-link"><i class="fas fa-video"></i> Join</a></td>
-                `;
-                tableBody.appendChild(tr);
-            });
+        moreBtn.style.display = config.visibleCount < config.meetings.length ? '' : 'none';
+        hideBtn.style.display = config.visibleCount > config.rowsPerPage ? '' : 'none';
+    }
 
-            moreBtn.style.display = visibleCount < meetings.length ? '' : 'none';
-            hideBtn.style.display = visibleCount > config.rowsPerPage ? '' : 'none';
+    // Fetch meetings for a specific table
+    async function fetchMeetings(config) {
+        try {
+            const res = await fetch(config.apiEndpoint);
+            if (!res.ok) throw new Error('Failed to fetch meetings');
+            config.meetings = await res.json();
+            config.visibleCount = config.rowsPerPage;
+            renderTable(config);
+        } catch (err) {
+            console.error(err);
+            const tableBody = document.getElementById(config.tableId);
+            tableBody.innerHTML = `<tr><td colspan="4" class="empty-message"><i class="fas fa-info-circle"></i> Could not load meetings.</td></tr>`;
+            document.getElementById(config.moreBtnId).style.display = 'none';
+            document.getElementById(config.hideBtnId).style.display = 'none';
         }
+    }
+
+    // Set up each table's functionality
+    tableConfig.forEach(config => {
+        const moreBtn = document.getElementById(config.moreBtnId);
+        const hideBtn = document.getElementById(config.hideBtnId);
 
         moreBtn.addEventListener('click', () => {
-            visibleCount += config.rowsPerPage;
-            renderTable();
+            config.visibleCount += config.rowsPerPage;
+            renderTable(config);
         });
 
         hideBtn.addEventListener('click', () => {
-            visibleCount = config.rowsPerPage;
-            renderTable();
+            config.visibleCount = config.rowsPerPage;
+            renderTable(config);
         });
 
-        fetchMeetings();
+        fetchMeetings(config); // Initial fetch
     });
 
     // Form validation and submission
@@ -557,36 +598,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = {
-            title: form.title.value,
-            date: form.date.value,
-            time: form.time.value,
-            link: form.link.value
+    e.preventDefault();
+    const formData = {
+        title: form.title.value,
+        date: form.date.value,
+        time: form.time.value,
+        link: form.link.value
+    };
+
+    if (!validateForm(formData)) {
+        showMessage('Please correct the errors in the form.', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch('/coordinator/api/meetings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Failed to schedule meeting');
+        }
+
+        const response = await res.json(); // Get the response { success: true, message: '...' }
+        form.reset();
+        showMessage(response.message || 'Meeting scheduled successfully!', 'success');
+
+        // Create the meeting object manually since API doesn't return it
+        const newMeeting = {
+            title: formData.title,
+            date: formData.date,
+            time: formData.time,
+            link: formData.link
         };
 
-        if (!validateForm(formData)) {
-            showMessage('Please correct the errors in the form.', 'error');
-            return;
+        // Add the new meeting to the Organized Meetings table
+        const organizedConfig = tableConfig.find(config => config.tableId === 'organizedMeetingsTable');
+        if (organizedConfig) {
+            organizedConfig.meetings.unshift(newMeeting); // Add to the start of the array
+            renderTable(organizedConfig); // Re-render the Organized Meetings table
         }
 
-        console.log(formData);
-        try {
-            const res = await fetch('/coordinator/api/meetings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            if (!res.ok) throw new Error('Failed to schedule meeting');
-            form.reset();
-            showMessage('Meeting scheduled successfully!', 'success');
-            // Refresh tables
-            tableConfig.forEach(cfg => fetch(cfg.apiEndpoint)); 
-        } catch (err) {
-            console.error(err);
-            showMessage('Failed to schedule meeting.', 'error');
+        // Refresh both tables from server to get accurate data (including the new meeting)
+        const upcomingConfig = tableConfig.find(config => config.tableId === 'upcomingMeetingsTable');
+        if (upcomingConfig) {
+            await fetchMeetings(upcomingConfig);
         }
-    });
+        await fetchMeetings(organizedConfig); // Also refresh organized table to get server data
+
+    } catch (err) {
+        console.error(err);
+        showMessage(`Failed to schedule meeting: ${err.message}`, 'error');
+    }
+});
 });
 </script>
 <script src="/js/searchbar.js"></script>

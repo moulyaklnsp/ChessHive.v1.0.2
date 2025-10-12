@@ -220,26 +220,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournament_id');
     const rounds = urlParams.get('rounds') || '5';
+    console.log('URL Params:', { tournamentId, rounds });
 
     if (!tournamentId) {
+        console.log('Error: No tournamentId provided');
         pairingsContainer.innerHTML = '<p>Error: Tournament ID is required.</p>';
         return;
     }
 
     try {
         // Fetch all rounds data from backend API
+        console.log(`Fetching pairings for tournamentId: ${tournamentId}, rounds: ${rounds}`);
         const res = await fetch(`/coordinator/api/pairings?tournament_id=${tournamentId}&rounds=${rounds}`);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
+        console.log('Fetched data:', data);
         const allRounds = data.allRounds;
+        console.log('Extracted allRounds:', allRounds);
 
         if (!allRounds || allRounds.length === 0) {
+            console.log('No pairings available in allRounds');
             pairingsContainer.innerHTML = '<p>No pairings available.</p>';
             return;
         }
 
         // Render pairings tables
         allRounds.forEach(roundData => {
+            console.log(`Rendering Round ${roundData.round}`);
             const roundDiv = document.createElement('div');
             roundDiv.className = 'pairings-container';
             roundDiv.innerHTML = `
@@ -266,24 +273,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Extract unique player usernames for tree
         let players = [];
         allRounds.forEach(round => {
+            console.log(`Processing round ${round.round} for players`);
             round.pairings.forEach(pair => {
-                if (!players.includes(pair.player1.username)) players.push(pair.player1.username);
-                if (!players.includes(pair.player2.username)) players.push(pair.player2.username);
+                if (!players.includes(pair.player1.username)) {
+                    console.log(`Adding player1: ${pair.player1.username}`);
+                    players.push(pair.player1.username);
+                }
+                if (!players.includes(pair.player2.username)) {
+                    console.log(`Adding player2: ${pair.player2.username}`);
+                    players.push(pair.player2.username);
+                }
             });
-            if (round.byePlayer && !players.includes(round.byePlayer.username)) players.push(round.byePlayer.username);
+            if (round.byePlayer && !players.includes(round.byePlayer.username)) {
+                console.log(`Adding byePlayer: ${round.byePlayer.username}`);
+                players.push(round.byePlayer.username);
+            }
         });
+        console.log('Unique players list:', players);
 
-        // Create tournament tree (simplified bracket for visualization)
-        const playerCount = players.length || 2;
+        // Handle tournament tree
+        const treeContainer = document.getElementById('tournament-tree');
+        if (players.length < 2) {
+            console.log('Not enough players for tree (only 1 player)');
+            treeContainer.innerHTML = '<p>Only one player enrolled. Tournament progression cannot be displayed.</p>';
+            return;
+        }
+
+        // Create tournament tree with player names
+        const playerCount = Math.max(2, players.length);
+        console.log(`Player count: ${playerCount}, Slots calculated: ${Math.pow(2, Math.ceil(Math.log2(playerCount)))}`);
         const slots = Math.pow(2, Math.ceil(Math.log2(playerCount)));
-        while (players.length < slots) players.push("BYE");
+        while (players.length < slots) {
+            console.log(`Adding BYE to reach ${slots} slots`);
+            players.push("BYE");
+        }
+        console.log('Final players list with BYEs:', players);
 
-        const treeData = { name: "Champion", children: [] };
+        const treeData = { name: players[0] || "Champion", children: [] }; // Top node is the first player or Champion
         const firstRound = [];
         for (let i = 0; i < slots; i += 2) {
+            console.log(`Creating match with ${players[i] || 'BYE'} vs ${players[i+1] || 'BYE'}`);
             firstRound.push({
-                name: `R1-M${i/2 + 1}`,
-                children: [{ name: players[i] }, { name: players[i+1] }]
+                name: `${players[i] || 'BYE'} vs ${players[i+1] || 'BYE'}`,
+                children: [{ name: players[i] || "BYE" }, { name: players[i+1] || "BYE" }]
             });
         }
 
@@ -293,11 +325,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const nextRound = [];
             for (let i = 0; i < currentRound.length; i += 2) {
                 if (i + 1 < currentRound.length) {
+                    console.log(`Creating R${roundIndex} match: ${currentRound[i].name} vs ${currentRound[i+1].name}`);
                     nextRound.push({ 
-                        name: `R${roundIndex}-M${i/2 + 1}`, 
+                        name: `${currentRound[i].name} vs ${currentRound[i+1].name}`,
                         children: [currentRound[i], currentRound[i+1]] 
                     });
                 } else {
+                    console.log(`Carrying over last match: ${currentRound[i].name}`);
                     nextRound.push(currentRound[i]);
                 }
             }
@@ -305,13 +339,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             roundIndex++;
         }
         treeData.children = currentRound;
+        console.log('Tree data structure:', treeData);
 
         // Render D3 tree
         const svg = d3.select("#tournament-tree");
         const width = 900, height = Math.max(300, slots * 50);
+        console.log(`Setting SVG viewBox to ${width}x${height}`);
         svg.attr("viewBox", `0 0 ${width} ${height}`);
         const treeLayout = d3.tree().size([height - 100, width - 200]);
         const root = d3.hierarchy(treeData);
+        console.log('Hierarchy root:', root);
         treeLayout(root);
 
         svg.append("g")
@@ -342,10 +379,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         nodes.append("text")
             .attr("y", 0)
-            .text(d => d.data.name.length > 12 ? d.data.name.substring(0,10) + "..." : d.data.name);
+            .text(d => (d.data.name || "Unknown").length > 12 ? (d.data.name || "Unknown").substring(0, 10) + "..." : d.data.name || "Unknown")
+            .each(function(d) { console.log(`Rendering node text: ${d.data.name || 'undefined'}`); });
 
     } catch (err) {
-        console.error(err);
+        console.error('Error in script:', err);
         pairingsContainer.innerHTML = '<p>Failed to load pairings.</p>';
     }
 });
