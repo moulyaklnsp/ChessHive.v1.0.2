@@ -314,106 +314,151 @@
     </div>
   </footer>
 
-  <script>
-    // Show messages after redirect
-    const params = new URLSearchParams(window.location.search);
-    const successMsg = params.get("success-message");
-    const errorMsg = params.get("error-message");
-    const successDiv = document.getElementById("successMessage");
-    if (successMsg) {
-      successDiv.textContent = successMsg;
-      successDiv.style.display = "block";
-    } else if (errorMsg) {
-      successDiv.textContent = errorMsg;
-      successDiv.style.display = "block";
-      successDiv.style.backgroundColor = "#f8d7da";
-      successDiv.style.color = "#721c24";
+ <script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Show messages after redirect
+  const params = new URLSearchParams(window.location.search);
+  const successMsg = params.get("success-message");
+  const errorMsg = params.get("error-message");
+  const successMessageDiv = document.getElementById('successMessage');
+
+  if (successMsg) {
+    successMessageDiv.textContent = successMsg;
+    successMessageDiv.style.display = 'block';
+    successMessageDiv.style.backgroundColor = 'rgba(46, 139, 87, 0.1)';
+    successMessageDiv.style.color = 'var(--sea-green)';
+  } else if (errorMsg) {
+    successMessageDiv.textContent = errorMsg;
+    successMessageDiv.style.display = 'block';
+    successMessageDiv.style.backgroundColor = '#f8d7da';
+    successMessageDiv.style.color = '#721c24';
+  }
+
+  // Client-side validation and form submission
+  const contactForm = document.getElementById('contactForm');
+  const nameInput = document.getElementById('name');
+  const emailInput = document.getElementById('email');
+  const messageInput = document.getElementById('message');
+  const errorName = document.getElementById('errorName');
+  const errorEmail = document.getElementById('errorEmail');
+  const errorMessage = document.getElementById('errorMessage');
+  let isSubmitting = false;
+
+  contactForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return; // Prevent multiple submissions
+    isSubmitting = true;
+
+    // Clear previous errors and success message
+    [errorName, errorEmail, errorMessage].forEach(error => error.textContent = '');
+    successMessageDiv.style.display = 'none';
+
+    // Validate form
+    let isValid = true;
+
+    // Validate name
+    const name = nameInput.value.trim();
+    const namePattern = /^[A-Za-z]+(?:[ -][A-Za-z]+)*$/; // Allows spaces and hyphens
+    if (!name) {
+      errorName.textContent = 'Name is required.';
+      isValid = false;
+    } else if (!namePattern.test(name)) {
+      errorName.textContent = 'Name should only contain letters, spaces, or hyphens.';
+      isValid = false;
     }
 
-    // Client-side validation and form submission
-    const contactForm = document.getElementById('contactForm');
-    const nameInput = document.getElementById('name');
-    const emailInput = document.getElementById('email');
-    const messageInput = document.getElementById('message');
-    const errorName = document.getElementById('errorName');
-    const errorEmail = document.getElementById('errorEmail');
-    const errorMessage = document.getElementById('errorMessage');
-    const successMessageDiv = document.getElementById('successMessage');
+    // Validate email
+    const email = emailInput.value.trim();
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!email) {
+      errorEmail.textContent = 'Email is required.';
+      isValid = false;
+    } else if (!emailPattern.test(email)) {
+      errorEmail.textContent = 'Please enter a valid email address.';
+      isValid = false;
+    }
 
-    contactForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      let isValid = true;
+    // Validate message
+    const message = messageInput.value.trim();
+    const words = message.match(/\b\w+\b/g) || []; // More accurate word count
+    if (!message) {
+      errorMessage.textContent = 'Message cannot be empty.';
+      isValid = false;
+    } else if (words.length > 200) {
+      errorMessage.textContent = 'Message cannot exceed 200 words.';
+      isValid = false;
+    }
 
-      // Clear previous errors
-      errorName.textContent = '';
-      errorEmail.textContent = '';
-      errorMessage.textContent = '';
-      successMessageDiv.style.display = 'none';
+    if (!isValid) {
+      isSubmitting = false;
+      return;
+    }
 
-      // Validate name
-      const name = nameInput.value.trim();
-      const namePattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
-      if (!name) {
-        errorName.textContent = 'Name is required.';
-        isValid = false;
-      } else if (!namePattern.test(name)) {
-        errorName.textContent = 'Name should only contain letters.';
-        isValid = false;
-      }
+    try {
+      const response = await fetch('/api/contactus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message })
+      });
 
-      // Validate email
-      const email = emailInput.value.trim();
-      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!email) {
-        errorEmail.textContent = 'Email is required.';
-        isValid = false;
-      } else if (!emailPattern.test(email)) {
-        errorEmail.textContent = 'Please enter a valid email address.';
-        isValid = false;
-      }
+      const data = await response.json();
+      console.log('Server response:', data);
 
-      // Validate message
-      const message = messageInput.value.trim();
-      const wordCount = message.split(/\s+/).length;
-      if (!message) {
-        errorMessage.textContent = 'Message cannot be empty.';
-        isValid = false;
-      } else if (wordCount > 200) {
-        errorMessage.textContent = 'Message cannot exceed 200 words.';
-        isValid = false;
-      }
-
-      if (!isValid) {
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/contactus', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, message })
-        });
-        const data = await response.json();
-        console.log('Server response:', data);
-
-        if (data.success) {
-          successMessageDiv.textContent = data.message;
-          successMessageDiv.style.display = 'block';
-          contactForm.reset(); // Clear the form
-        } else {
-          successMessageDiv.textContent = data.message;
-          successMessageDiv.style.display = 'block';
-          successMessageDiv.style.backgroundColor = '#f8d7da';
-          successMessageDiv.style.color = '#721c24';
-        }
-      } catch (err) {
-        console.error('Contact error:', err);
-        successMessageDiv.textContent = 'Failed to connect to server.';
+      if (response.ok && data.success) {
+        successMessageDiv.textContent = data.message || 'Message sent successfully!';
+        successMessageDiv.style.display = 'block';
+        successMessageDiv.style.backgroundColor = 'rgba(46, 139, 87, 0.1)';
+        successMessageDiv.style.color = 'var(--sea-green)';
+        contactForm.reset(); // Clear the form
+        setTimeout(() => {
+          successMessageDiv.style.display = 'none'; // Auto-hide after 5 seconds
+        }, 5000);
+      } else {
+        successMessageDiv.textContent = data.message || 'Failed to send message.';
         successMessageDiv.style.display = 'block';
         successMessageDiv.style.backgroundColor = '#f8d7da';
         successMessageDiv.style.color = '#721c24';
       }
-    });
-  </script>
+    } catch (err) {
+      console.error('Contact error:', err);
+      successMessageDiv.textContent = 'Failed to connect to server.';
+      successMessageDiv.style.display = 'block';
+      successMessageDiv.style.backgroundColor = '#f8d7da';
+      successMessageDiv.style.color = '#721c24';
+    } finally {
+      isSubmitting = false;
+    }
+  });
+
+  // Add input event listeners for real-time validation
+  nameInput.addEventListener('input', () => {
+    const name = nameInput.value.trim();
+    if (name && !/^[A-Za-z]+(?:[ -][A-Za-z]+)*$/.test(name)) {
+      errorName.textContent = 'Name should only contain letters, spaces, or hyphens.';
+    } else {
+      errorName.textContent = '';
+    }
+  });
+
+  emailInput.addEventListener('input', () => {
+    const email = emailInput.value.trim();
+    if (email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      errorEmail.textContent = 'Please enter a valid email address.';
+    } else {
+      errorEmail.textContent = '';
+    }
+  });
+
+  messageInput.addEventListener('input', () => {
+    const message = messageInput.value.trim();
+    const words = message.match(/\b\w+\b/g) || [];
+    if (words.length > 200) {
+      errorMessage.textContent = 'Message cannot exceed 200 words.';
+    } else {
+      errorMessage.textContent = '';
+    }
+  });
+});
+</script>
 </body>
 </html>
