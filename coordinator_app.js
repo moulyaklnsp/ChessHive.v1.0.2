@@ -153,11 +153,11 @@ router.get('/api/profile', async (req, res) => {
 router.delete('/api/profile', async (req, res) => {
   try {
     const db = await connectDB();
-    const username = req.session.username || req.session.userEmail;
+    const usermail = req.session.userEmail;
 
     const result = await db.collection('users').updateOne(
       { email: req.session.userEmail, role: 'coordinator' },
-      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: username } }
+      { $set: { isDeleted: 1, deleted_date: new Date(), deleted_by: usermail } }
     );
 
     if (result.modifiedCount > 0) {
