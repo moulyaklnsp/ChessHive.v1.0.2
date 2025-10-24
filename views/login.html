@@ -398,6 +398,46 @@
     </footer>
 
     <script>
+            function validateEmail(email) {
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        document.getElementById('emailError').textContent = 'Valid email is required';
+        document.getElementById('emailError').style.display = 'block';
+        document.getElementById('email').classList.add('error-input');
+        return false;
+      } else if (/[A-Z]/.test(email)) {
+        document.getElementById('emailError').textContent = 'Email should only contain lowercase letters';
+        document.getElementById('emailError').style.display = 'block';
+        document.getElementById('email').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+    
+    function validatePassword(password) {
+      if (!password || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(password)) {
+        document.getElementById('passwordError').textContent = 'Password must be at least 8 characters with one uppercase, one lowercase, and one special character';
+        document.getElementById('passwordError').style.display = 'block';
+        document.getElementById('password').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+     function clearError(id) {
+      document.getElementById(`${id}Error`).textContent = '';
+      document.getElementById(`${id}Error`).style.display = 'none';
+      document.getElementById(id).classList.remove('error-input');
+      document.getElementById('serverError').style.display = 'none';
+    }
+     document.getElementById('email').addEventListener('input', function() {
+      clearError('email');
+      validateEmail(this.value.trim());
+    });
+     document.getElementById('password').addEventListener('input', function() {
+      clearError('password');
+      validatePassword(this.value);
+    });
+
+
         // Fetch session email
         async function getSessionEmail() {
             try {
@@ -472,31 +512,18 @@
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            let isValid = true;
 
             // Clear previous error messages
             errorMessageDiv.innerHTML = '';
 
-            // Validate email
-            const email = emailInput.value.trim();
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!email) {
-                errorMessageDiv.innerHTML += '<p class="error">Email is required.</p>';
-                isValid = false;
-            } else if (!emailPattern.test(email)) {
-                errorMessageDiv.innerHTML += '<p class="error">Please enter a valid email address.</p>';
-                isValid = false;
-            }
+           // Collect form data
+      const formData = {
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value
+      };
 
-            // Validate password
-            const password = passwordInput.value.trim();
-            if (!password) {
-                errorMessageDiv.innerHTML += '<p class="error">Password is required.</p>';
-                isValid = false;
-            } else if (password.length < 6) {
-                errorMessageDiv.innerHTML += '<p class="error">Password must be at least 6 characters long.</p>';
-                isValid = false;
-            }
+      // Validate all fields before submission
+      const isValid = validateEmail(formData.email) &&validatePassword(formData.password);
 
             if (!isValid) {
                 return;
@@ -506,7 +533,7 @@
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify(formData)
                 });
                 const data = await response.json();
                 console.log('Server response:', data);

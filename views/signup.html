@@ -353,16 +353,167 @@
   </footer>
 
   <script>
+    // Validation functions
+    function validateName(name) {
+      if (!name || !/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(name)) {
+        document.getElementById('nameError').textContent = 'Valid full name is required (letters and single spaces only)';
+        document.getElementById('nameError').style.display = 'block';
+        document.getElementById('name').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validateEmail(email) {
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        document.getElementById('emailError').textContent = 'Valid email is required';
+        document.getElementById('emailError').style.display = 'block';
+        document.getElementById('email').classList.add('error-input');
+        return false;
+      } else if (/[A-Z]/.test(email)) {
+        document.getElementById('emailError').textContent = 'Email should only contain lowercase letters';
+        document.getElementById('emailError').style.display = 'block';
+        document.getElementById('email').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validateDob(dob) {
+      if (!dob) {
+        document.getElementById('dobError').textContent = 'Date of Birth is required';
+        document.getElementById('dobError').style.display = 'block';
+        document.getElementById('dob').classList.add('error-input');
+        return false;
+      }
+      const birthDate = new Date(dob);
+      if (isNaN(birthDate)) {
+        document.getElementById('dobError').textContent = 'Invalid date format';
+        document.getElementById('dobError').style.display = 'block';
+        document.getElementById('dob').classList.add('error-input');
+        return false;
+      }
+      const age = Math.floor((Date.now() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < 16) {
+        document.getElementById('dobError').textContent = 'You must be at least 16 years old';
+        document.getElementById('dobError').style.display = 'block';
+        document.getElementById('dob').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validateGender(gender) {
+      if (!gender || !['male', 'female', 'other'].includes(gender)) {
+        document.getElementById('genderError').textContent = 'Gender is required';
+        document.getElementById('genderError').style.display = 'block';
+        document.getElementById('gender').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validateCollege(college) {
+      if (!college || !/^[A-Za-z\s']+$/.test(college)) {
+        document.getElementById('collegeError').textContent = 'College name must contain only letters, spaces, or apostrophes';
+        document.getElementById('collegeError').style.display = 'block';
+        document.getElementById('college').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validatePhone(phone) {
+      if (!phone || !/^[0-9]{10}$/.test(phone)) {
+        document.getElementById('phoneError').textContent = 'Valid 10-digit phone number is required';
+        document.getElementById('phoneError').style.display = 'block';
+        document.getElementById('phone').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validatePassword(password) {
+      if (!password || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(password)) {
+        document.getElementById('passwordError').textContent = 'Password must be at least 8 characters with one uppercase, one lowercase, and one special character';
+        document.getElementById('passwordError').style.display = 'block';
+        document.getElementById('password').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    function validateRole(role) {
+      if (!role || !['admin', 'organizer', 'coordinator', 'player'].includes(role)) {
+        document.getElementById('roleError').textContent = 'Valid role is required';
+        document.getElementById('roleError').style.display = 'block';
+        document.getElementById('role').classList.add('error-input');
+        return false;
+      }
+      return true;
+    }
+
+    // Optional fields don't require validation
+    function clearError(id) {
+      document.getElementById(`${id}Error`).textContent = '';
+      document.getElementById(`${id}Error`).style.display = 'none';
+      document.getElementById(id).classList.remove('error-input');
+      document.getElementById('serverError').style.display = 'none';
+    }
+
+    // Real-time validation for each field
+    document.getElementById('name').addEventListener('input', function() {
+      clearError('name');
+      validateName(this.value.trim());
+    });
+
+    document.getElementById('email').addEventListener('input', function() {
+      clearError('email');
+      validateEmail(this.value.trim());
+    });
+
+    document.getElementById('dob').addEventListener('input', function() {
+      clearError('dob');
+      validateDob(this.value);
+    });
+
+    document.getElementById('gender').addEventListener('change', function() {
+      clearError('gender');
+      validateGender(this.value);
+    });
+
+    document.getElementById('college').addEventListener('input', function() {
+      clearError('college');
+      validateCollege(this.value.trim());
+    });
+
+    document.getElementById('phone').addEventListener('input', function() {
+      clearError('phone');
+      validatePhone(this.value.trim());
+    });
+
+    document.getElementById('password').addEventListener('input', function() {
+      clearError('password');
+      validatePassword(this.value);
+    });
+
+    document.getElementById('role').addEventListener('change', function() {
+      clearError('role');
+      validateRole(this.value);
+    });
+
+    // Optional fields only clear errors
+    ['aicf_id', 'fide_id'].forEach(id => {
+      document.getElementById(id).addEventListener('input', function() {
+        clearError(id);
+      });
+    });
+
+    // Form submission
     document.getElementById('signupForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      let isValid = true;
 
-      // Clear previous errors
-      document.querySelectorAll('.error').forEach(el => {
-        el.textContent = '';
-        el.style.display = 'none';
-        el.parentElement.querySelector('input, select').classList.remove('error-input');
-      });
+      // Clear server error
       document.getElementById('serverError').style.display = 'none';
       document.getElementById('serverError').textContent = '';
 
@@ -380,83 +531,15 @@
         fide_id: document.getElementById('fide_id').value.trim()
       };
 
-      // Client-side validation
-      if (!formData.name || !/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(formData.name)) {
-        document.getElementById('nameError').textContent = 'Valid full name is required (letters and single spaces only)';
-        document.getElementById('nameError').style.display = 'block';
-        document.getElementById('name').classList.add('error-input');
-        isValid = false;
-      }
-
-      if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
-        document.getElementById('emailError').textContent = 'Valid email is required';
-        document.getElementById('emailError').style.display = 'block';
-        document.getElementById('email').classList.add('error-input');
-        isValid = false;
-      } else if (/[A-Z]/.test(formData.email)) {
-        document.getElementById('emailError').textContent = 'Email should only contain lowercase letters';
-        document.getElementById('emailError').style.display = 'block';
-        document.getElementById('email').classList.add('error-input');
-        isValid = false;
-      }
-
-      if (!formData.dob) {
-        document.getElementById('dobError').textContent = 'Date of Birth is required';
-        document.getElementById('dobError').style.display = 'block';
-        document.getElementById('dob').classList.add('error-input');
-        isValid = false;
-      } else {
-        const birthDate = new Date(formData.dob);
-        if (isNaN(birthDate)) {
-          document.getElementById('dobError').textContent = 'Invalid date format';
-          document.getElementById('dobError').style.display = 'block';
-          document.getElementById('dob').classList.add('error-input');
-          isValid = false;
-        } else {
-          const age = Math.floor((Date.now() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
-          if (age < 16) {
-            document.getElementById('dobError').textContent = 'You must be at least 16 years old';
-            document.getElementById('dobError').style.display = 'block';
-            document.getElementById('dob').classList.add('error-input');
-            isValid = false;
-          }
-        }
-      }
-
-      if (!formData.gender || !['male', 'female', 'other'].includes(formData.gender)) {
-        document.getElementById('genderError').textContent = 'Gender is required';
-        document.getElementById('genderError').style.display = 'block';
-        document.getElementById('gender').classList.add('error-input');
-        isValid = false;
-      }
-
-      if (!formData.college || !/^[A-Za-z\s']+$/.test(formData.college)) {
-        document.getElementById('collegeError').textContent = 'College name must contain only letters, spaces, or apostrophes';
-        document.getElementById('collegeError').style.display = 'block';
-        document.getElementById('college').classList.add('error-input');
-        isValid = false;
-      }
-
-      if (!formData.phone || !/^[0-9]{10}$/.test(formData.phone)) {
-        document.getElementById('phoneError').textContent = 'Valid 10-digit phone number is required';
-        document.getElementById('phoneError').style.display = 'block';
-        document.getElementById('phone').classList.add('error-input');
-        isValid = false;
-      }
-
-      if (!formData.password || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(formData.password)) {
-        document.getElementById('passwordError').textContent = 'Password must be at least 8 characters with one uppercase, one lowercase, and one special character';
-        document.getElementById('passwordError').style.display = 'block';
-        document.getElementById('password').classList.add('error-input');
-        isValid = false;
-      }
-
-      if (!formData.role || !['admin', 'organizer', 'coordinator', 'player'].includes(formData.role)) {
-        document.getElementById('roleError').textContent = 'Valid role is required';
-        document.getElementById('roleError').style.display = 'block';
-        document.getElementById('role').classList.add('error-input');
-        isValid = false;
-      }
+      // Validate all fields before submission
+      const isValid = validateName(formData.name) &&
+                      validateEmail(formData.email) &&
+                      validateDob(formData.dob) &&
+                      validateGender(formData.gender) &&
+                      validateCollege(formData.college) &&
+                      validatePhone(formData.phone) &&
+                      validatePassword(formData.password) &&
+                      validateRole(formData.role);
 
       if (!isValid) {
         document.getElementById('serverError').style.display = 'block';
@@ -464,41 +547,31 @@
         return;
       }
 
-     try {
-      console.log('Sending data:', JSON.stringify(formData));
-    const res = await fetch('/api/signup', { // Updated from '/auth/signup' to '/api/signup'
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    });
-    const data = await res.json();
-    console.log('Server response:', data); // Add this to debug
-    if (data.success) {
-      document.getElementById('serverError').style.display = 'block';
-      document.getElementById('serverError').className = 'server-error success';
-      document.getElementById('serverError').textContent = data.message;
-      setTimeout(() => {
-        window.location.href = data.redirectUrl;
-      }, 1000);
-    } else {
-      document.getElementById('serverError').style.display = 'block';
-      document.getElementById('serverError').textContent = data.message;
-    }
-  } catch (err) {
-    console.error('Signup error:', err);
-    document.getElementById('serverError').style.display = 'block';
-    document.getElementById('serverError').textContent = 'Failed to connect to server';
-  }
-});
-
-    // Real-time validation
-    ['name', 'email', 'dob', 'gender', 'college', 'phone', 'password', 'role', 'aicf_id', 'fide_id'].forEach(id => {
-      document.getElementById(id).addEventListener('input', function() {
-        this.parentElement.querySelector('.error').textContent = '';
-        this.parentElement.querySelector('.error').style.display = 'none';
-        this.classList.remove('error-input');
-        document.getElementById('serverError').style.display = 'none';
-      });
+      try {
+        console.log('Sending data:', JSON.stringify(formData));
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        const data = await res.json();
+        console.log('Server response:', data);
+        if (data.success) {
+          document.getElementById('serverError').style.display = 'block';
+          document.getElementById('serverError').className = 'server-error success';
+          document.getElementById('serverError').textContent = data.message;
+          setTimeout(() => {
+            window.location.href = data.redirectUrl;
+          }, 1000);
+        } else {
+          document.getElementById('serverError').style.display = 'block';
+          document.getElementById('serverError').textContent = data.message;
+        }
+      } catch (err) {
+        console.error('Signup error:', err);
+        document.getElementById('serverError').style.display = 'block';
+        document.getElementById('serverError').textContent = 'Failed to connect to server';
+      }
     });
   </script>
 </body>
