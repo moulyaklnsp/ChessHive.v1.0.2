@@ -1,8 +1,13 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const authrouter = require('./routes/auth');
 const methodOverride = require('method-override');
+const http = require('http');
+const { Server } = require('socket.io');
+// nodemailer is optional. If not installed or SMTP not configured, magic link will be logged to console.
+let nodemailer;
+try { nodemailer = require('nodemailer'); } catch (e) { nodemailer = null; }
+require('dotenv').config();
 const { connectDB } = require('./routes/databasecongi');
 
 const adminRouter = require('./admin_app');
@@ -14,80 +19,159 @@ const utils = require('./utils');
 const { ObjectId } = require('mongodb');
 
 const app = express();
-const PORT = 3000;
+const cors = require('cors');
+// Allow CORS from frontend
+app.use(cors({ origin: 'http://localhost:3001', credentials: true }));
+// Increase maxHeaderSize to accept larger request headers (fixes 431 errors)
+// Default Node limit can be too small when many/large cookies or headers are present.
+// Raise to 1MB to tolerate larger Cookie headers from development environments.
+const server = http.createServer({ maxHeaderSize: 1048576 }, app);
+const io = new Server(server, { cors: { origin: 'http://localhost:3001', methods: ['GET', 'POST'] } });
+const PORT = process.env.PORT || 3000;
 
 app.use(session({
-  secret: 'your_secret_key',
+  name: process.env.SESSION_COOKIE_NAME || 'sid',
+  secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false }
+  saveUninitialized: false,
+  rolling: false,
+  cookie: { secure: false, sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json()); // For parsing JSON from API requests
+app.use(express.json());
 app.use(methodOverride('_method'));
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.use(authrouter);
 
-// ---------- Role Middleware ----------
-const isAdmin = (req, res, next) => { 
-  if (req.session.userRole === 'admin') next(); 
-  else res.status(403).send('Unauthorized'); 
-};
-const isOrganizer = (req, res, next) => { 
-  if (req.session.userRole === 'organizer') next(); 
-  else res.status(403).send('Unauthorized'); 
-};
-const isCoordinator = (req, res, next) => { 
-  if (req.session.userRole === 'coordinator') next(); 
-  else res.status(403).send('Unauthorized'); 
-};
-const isPlayer = (req, res, next) => { 
-  if (req.session.userRole === 'player') next(); 
-  else res.status(403).send('Unauthorized'); 
-};
-const isAdminOrOrganizer = (req, res, next) => { 
-  if (req.session.userRole === 'admin' || req.session.userRole === 'organizer') next(); 
-  else res.status(403).json({ success: false, message: 'Unauthorized' }); 
-};
+// mount optional auth router
+try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
 
-// ---------- Mount Routers ----------
+// Role middleware
+const isAdmin = (req, res, next) => { if (req.session.userRole === 'admin') next(); else res.status(403).send('Unauthorized'); };
+const isOrganizer = (req, res, next) => { if (req.session.userRole === 'organizer') next(); else res.status(403).send('Unauthorized'); };
+const isCoordinator = (req, res, next) => { if (req.session.userRole === 'coordinator') next(); else res.status(403).send('Unauthorized'); };
+const isPlayer = (req, res, next) => { if (req.session.userRole === 'player') next(); else res.status(403).send('Unauthorized'); };
+const isAdminOrOrganizer = (req, res, next) => { if (req.session.userRole === 'admin' || req.session.userRole === 'organizer') next(); else res.status(403).json({ success: false, message: 'Unauthorized' }); };
+
+// Mount routers
 app.use('/admin', isAdmin, adminRouter);
 app.use('/organizer', isOrganizer, organizerRouter);
 app.use('/coordinator', isCoordinator, coordinatorRouter);
 app.use('/player', isPlayer, playerRouter.router);
 
-// ---------- Serve index.html ----------
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'index.html'));
-});
-
+// Serve index
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'views', 'index.html')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// API endpoint for login
+// Login with OTP
 app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
-
+  const { email, password } = req.body || {};
   try {
     const db = await connectDB();
     const user = await db.collection('users').findOne({ email, password });
-    if (!user) {
-      console.log('Login failed: Invalid credentials for', email);
-      return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    if (user.isDeleted) return res.status(403).json({ success: false, message: 'Account has been deleted', deletedUserId: user._id.toString(), deletedUserRole: user.role, deleted_by: user.deleted_by || null, sessionEmail: email });
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Store OTP in database
+    await db.collection('otps').insertOne({
+      email,
+      otp,
+      type: 'login',
+      expires_at: expiresAt,
+      used: false
+    });
+
+    // Send OTP via email
+    async function sendOtpEmail(to, otp) {
+      if (!nodemailer) {
+        console.log(`nodemailer not installed. OTP for ${to}: ${otp}`);
+        return { previewUrl: null, messageId: null, info: null };
+      }
+
+      // If no SMTP configured, use Ethereal test account for local testing
+      if (!process.env.SMTP_HOST) {
+        try {
+          const testAccount = await nodemailer.createTestAccount();
+          const transporter = nodemailer.createTransport({ host: testAccount.smtp.host, port: testAccount.smtp.port, secure: testAccount.smtp.secure, auth: { user: testAccount.user, pass: testAccount.pass } });
+          const info = await transporter.sendMail({ from: process.env.SMTP_FROM || '', to, subject: 'Your ChessHive OTP', text: `Your OTP is: ${otp}. It expires in 5 minutes.` });
+          const previewUrl = nodemailer.getTestMessageUrl(info);
+          console.log(`Ethereal OTP preview for ${to}: ${previewUrl}`);
+          return { previewUrl, messageId: info && info.messageId, info };
+        } catch (err) {
+          console.error('Failed to send via Ethereal, falling back to console:', err);
+          console.log(`OTP for ${to}: ${otp}`);
+          return { previewUrl: null, messageId: null, info: null };
+        }
+      }
+
+      // SMTP configured path
+      try {
+        const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: parseInt(process.env.SMTP_PORT || '587', 10), secure: (process.env.SMTP_SECURE === 'true'), auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined });
+        // attempt to verify transporter (helps surfacing auth/connectivity issues early)
+        try {
+          await transporter.verify();
+          console.log('SMTP transporter verified');
+        } catch (verErr) {
+          console.warn('SMTP transporter verification failed:', verErr);
+        }
+        const info = await transporter.sendMail({ from: process.env.SMTP_FROM || '', to, subject: 'Your ChessHive OTP', text: `Your OTP is: ${otp}. It expires in 5 minutes.` });
+        console.log('OTP email sent:', info && info.messageId, 'envelope:', info && info.envelope);
+        return { previewUrl: null, messageId: info && info.messageId, info };
+      } catch (err) {
+        console.error('Failed to send OTP email, falling back to console:', err);
+        console.log(`OTP for ${to}: ${otp}`);
+        return { previewUrl: null, messageId: null, info: null };
+      }
     }
-    if (user.isDeleted) {
-      console.log('Login failed: Account deleted for', email);
-      return res.status(403).json({
-        success: false,
-        message: 'Account has been deleted',
-        deletedUserId: user._id.toString(),
-        deletedUserRole: user.role,
-        deleted_by: user.deleted_by || null,
-        sessionEmail: email
-      });
+
+    // Send OTP
+    let preview = null;
+    let messageId = null;
+    try {
+      const result = await sendOtpEmail(user.email, otp);
+      if (result) {
+        if (result.previewUrl) preview = result.previewUrl;
+        if (result.messageId) messageId = result.messageId;
+      }
+    } catch (e) {
+      console.error('sendOtpEmail error:', e);
     }
+
+    // Tell frontend that OTP was sent
+    const responsePayload = { success: true, message: 'OTP sent to registered email' };
+    if (preview) responsePayload.previewUrl = preview;
+    if (messageId) responsePayload.messageId = messageId;
+    return res.json(responsePayload);
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+  }
+});
+
+// Verify login OTP
+app.post('/api/verify-login-otp', async (req, res) => {
+  const { email, otp } = req.body || {};
+  try {
+    if (!email || !otp) return res.status(400).json({ success: false, message: 'Email and OTP required' });
+
+    const db = await connectDB();
+    const otpRecord = await db.collection('otps').findOne({ email, otp, type: 'login', used: false });
+    if (!otpRecord) return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    if (new Date() > otpRecord.expires_at) return res.status(400).json({ success: false, message: 'OTP expired' });
+
+    // Mark OTP as used
+    await db.collection('otps').updateOne({ _id: otpRecord._id }, { $set: { used: true } });
+
+    // Fetch user and establish session
+    const user = await db.collection('users').findOne({ email });
+    if (!user) return res.status(400).json({ success: false, message: 'User not found' });
+
     req.session.userID = user._id;
     req.session.userEmail = user.email;
     req.session.userRole = user.role;
@@ -95,292 +179,182 @@ app.post('/api/login', async (req, res) => {
     req.session.playerName = user.name;
     req.session.userCollege = user.college;
     req.session.collegeName = user.college;
-    console.log(`User logged in: ${email} as ${user.role}`);
 
     let redirectUrl = '';
     switch (user.role) {
-      case 'admin':
-        redirectUrl = '/admin/admin_dashboard';
-        break;
-      case 'organizer':
-        redirectUrl = '/organizer/organizer_dashboard';
-        break;
-      case 'coordinator':
-        redirectUrl = '/coordinator/coordinator_dashboard';
-        break;
-      case 'player':
-        redirectUrl = '/player/player_dashboard?success-message=Player Login Successful';
-        break;
-      default:
-        return res.status(400).json({ success: false, message: 'Invalid Role' });
+      case 'admin': redirectUrl = '/admin/admin_dashboard'; break;
+      case 'organizer': redirectUrl = '/organizer/organizer_dashboard'; break;
+      case 'coordinator': redirectUrl = '/coordinator/coordinator_dashboard'; break;
+      case 'player': redirectUrl = '/player/player_dashboard?success-message=Player Login Successful'; break;
+      default: return res.status(400).json({ success: false, message: 'Invalid Role' });
     }
     res.json({ success: true, redirectUrl });
   } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+    console.error('OTP verify error:', err);
+    res.status(500).json({ success: false, message: 'Unexpected server error' });
   }
 });
 
-// API endpoint for signup
-app.post('/api/signup', async (req, res) => {
-  const {
-    name, email, dob, gender, college, phone, password, role, aicf_id, fide_id
-  } = req.body;
 
-  // Log the incoming data for debugging
-  console.log('Received data:', req.body);
 
+// Session info
+app.get('/api/session', (req, res) => {
+  res.json({ userEmail: req.session.userEmail || null, userRole: req.session.userRole || null, username: req.session.username || null });
+});
+
+
+
+// Chat history
+app.get('/api/chat/history', async (req, res) => {
   try {
-    // Validate dob
-    console.log(dob);
-    if (!dob || isNaN(new Date(dob).getTime())) {
-      throw new Error('Invalid date of birth');
-    }
-
-    const newUser = {
-      name: name || '',
-      email: email || '',
-      password: password || '', // Hash this in production
-      role: role || '',
-      isDeleted: 0, // Required field
-      dob: new Date(dob), // Convert to Date
-      gender: gender || '',
-      college: college || '',
-      phone: phone || '',
-      AICF_ID: aicf_id || '', // Default to empty string if not provided
-      FIDE_ID: fide_id || ''  // Default to empty string if not provided
-    };
-
+    const room = (req.query.room || 'global').toString();
     const db = await connectDB();
-    const result = await db.collection('users').insertOne(newUser);
-    if (result.insertedId) {
-      console.log(`User signed up: ${email} as ${role}`);
-      res.json({
-        success: true,
-        message: 'Signup successful! Redirecting to login...',
-        redirectUrl: '/login'
-      });
-    } else {
-      res.json({ success: false, message: 'Failed to create user' });
-    }
+    const history = await db.collection('chat_messages').find({ room }).sort({ timestamp: -1 }).limit(50).toArray();
+    res.json({ success: true, history });
   } catch (err) {
-    console.error('Signup error:', err);
-    if (err.code === 121) {
-      res.status(400).json({ success: false, message: 'Data validation failed. Please check your input.' });
-    } else if (err.code === 11000) {
-      res.status(400).json({ success: false, message: 'Email already exists.' });
-    } else {
-      res.status(500).json({ success: false, message: 'An unexpected error occurred' });
-    }
+    console.error('Chat history error:', err);
+    res.status(500).json({ success: false, message: 'Unexpected server error' });
   }
 });
 
-// API endpoint for contact us
-app.post('/api/contactus', async (req, res) => {
-  const { name, email, message } = req.body || {};
-  console.log("Raw req.body:", req.body);
-  console.log("Destructured:", { name, email, message });
-  let errors = {};
-
-  // Validate name
-  if (!name || !/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(name)) {
-    errors.name = "Name should only contain letters";
-  }
-
-  // Validate email
-  if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-    errors.email = "Please enter a valid email address";
-  }
-
-  // Validate message
-  if (!message || message.trim() === '') {
-    errors.message = "Message cannot be empty";
-  } else {
-    const wordCount = message.trim().split(/\s+/).length;
-    if (wordCount > 200) {
-      errors.message = "Message cannot exceed 200 words";
-    }
-  }
-
-  // If there are any validation errors, return them
-  if (Object.keys(errors).length > 0) {
-    console.log('Contact us validation errors:', errors);
-    return res.status(400).json({ success: false, message: 'Validation failed', errors });
-  }
-
-  // Connect to database and check if user is a registered player (commented out as per original)
+// Search users by role (registered users) - returns basic public info (no password/mfaSecret)
+app.get('/api/users', async (req, res) => {
+  console.log('API /api/users called with query:', req.query);
   try {
+    const role = (req.query.role || '').toString().toLowerCase();
+    const q = {};
+    if (role) q.role = role;
     const db = await connectDB();
-    // const user = await db.collection('users').findOne({ name, email, role: 'player', isDeleted: 0 });
-    // if (!user) {
-    //   return res.status(403).json({ success: false, message: 'Only registered players can submit messages. Please sign up or use a player account.' });
-    // }
-
-    // Insert the message into the database
-    await db.collection('contact').insertOne({ name, email, message, submission_date: new Date() });
-    console.log('Contact message submitted:', { name, email });
-
-    // Log current contact table contents
-    const contacts = await db.collection('contact').find().toArray();
-    console.log("\n=== Current Contact Table Contents ===");
-    console.log("Total rows:", contacts.length);
-    console.table(contacts);
-    console.log("=====================================\n");
-
-    res.json({ success: true, message: 'Message sent successfully!' });
+    const users = await db.collection('users').find(q, { projection: { password: 0, mfaSecret: 0 } }).limit(200).toArray();
+    // normalize name field to username for frontend compatibility
+    const list = users.map(u => ({ id: u._id, username: u.name || u.username || u.email, email: u.email || null, role: u.role }));
+    res.json({ success: true, users: list });
   } catch (err) {
-    console.error('Contact error:', err);
-    res.status(500).json({ success: false, message: 'An unexpected error occurred' });
+    console.error('User search error:', err);
+    res.status(500).json({ success: false, message: 'Unexpected server error' });
   }
 });
 
-// ---------- RESTORE PLAYER ----------
-app.post('/players/restore/:id', async (req, res) => {
-  const { id } = req.params;
-  const db = await connectDB();
+// Contacts summary for a given username: returns last message per contact (global + PMs)
+app.get('/api/chat/contacts', async (req, res) => {
   try {
-    const result = await db.collection('users').updateOne(
-      { _id: new ObjectId(id), role: 'player' },
-      { $set: { isDeleted: 0 },
-        $unset: { deleted_date: "", deleted_by: "" } }
-    );
+    const username = (req.query.username || '').toString();
+    if (!username) return res.status(400).json({ success: false, message: 'username required' });
+    const db = await connectDB();
+    // fetch recent messages involving this user (global + pm rooms containing username)
+    const recent = await db.collection('chat_messages').find({
+      $or: [
+        { room: 'global' },
+        { room: { $regex: `^pm:` } }
+      ],
+      $or: [ { sender: username }, { receiver: username }, { room: { $regex: username } } ]
+    }).sort({ timestamp: -1 }).limit(500).toArray();
 
-    if (result.matchedCount === 0) {
-      console.log('Restore failed: Player not found:', id);
-      return res.status(404).json({ message: 'Player not found' });
+    const contactsMap = new Map();
+    for (const m of recent) {
+      if (m.room === 'global') {
+        if (!contactsMap.has('All')) contactsMap.set('All', { contact: 'All', lastMessage: m.message, timestamp: m.timestamp, room: 'global' });
+        continue;
+      }
+      // room is pm:UserA:UserB
+      const parts = (m.room || '').replace(/^pm:/, '').split(':');
+      const other = parts.find(p => p !== username) || parts[0] || 'Unknown';
+      if (!contactsMap.has(other)) contactsMap.set(other, { contact: other, lastMessage: m.message, timestamp: m.timestamp, room: m.room });
     }
 
-    console.log(`Player account restored: ${id}`);
-    await db.collection('logs').insertOne({
-      action: 'player_restore',
-      userId: id,
-      success: true,
-      timestamp: new Date()
-    });
-
-    res.json({ message: 'Player account restored successfully' });
+    const contacts = Array.from(contactsMap.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    res.json({ success: true, contacts });
   } catch (err) {
-    console.error('Restore error:', err);
-    await db.collection('logs').insertOne({
-      action: 'player_restore',
-      userId: id,
-      success: false,
-      error: err.message,
-      timestamp: new Date()
-    });
-
-    if (err.code === 121)
-      return res.status(400).json({ message: 'Validation error during restore' });
-
-    res.status(500).json({ message: 'Unexpected server error' });
+    console.error('chat contacts error:', err);
+    res.status(500).json({ success: false, message: 'Unexpected server error' });
   }
 });
 
-// ---------- RESTORE COORDINATOR ----------
-app.post('/coordinators/restore/:id', async (req, res) => {
-  const { id } = req.params;
-  const { email, password } = req.body;
-  const db = await connectDB();
+// ------------- Socket.IO chat & chess -------------
+const onlineUsers = new Map(); // socket.id -> { username, role }
+const usernameToSockets = new Map(); // username -> Set(socket.id)
 
-  try {
-    const result = await db.collection('users').updateOne(
-      { _id: new ObjectId(id), role: 'coordinator' },
-      { $set: { isDeleted: 0 },
-        $unset: { deleted_date: "", deleted_by: "" } }
-    );
+function broadcastUsers() {
+  const unique = Array.from(new Map(Array.from(onlineUsers.values()).map(u => [u.username, u])).values());
+  io.emit('updateUsers', unique);
+}
 
-    if (result.matchedCount === 0) {
-      console.log('Restore failed: Coordinator not found:', id);
-      return res.status(404).json({ message: 'Coordinator not found' });
+function privateRoomName(u1, u2) {
+  return `pm:${[u1, u2].sort().join(':')}`;
+}
+
+io.on('connection', (socket) => {
+  socket.on('join', ({ username, role }) => {
+    if (!username) return;
+    onlineUsers.set(socket.id, { username, role });
+    const set = usernameToSockets.get(username) || new Set();
+    set.add(socket.id);
+    usernameToSockets.set(username, set);
+    broadcastUsers();
+  });
+
+  socket.on('disconnect', () => {
+    const info = onlineUsers.get(socket.id);
+    if (info && info.username) {
+      const set = usernameToSockets.get(info.username);
+      if (set) {
+        set.delete(socket.id);
+        if (set.size === 0) usernameToSockets.delete(info.username);
+        else usernameToSockets.set(info.username, set);
+      }
     }
+    onlineUsers.delete(socket.id);
+    broadcastUsers();
+  });
 
-    console.log(`Coordinator account restored: ${id}, ${email}`);
-    await db.collection('logs').insertOne({
-      action: 'coordinator_restore',
-      userId: id,
-      email,
-      success: true,
-      timestamp: new Date()
-    });
-
-    res.json({ message: 'Coordinator account restored successfully' });
-  } catch (err) {
-    console.error('Restore error:', err);
-    await db.collection('logs').insertOne({
-      action: 'coordinator_restore',
-      userId: id,
-      email,
-      success: false,
-      error: err.message,
-      timestamp: new Date()
-    });
-    res.status(500).json({ message: 'Unexpected server error' });
-  }
-});
-
-// ---------- RESTORE ORGANIZER ----------
-app.post('/organizers/restore/:id', async (req, res) => {
-  const { id } = req.params;
-  const { email } = req.body;
-  const db = await connectDB();
-  try {
-    const result = await db.collection('users').updateOne(
-      { _id: new ObjectId(id), role: 'organizer' },
-      { $set: { isDeleted: 0 },
-        $unset: { deleted_date: "", deleted_by: "" } } 
-    );
-
-    if (result.matchedCount === 0) {
-      console.log('Restore failed: Organizer not found:', id);
-      return res.status(404).json({ message: 'Organizer not found' });
+  // Chat messaging
+  socket.on('chatMessage', async ({ sender, receiver, message }) => {
+    const socketInfo = onlineUsers.get(socket.id) || {};
+    const actualSender = socketInfo.username || sender;
+    if (!actualSender || !message) return;
+    const payload = { sender: actualSender, message, receiver: receiver || 'All' };
+    const db = await connectDB();
+    try {
+      if (!receiver || receiver === 'All') {
+        io.emit('message', payload);
+        await db.collection('chat_messages').insertOne({ room: 'global', sender: actualSender, message, timestamp: new Date() });
+      } else {
+        const room = privateRoomName(actualSender, receiver);
+        const senderSet = usernameToSockets.get(actualSender) || new Set();
+        const receiverSet = usernameToSockets.get(receiver) || new Set();
+        const allIds = new Set([...senderSet, ...receiverSet]);
+        for (const id of allIds) {
+          const s = io.sockets.sockets.get ? io.sockets.sockets.get(id) : io.sockets.sockets[id];
+          if (s && s.emit) s.emit('message', payload);
+        }
+        await db.collection('chat_messages').insertOne({ room, sender: actualSender, receiver, message, timestamp: new Date() });
+      }
+    } catch (e) {
+      console.error('chatMessage error:', e);
     }
+  });
 
-    console.log(`Organizer account restored: ${id}, ${email}`);
-    await db.collection('logs').insertOne({
-      action: 'organizer_restore',
-      userId: id,
-      email,
-      success: true,
-      timestamp: new Date()
-    });
+  // Chess events
+  socket.on('chessJoin', ({ room }) => {
+    if (!room) return;
+    socket.join(room);
+  });
 
-    res.json({ message: 'Organizer account restored successfully' });
-  } catch (err) {
-    console.error('Restore error:', err);
-    await db.collection('logs').insertOne({
-      action: 'organizer_restore',
-      userId: id,
-      email,
-      success: false,
-      error: err.message,
-      timestamp: new Date()
-    });
-    res.status(500).json({ message: 'Unexpected server error' });
-  }
-});
-
-// ---------- Dynamic Page Renderer ----------
-app.get('/:page', (req, res) => {
-  const { page } = req.params;
-  const filePath = path.join(__dirname, 'views', `${page}.html`);
-  console.log('Requested page:', filePath);
-
-  res.sendFile(filePath, (err) => {
-    if (err) res.status(404).send(`Page not found: ${page}`);
+  socket.on('chessMove', async ({ room, move }) => {
+    if (!room || !move) return;
+    socket.to(room).emit('chessMove', move);
+    try {
+      const db = await connectDB();
+      await db.collection('games').updateOne({ room }, { $push: { moves: { ...move, timestamp: new Date() } }, $set: { fen: move.fen, updatedAt: new Date() } }, { upsert: true });
+    } catch (e) {
+      // ignore persistence errors for now
+      console.error('chessMove persist error:', e);
+    }
   });
 });
 
-// ---------- API Data Fetch ----------
-app.get('/api/:pageData', (req, res) => {
-  const messages = utils.getMessages(req);
-  res.json({
-    ...messages,
-    deletedUserId: req.query.deletedUserId || null
-  });
-});
-
-// ---------- 404 Handler ----------
+// 404 handler
 app.use((req, res) => res.status(404).redirect('/?error-message=Page not found'));
 
 connectDB().catch(err => console.error('Database connection failed:', err));
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
