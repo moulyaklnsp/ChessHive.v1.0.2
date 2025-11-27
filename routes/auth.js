@@ -6,6 +6,7 @@ const { swissPairing, Player } = require('../player_app');
 
 
 router.post('/signup', async (req, res) => {
+  console.log('Signup request body:', req.body); // Debug log
   const { name, dob, gender, college, email, phone, password, role, aicf_id, fide_id } = req.body;
   let errors = {};
 
@@ -33,7 +34,8 @@ router.post('/signup', async (req, res) => {
   const existingUser = await db.collection('users').findOne({ email });
   if (existingUser) {
     errors.email = "Email already registered";
-    console.log('Signup failed: Email already exists:', email);
+    console.log('Signup failed: Email already exists:', email
+    );
     return res.render('signup', { errors, name, dob, gender, college, email, phone, role });
   }
 
@@ -64,7 +66,7 @@ router.post('/signup', async (req, res) => {
   console.table(users);
   console.log("=====================================\n");
 
-  res.redirect("/login");
+  res("heelow world");
 });
 
 router.post('/contactus', async (req, res) => {
