@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 // React version of views/coordinator/coordinator_chat.ejs
 // Loads Socket.IO client from backend at /socket.io/socket.io.js (works in dev via CRA proxy).
@@ -145,6 +146,7 @@ function CoordinatorChat() {
           const q = usernameSearch.trim().toLowerCase();
           list = list.filter(u => (u.username || '').toLowerCase().includes(q));
         }
+        list = list.filter(u => ['coordinator','player'].includes((u.role || '').toLowerCase()));
         setRegisteredUsers(list);
       }
     } catch (e) {}
@@ -219,12 +221,16 @@ function CoordinatorChat() {
 
   return (
     <div style={{ ...styles.root, padding: 0 }}>
+      <div style={{ maxWidth: 1100, margin: '1rem auto 0 auto', padding: '0 1rem' }}>
+        <Link to="/coordinator/coordinator_dashboard" style={styles.backLink}>
+          <span style={{ fontSize: '1.1rem' }}>⬅</span>
+          <span>Back to Dashboard</span>
+        </Link>
+      </div>
       <div style={{ display: 'flex', maxWidth: 1100, margin: '2rem auto', gap: '1rem' }}>
         <div style={{ flex: '0 0 320px', background: '#fff', borderRadius: 12, padding: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <select style={{ flex: 1, ...styles.select }} value={role} onChange={(e) => setRole(e.target.value)} disabled={joined}>
-              <option>Admin</option>
-              <option>Organizer</option>
               <option>Coordinator</option>
               <option>Player</option>
             </select>
