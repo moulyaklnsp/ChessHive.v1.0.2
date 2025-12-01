@@ -258,20 +258,7 @@ function PlayerTournament() {
   return (
     <div>
       <style>{`
-        :root {
-          --page-bg:#050a12;
-          --content-bg:#0b1623;
-          --panel-bg:#0f1f30;
-          --sea-green:#62b5ac; /* teal accent */
-          --sky-blue:#1e50ff; /* primary button / heading */
-          --sky-blue-hover:#3465ff;
-          --on-accent:#ffffff;
-          --text-color:#e6f1ff;
-          --border-color:#1e50ff33;
-          --row-hover-bg:#11263a;
-          --yellow:#ffcc00;
-          --red:#ff4d4d;
-        }
+        /* Use global CSS variables from index.css; do not override theme here. */
         *{ margin:0; padding:0; box-sizing:border-box; }
         html,body,#root{ height:100%; background:var(--page-bg); color:var(--text-color); }
         .content{ font-family:'Playfair Display', serif; min-height:100vh; width:100vw; padding:2rem clamp(1rem,2vw,2rem); background:var(--page-bg); }
@@ -281,7 +268,7 @@ function PlayerTournament() {
         table{ width:100%; border-collapse:collapse; background:var(--panel-bg); min-width:760px; font-family:'Playfair Display', serif; }
         th{ background:var(--sea-green); color:var(--on-accent); padding:12px; text-align:left; font-weight:600; font-size:.9rem; letter-spacing:.5px; }
         td{ padding:12px; border:1px solid var(--border-color); color:var(--text-color); font-size:.9rem; }
-        tbody tr:nth-child(even){ background:#0d1e30; }
+        tbody tr:nth-child(even){ background:var(--row-hover-bg); }
         tr:hover{ background:var(--row-hover-bg); }
         .status-ongoing{ color:var(--yellow); font-weight:bold; }
         .status-yet-to-start{ color:var(--sea-green); font-weight:bold; }
@@ -354,7 +341,18 @@ function PlayerTournament() {
           <span className="wallet-icon" role="img" aria-label="wallet">💰</span>
           <h3>Wallet Balance: ₹<span>{walletBalance}</span></h3>
           <form onSubmit={(e) => { e.preventDefault(); const amount = e.currentTarget.amount.value; if (!amount) return; addFunds(amount); e.currentTarget.reset(); }}>
-            <input type="number" name="amount" placeholder="Enter amount" min="1" required />
+            <input
+              type="number"
+              name="amount"
+              placeholder="Enter amount"
+              min="1"
+              required
+              style={{
+                backgroundColor: isDark ? '#000' : '#fff',
+                color: isDark ? '#fff' : '#000',
+                borderColor: isDark ? '#444' : '#ddd'
+              }}
+            />
             <input type="hidden" name="redirectTo" value="/player/player_tournament" />
             <button type="submit" disabled={loading}>Add Funds</button>
           </form>
@@ -363,8 +361,26 @@ function PlayerTournament() {
         {/* Individual Tournaments */}
         <h2 className="black-h2">Available Individual Tournaments</h2>
         <div className="search-box">
-          <input type="text" placeholder="Search individual tournaments..." value={searchIndividual} onChange={(e) => setSearchIndividual(e.target.value)} />
-          <select value={searchIndividualType} onChange={(e) => setSearchIndividualType(e.target.value)}>
+          <input
+            type="text"
+            placeholder="Search individual tournaments..."
+            value={searchIndividual}
+            onChange={(e) => setSearchIndividual(e.target.value)}
+            style={{
+              backgroundColor: isDark ? '#000' : '#fff',
+              color: isDark ? '#fff' : '#000',
+              borderColor: isDark ? '#444' : '#ddd'
+            }}
+          />
+          <select
+            value={searchIndividualType}
+            onChange={(e) => setSearchIndividualType(e.target.value)}
+            style={{
+              backgroundColor: isDark ? '#000' : '#fff',
+              color: isDark ? '#fff' : '#000',
+              borderColor: isDark ? '#444' : '#ddd'
+            }}
+          >
             <option value="name">Name</option>
             <option value="location">Location</option>
             <option value="status">Status</option>
@@ -430,8 +446,26 @@ function PlayerTournament() {
         {/* Team Tournaments */}
         <h2 className="black-h2">Available Team Tournaments</h2>
         <div className="search-box">
-          <input type="text" placeholder="Search team tournaments..." value={searchTeam} onChange={(e) => setSearchTeam(e.target.value)} />
-          <select value={searchTeamType} onChange={(e) => setSearchTeamType(e.target.value)}>
+          <input
+            type="text"
+            placeholder="Search team tournaments..."
+            value={searchTeam}
+            onChange={(e) => setSearchTeam(e.target.value)}
+            style={{
+              backgroundColor: isDark ? '#000' : '#fff',
+              color: isDark ? '#fff' : '#000',
+              borderColor: isDark ? '#444' : '#ddd'
+            }}
+          />
+          <select
+            value={searchTeamType}
+            onChange={(e) => setSearchTeamType(e.target.value)}
+            style={{
+              backgroundColor: isDark ? '#000' : '#fff',
+              color: isDark ? '#fff' : '#000',
+              borderColor: isDark ? '#444' : '#ddd'
+            }}
+          >
             <option value="name">Name</option>
             <option value="location">Location</option>
             <option value="status">Status</option>
