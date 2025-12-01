@@ -5,8 +5,173 @@ const { ObjectId } = require('mongodb');
 const { swissPairing, Player } = require('../player_app');
 
 
+// JSON API endpoint used by the React frontend
+router.post('/api/signup', async (req, res) => {
+  const { name, dob, gender, college, email, phone, password, role, aicf_id, fide_id } = req.body || {};
+  let errors = {};
+
+  if (!name || !/^[A-Za-z]+(?: [A-Za-z]+)*$/.test(name)) errors.name = "Valid full name is required (letters only)";
+  if (!dob) errors.dob = "Date of Birth is required";
+  else {
+    const birthDate = new Date(dob);
+    const age = Math.floor((Date.now() - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+    if (age < 16) errors.dob = "You must be at least 16 years old";
+  }
+  if (!gender || !['male', 'female', 'other'].includes(gender)) errors.gender = "Gender is required";
+  if (!college || !/^[A-Za-z\s']+$/.test((college || '').trim())) errors.college = "College name must contain only letters, spaces, or apostrophes";
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) errors.email = "Valid email is required";
+  else if (/[A-Z]/.test(email)) errors.email = "Email should only contain lowercase letters";
+  if (!phone || !/^[0-9]{10}$/.test(phone)) errors.phone = "Valid 10-digit phone number is required";
+  if (!password || password.length < 8) errors.password = "Password must be at least 8 characters";
+  if (!role || !['admin', 'organizer', 'coordinator', 'player'].includes(role)) errors.role = "Valid role is required";
+
+  if (Object.keys(errors).length > 0) {
+    console.log('Signup validation errors (API):', errors);
+    return res.status(400).json({ success: false, message: 'Validation failed', errors });
+  }
+
+  try {
+    const db = await connectDB();
+    const existingUser = await db.collection('users').findOne({ email });
+    if (existingUser) {
+      console.log('Signup failed (API): Email already exists:', email);
+      return res.status(409).json({ success: false, message: 'Email already registered' });
+    }
+
+    // Store signup data temporarily
+    const signupData = {
+      name,
+      dob: new Date(dob),
+      gender,
+      college,
+      email,
+      phone,
+      password,
+      role,
+      aicf_id: aicf_id || '',
+      fide_id: fide_id || ''
+    };
+    await db.collection('signup_otps').insertOne({
+      email,
+      data: signupData,
+      created_at: new Date()
+    });
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Store OTP in database
+    await db.collection('otps').insertOne({
+      email,
+      otp,
+      type: 'signup',
+      expires_at: expiresAt,
+      used: false
+    });
+
+    // Send OTP via email (similar to login)
+    const nodemailer = require('nodemailer');
+    console.log(`Generated OTP for ${email}: ${otp}`); // Always log OTP for testing
+    async function sendOtpEmail(to, otp) {
+      if (!nodemailer) {
+        console.log(`nodemailer not installed. OTP for ${to}: ${otp}`);
+        return;
+      }
+
+      if (!process.env.SMTP_HOST) {
+        try {
+          const testAccount = await nodemailer.createTestAccount();
+          const transporter = nodemailer.createTransport({ host: testAccount.smtp.host, port: testAccount.smtp.port, secure: testAccount.smtp.secure, auth: { user: testAccount.user, pass: testAccount.pass } });
+          const info = await transporter.sendMail({ from: process.env.SMTP_FROM || '', to, subject: 'Your ChessHive Signup OTP', text: `Your OTP is: ${otp}. It expires in 5 minutes.` });
+          const previewUrl = nodemailer.getTestMessageUrl(info);
+          console.log(`Ethereal OTP preview for ${to}: ${previewUrl}`);
+        } catch (err) {
+          console.error('Failed to send via Ethereal, falling back to console:', err);
+          console.log(`OTP for ${to}: ${otp}`);
+        }
+      } else {
+        try {
+          const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: parseInt(process.env.SMTP_PORT || '587', 10), secure: (process.env.SMTP_SECURE === 'true'), auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined });
+          const info = await transporter.sendMail({ from: process.env.SMTP_FROM || '', to, subject: 'Your ChessHive Signup OTP', text: `Your OTP is: ${otp}. It expires in 5 minutes.` });
+          console.log('OTP email sent:', info && info.messageId);
+        } catch (err) {
+          console.error('Failed to send OTP email, falling back to console:', err);
+          console.log(`OTP for ${to}: ${otp}`);
+        }
+      }
+    }
+
+    await sendOtpEmail(email, otp);
+
+    return res.json({ success: true, message: 'OTP sent to your email for verification' });
+  } catch (err) {
+    console.error('Signup API error:', err);
+    return res.status(500).json({ success: false, message: 'Unexpected server error' });
+  }
+});
+
+// Verify signup OTP
+router.post('/api/verify-signup-otp', async (req, res) => {
+  const { email, otp } = req.body || {};
+  try {
+    if (!email || !otp) return res.status(400).json({ success: false, message: 'Email and OTP required' });
+
+    const db = await connectDB();
+    const otpRecord = await db.collection('otps').findOne({ email, otp, type: 'signup', used: false });
+    if (!otpRecord) return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    if (new Date() > otpRecord.expires_at) return res.status(400).json({ success: false, message: 'OTP expired' });
+
+    // Mark OTP as used
+    await db.collection('otps').updateOne({ _id: otpRecord._id }, { $set: { used: true } });
+
+    // Get signup data
+    const signupRecord = await db.collection('signup_otps').findOne({ email });
+    if (!signupRecord) return res.status(400).json({ success: false, message: 'Signup data not found' });
+
+    // Create user
+    const user = {
+      ...signupRecord.data,
+      isDeleted: 0,
+      AICF_ID: signupRecord.data.aicf_id || '',
+      FIDE_ID: signupRecord.data.fide_id || ''
+    };
+    const result = await db.collection('users').insertOne(user);
+    const userId = result.insertedId;
+
+    // Clean up
+    await db.collection('signup_otps').deleteOne({ _id: signupRecord._id });
+
+    if (user.role === "player") {
+      await db.collection('user_balances').insertOne({ user_id: userId, wallet_balance: 0 });
+    }
+
+    // Establish session
+    req.session.userID = userId;
+    req.session.userEmail = user.email;
+    req.session.userRole = user.role;
+    req.session.username = user.name;
+    req.session.playerName = user.name;
+    req.session.userCollege = user.college;
+    req.session.collegeName = user.college;
+
+    let redirectUrl = '';
+    switch (user.role) {
+      case 'admin': redirectUrl = '/admin/admin_dashboard'; break;
+      case 'organizer': redirectUrl = '/organizer/organizer_dashboard'; break;
+      case 'coordinator': redirectUrl = '/coordinator/coordinator_dashboard'; break;
+      case 'player': redirectUrl = '/player/player_dashboard?success-message=Player Signup Successful'; break;
+      default: return res.status(400).json({ success: false, message: 'Invalid Role' });
+    }
+    res.json({ success: true, redirectUrl });
+  } catch (err) {
+    console.error('Signup OTP verify error:', err);
+    res.status(500).json({ success: false, message: 'Unexpected server error' });
+  }
+});
+
+// Traditional server-rendered signup (kept for legacy EJS views)
 router.post('/signup', async (req, res) => {
-  console.log('Signup request body:', req.body); // Debug log
   const { name, dob, gender, college, email, phone, password, role, aicf_id, fide_id } = req.body;
   let errors = {};
 
@@ -34,8 +199,7 @@ router.post('/signup', async (req, res) => {
   const existingUser = await db.collection('users').findOne({ email });
   if (existingUser) {
     errors.email = "Email already registered";
-    console.log('Signup failed: Email already exists:', email
-    );
+    console.log('Signup failed: Email already exists:', email);
     return res.render('signup', { errors, name, dob, gender, college, email, phone, role });
   }
 
@@ -66,7 +230,7 @@ router.post('/signup', async (req, res) => {
   console.table(users);
   console.log("=====================================\n");
 
-  res("heelow world");
+  res.redirect("/login");
 });
 
 router.post('/contactus', async (req, res) => {
