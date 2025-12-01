@@ -80,7 +80,6 @@ const styles = `
     .main-content {
         margin-left: 250px;
         padding: 20px;
-        position: relative;
     }
 
     .hero-section {
@@ -89,14 +88,6 @@ const styles = `
         text-align: center;
         border-radius: 15px;
         margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .left-part {
-        flex: 1;
-        text-align: center;
     }
 
     .chess-pieces {
@@ -182,55 +173,6 @@ const styles = `
     .feedback-card { background: var(--cream); border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
     .feedback-card:hover { transform: translateY(-5px); }
     .feedback-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-
-    .transforming-piece {
-      text-align: center;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(46,139,87,0.3) 0%, transparent 70%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 20px rgba(46,139,87,0.5), 0 0 40px rgba(46,139,87,0.3);
-      z-index: 1;
-      position: relative;
-    }
-
-    .transforming-piece::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(135,206,235,0.2) 0%, transparent 70%);
-      box-shadow: 0 0 30px rgba(135,206,235,0.4);
-      z-index: -1;
-    }
-
-    .transforming-piece::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,253,208,0.4) 0%, transparent 70%);
-      box-shadow: 0 0 15px rgba(255,253,208,0.6);
-      z-index: -1;
-    }
-
-    .transforming-piece .piece {
-      font-size: 4rem;
-      color: var(--cream);
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-      transition: all 0.5s ease;
-    }
 `;
 
 export default function Home() {
@@ -238,16 +180,6 @@ export default function Home() {
     // Match original behavior
     document.body.classList.add('react-root-host');
     return () => document.body.classList.remove('react-root-host');
-  }, []);
-
-  const pieces = ['♟', '♞', '♝', '♕', '♔'];
-  const [currentPiece, setCurrentPiece] = React.useState(0);
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPiece((prev) => (prev + 1) % pieces.length);
-    }, 2000);
-    return () => clearInterval(interval);
   }, []);
 
   const openLoginForm = () => { window.location.href = "/login"; };
@@ -272,31 +204,27 @@ export default function Home() {
       <div className="main-content">
         <h1 className="welcome-title">Welcome to ChessHive</h1>
         <div className="hero-section">
-          <div className="left-part">
-            <div className="chess-pieces">
-              <div className="piece queen" data-tooltip="Click to Login" onClick={openLoginForm}>♕</div>
-              <div className="piece-text">LOGIN</div>
-              <div className="piece king" data-tooltip="Click to Sign Up" onClick={openSignupForm}>♔</div>
-              <div className="piece-text">SIGN UP</div>
-            </div>
-            <div className="secondary-header">Bringing Chess Passionates from Campuses to the Board</div>
+          <div className="chess-pieces">
+            <div className="piece queen" data-tooltip="Click to Login" onClick={openLoginForm}>♕</div>
+            <div className="piece-text">LOGIN</div>
+            <div className="piece king" data-tooltip="Click to Sign Up" onClick={openSignupForm}>♔</div>
+            <div className="piece-text">SIGN UP</div>
           </div>
-          <div className="transforming-piece">
-            <div className="piece" data-tooltip="Evolving Chess Piece">{pieces[currentPiece]}</div>
-          </div>
+          <div className="secondary-header">Bringing Chess Passionates from Campuses to the Board</div>
         </div>
 
         <div className="content-box">
           <div className="left-inner-box">
             <p>Whether you're a grandmaster or just starting, our platform brings chess lovers together from around the world. Play, learn, compete, and shop – all in one place!</p>
-            <p>
-              <ul>♟️ Ready to Make Your Move?
-                <li> Play anytime, anywhere 🌍</li>
+            <div>
+              <p>♟️ Ready to Make Your Move?</p>
+              <ul>
+                <li>Play anytime, anywhere 🌍</li>
                 <li>Improve your skills with coaching & lessons</li>
                 <li>Compete with top players worldwide</li>
-                🖱️ Sign Up & Start Playing!
               </ul>
-            </p>
+              <p>🖱️ Sign Up & Start Playing!</p>
+            </div>
           </div>
         </div>
 

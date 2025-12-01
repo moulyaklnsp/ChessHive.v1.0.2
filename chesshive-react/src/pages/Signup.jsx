@@ -1,4 +1,6 @@
 import React from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import { signup, verifySignupOtp } from '../features/auth/authSlice';
 
 const styles = `
 :root { --sea-green:#2E8B57; --cream:#FFFDD0; --sky-blue:#87CEEB; --dark-green:#236B43; }
@@ -36,8 +38,11 @@ button:hover{ background-color:#236B43; transform:translateY(-2px); box-shadow:0
 
 export default function Signup(){
   const [form, setForm] = React.useState({ name:"", email:"", dob:"", gender:"", college:"", phone:"", password:"", role:"", aicf_id:"", fide_id:"" });
+  const [otp, setOtp] = React.useState("");
   const [errors, setErrors] = React.useState({});
   const [serverMsg, setServerMsg] = React.useState({ type:"", text:"" });
+  const dispatch = useDispatch();
+  const auth = useSelector(state => state.auth);
 
   React.useEffect(()=>{ document.body.classList.add('react-root-host'); return ()=>document.body.classList.remove('react-root-host'); },[]);
 
@@ -73,16 +78,34 @@ export default function Signup(){
     setServerMsg({type:"", text:""});
     if (!validateAll()) { setServerMsg({type:"error", text:"Please correct the errors in the form"}); return; }
     try{
-      const res = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
-      const data = await res.json();
-      if (data.success){
-        setServerMsg({type:"success", text:data.message});
-        setTimeout(()=>{ window.location.href = data.redirectUrl; }, 1000);
+      const result = await dispatch(signup(form));
+      if (result.meta.requestStatus === 'fulfilled') {
+        setServerMsg({type:"success", text:"OTP sent to your email. Please enter it below."});
       } else {
-        setServerMsg({type:"error", text:data.message || 'Signup failed'});
+        const err = result.payload || result.error || {};
+        setServerMsg({type:"error", text:err.message || 'Signup failed'});
       }
     } catch(err){
       console.error('Signup error:', err);
+      setServerMsg({type:"error", text:'Failed to connect to server'});
+    }
+  }
+
+  async function onVerifyOtp(e){
+    e.preventDefault();
+    setServerMsg({type:"", text:""});
+    if (!otp || otp.length !== 6) { setServerMsg({type:"error", text:"Please enter a valid 6-digit OTP"}); return; }
+    try{
+      const result = await dispatch(verifySignupOtp({ email: form.email.trim(), otp }));
+      if (result.meta.requestStatus === 'fulfilled') {
+        const redirectUrl = result.payload?.redirectUrl || '/';
+        window.location.href = redirectUrl;
+      } else {
+        const err = result.payload || result.error || {};
+        setServerMsg({type:"error", text:err.message || 'OTP verification failed'});
+      }
+    } catch(err){
+      console.error('OTP verify error:', err);
       setServerMsg({type:"error", text:'Failed to connect to server'});
     }
   }
@@ -110,81 +133,96 @@ export default function Signup(){
           <h2>Join ChessHive</h2>
           <div id="serverError" className={`server-error${serverMsg.type==='success' ? ' success' : ''}`} style={{ display: serverMsg.text ? 'block' : 'none' }}>{serverMsg.text}</div>
 
-          <form id="signupForm" onSubmit={onSubmit}>
-            <div>
-              <label htmlFor="name">Full Name</label>
-              <input type="text" id="name" name="name" placeholder="Enter full name" required value={form.name} onChange={e=>{ setField('name', e.target.value); setError('name',''); }} />
-              {errors.name && <span id="nameError" className="error">{errors.name}</span>}
-            </div>
+          <form id="signupForm" onSubmit={auth.otpSent ? onVerifyOtp : onSubmit}>
+            {!auth.otpSent ? (
+              <>
+                <div>
+                  <label htmlFor="name">Full Name</label>
+                  <input type="text" id="name" name="name" placeholder="Enter full name" required value={form.name} onChange={e=>{ setField('name', e.target.value); setError('name',''); }} />
+                  {errors.name && <span id="nameError" className="error">{errors.name}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="email">Email ID</label>
-              <input type="email" id="email" name="email" placeholder="Enter your email" required value={form.email} onChange={e=>{ setField('email', e.target.value); setError('email',''); }} />
-              {errors.email && <span id="emailError" className="error">{errors.email}</span>}
-            </div>
+                <div>
+                  <label htmlFor="email">Email ID</label>
+                  <input type="email" id="email" name="email" placeholder="Enter your email" required value={form.email} onChange={e=>{ setField('email', e.target.value); setError('email',''); }} />
+                  {errors.email && <span id="emailError" className="error">{errors.email}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="dob">Date of Birth</label>
-              <input type="date" id="dob" name="dob" required value={form.dob} onChange={e=>{ setField('dob', e.target.value); setError('dob',''); }} />
-              {errors.dob && <span id="dobError" className="error">{errors.dob}</span>}
-            </div>
+                <div>
+                  <label htmlFor="dob">Date of Birth</label>
+                  <input type="date" id="dob" name="dob" required value={form.dob} onChange={e=>{ setField('dob', e.target.value); setError('dob',''); }} />
+                  {errors.dob && <span id="dobError" className="error">{errors.dob}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="gender">Gender</label>
-              <select id="gender" name="gender" required value={form.gender} onChange={e=>{ setField('gender', e.target.value); setError('gender',''); }}>
-                <option value="" disabled>Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-              {errors.gender && <span id="genderError" className="error">{errors.gender}</span>}
-            </div>
+                <div>
+                  <label htmlFor="gender">Gender</label>
+                  <select id="gender" name="gender" required value={form.gender} onChange={e=>{ setField('gender', e.target.value); setError('gender',''); }}>
+                  <option value="" disabled>Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+                  {errors.gender && <span id="genderError" className="error">{errors.gender}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="college">College Name</label>
-              <input type="text" id="college" name="college" placeholder="Enter college name" required value={form.college} onChange={e=>{ setField('college', e.target.value); setError('college',''); }} />
-              {errors.college && <span id="collegeError" className="error">{errors.college}</span>}
-            </div>
+                <div>
+                  <label htmlFor="college">College Name</label>
+                  <input type="text" id="college" name="college" placeholder="Enter college name" required value={form.college} onChange={e=>{ setField('college', e.target.value); setError('college',''); }} />
+                  {errors.college && <span id="collegeError" className="error">{errors.college}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="phone">Phone Number</label>
-              <input type="text" id="phone" name="phone" placeholder="Enter phone number" required value={form.phone} onChange={e=>{ setField('phone', e.target.value); setError('phone',''); }} />
-              {errors.phone && <span id="phoneError" className="error">{errors.phone}</span>}
-            </div>
+                <div>
+                  <label htmlFor="phone">Phone Number</label>
+                  <input type="text" id="phone" name="phone" placeholder="Enter phone number" required value={form.phone} onChange={e=>{ setField('phone', e.target.value); setError('phone',''); }} />
+                  {errors.phone && <span id="phoneError" className="error">{errors.phone}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="password">Password</label>
-              <input type="password" id="password" name="password" placeholder="Enter password" required value={form.password} onChange={e=>{ setField('password', e.target.value); setError('password',''); }} />
-              {errors.password && <span id="passwordError" className="error">{errors.password}</span>}
-            </div>
+                <div>
+                  <label htmlFor="password">Password</label>
+                  <input type="password" id="password" name="password" placeholder="Enter password" required value={form.password} onChange={e=>{ setField('password', e.target.value); setError('password',''); }} />
+                  {errors.password && <span id="passwordError" className="error">{errors.password}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="role">Select Role</label>
-              <select id="role" name="role" required value={form.role} onChange={e=>{ setField('role', e.target.value); setError('role',''); }}>
-                <option value="" disabled>Select Role</option>
-                <option value="admin">Admin</option>
-                <option value="organizer">Organizer</option>
-                <option value="coordinator">Coordinator</option>
-                <option value="player">Player</option>
-              </select>
-              {errors.role && <span id="roleError" className="error">{errors.role}</span>}
-            </div>
+                <div>
+                  <label htmlFor="role">Select Role</label>
+                  <select id="role" name="role" required value={form.role} onChange={e=>{ setField('role', e.target.value); setError('role',''); }}>
+                  <option value="" disabled>Select Role</option>
+                  <option value="admin">Admin</option>
+                  <option value="organizer">Organizer</option>
+                  <option value="coordinator">Coordinator</option>
+                  <option value="player">Player</option>
+                </select>
+                  {errors.role && <span id="roleError" className="error">{errors.role}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="aicf_id">AICF ID (Optional)</label>
-              <input type="text" id="aicf_id" name="aicf_id" placeholder="Enter AICF ID" value={form.aicf_id} onChange={e=>{ setField('aicf_id', e.target.value); setError('aicf_id',''); }} />
-              {errors.aicf_id && <span id="aicf_idError" className="error">{errors.aicf_id}</span>}
-            </div>
+                <div>
+                  <label htmlFor="aicf_id">AICF ID (Optional)</label>
+                  <input type="text" id="aicf_id" name="aicf_id" placeholder="Enter AICF ID" value={form.aicf_id} onChange={e=>{ setField('aicf_id', e.target.value); setError('aicf_id',''); }} />
+                  {errors.aicf_id && <span id="aicf_idError" className="error">{errors.aicf_id}</span>}
+                </div>
 
-            <div>
-              <label htmlFor="fide_id">FIDE ID (Optional)</label>
-              <input type="text" id="fide_id" name="fide_id" placeholder="Enter FIDE ID" value={form.fide_id} onChange={e=>{ setField('fide_id', e.target.value); setError('fide_id',''); }} />
-              {errors.fide_id && <span id="fide_idError" className="error">{errors.fide_id}</span>}
-            </div>
+                <div>
+                  <label htmlFor="fide_id">FIDE ID (Optional)</label>
+                  <input type="text" id="fide_id" name="fide_id" placeholder="Enter FIDE ID" value={form.fide_id} onChange={e=>{ setField('fide_id', e.target.value); setError('fide_id',''); }} />
+                  {errors.fide_id && <span id="fide_idError" className="error">{errors.fide_id}</span>}
+                </div>
 
-            <div className="full-width">
-              <button type="submit">Create Account</button>
-            </div>
+                <div className="full-width">
+                  <button type="submit" disabled={auth.loading}>{auth.loading ? 'Sending OTP...' : 'Send OTP'}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="otp">Enter OTP</label>
+                  <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP" required value={otp} onChange={e=>setOtp(e.target.value)} maxLength="6" />
+                </div>
+                <div className="full-width">
+                  <button type="submit" disabled={auth.loading}>{auth.loading ? 'Verifying...' : 'Verify OTP'}</button>
+                  <button type="button" onClick={() => { setServerMsg({type:"", text:""}); dispatch({ type: 'auth/clearError' }); }}>Back</button>
+                </div>
+              </>
+            )}
           </form>
 
           <div className="login-box">
@@ -198,9 +236,9 @@ export default function Signup(){
         <div className="footer-content">
           <p><i className="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
           <div className="footer-socials">
-            <a href="#"><i className="fab fa-facebook-f"></i> Facebook</a>
-            <a href="#"><i className="fab fa-twitter"></i> Twitter</a>
-            <a href="#"><i className="fab fa-instagram"></i> Instagram</a>
+            <a href="https://facebook.com" target="_blank" rel="noreferrer"><i className="fab fa-facebook-f"></i> Facebook</a>
+            <a href="https://twitter.com" target="_blank" rel="noreferrer"><i className="fab fa-twitter"></i> Twitter</a>
+            <a href="https://instagram.com" target="_blank" rel="noreferrer"><i className="fab fa-instagram"></i> Instagram</a>
           </div>
         </div>
       </footer>
