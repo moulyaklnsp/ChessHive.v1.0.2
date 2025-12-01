@@ -100,9 +100,9 @@ export default function About() {
         <div className="footer-content">
           <p><i className="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
           <div className="footer-socials">
-            <a href="#"><i className="fab fa-facebook-f"></i> Facebook</a>
-            <a href="#"><i className="fab fa-twitter"></i> Twitter</a>
-            <a href="#"><i className="fab fa-instagram"></i> Instagram</a>
+            <a href="https://facebook.com" target="_blank" rel="noreferrer"><i className="fab fa-facebook-f"></i> Facebook</a>
+            <a href="https://twitter.com" target="_blank" rel="noreferrer"><i className="fab fa-twitter"></i> Twitter</a>
+            <a href="https://instagram.com" target="_blank" rel="noreferrer"><i className="fab fa-instagram"></i> Instagram</a>
           </div>
         </div>
       </footer>

@@ -1,5 +1,6 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from 'react-redux';
+import { login, verifyLoginOtp } from '../features/auth/authSlice';
 
 const styles = `
 :root { --sea-green:#2E8B57; --cream:#FFFDD0; --sky-blue:#87CEEB; --text-dark:#333; --dark:#333; }
@@ -43,11 +44,15 @@ footer { background-color:var(--sea-green); color:var(--cream); padding:1.5rem 2
 @media(max-width:768px){ header{flex-direction:column; gap:1rem;} .form-container-login{padding:1rem;} h2{font-size:2rem;} input,button{padding:1rem;} }
 `;
 
-export default function Login() {
+export default function Login(){
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [otp, setOtp] = React.useState("");
   const [dynamicError, setDynamicError] = React.useState("");
   const [dynamicSuccess, setDynamicSuccess] = React.useState("");
+  const dispatch = useDispatch();
+  const auth = useSelector(state => state.auth);
+  const authError = auth.error;
   const [restoreVisibility, setRestoreVisibility] = React.useState({ coordinator:false, organizer:false, player:false });
   const [restoreIds, setRestoreIds] = React.useState({ coordinator:"", organizer:"", player:"" });
   const [restoring, setRestoring] = React.useState({ coordinator:false, organizer:false, player:false });
@@ -56,6 +61,11 @@ export default function Login() {
     document.body.classList.add('react-root-host');
     return () => document.body.classList.remove('react-root-host');
   }, []);
+
+  // Sync auth errors into local UI
+  React.useEffect(() => {
+    if (authError) setDynamicError(authError);
+  }, [authError]);
 
   // URL params handling (error/success and restore)
   React.useEffect(() => {
@@ -117,25 +127,40 @@ export default function Login() {
     setDynamicError("");
     if (!validateEmail(email)) { setDynamicError('Valid lowercase email is required'); return; }
     if (!validatePassword(password)) { setDynamicError('Password must be at least 8 characters with one uppercase, one lowercase, and one special character'); return; }
-
     try {
-      const response = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: email.trim(), password }) });
-      const data = await response.json();
-      if (data.success) {
-        window.location.href = data.redirectUrl;
+      const result = await dispatch(login({ email: email.trim(), password }));
+      if (result.meta.requestStatus === 'fulfilled') {
+        setDynamicSuccess('OTP sent to your email. Please enter it below.');
       } else {
-        setDynamicError(data.message || 'Login failed');
-        if (data.deletedUserId && data.deletedUserRole && data.deleted_by) {
-          getSessionEmail().then(sessionEmail => {
-            showRestoreForm(data.deletedUserId, data.deletedUserRole, data.deleted_by, data.sessionEmail);
-          });
-        }
+        const err = result.payload || result.error || {};
+        setDynamicError(err.message || 'Login failed');
       }
     } catch(err){
       console.error('Login error:', err);
       setDynamicError('Failed to connect to server.');
     }
   }
+
+  async function onVerifyOtp(e){
+    e.preventDefault();
+    setDynamicError("");
+    if (!otp || otp.length !== 6) { setDynamicError('Please enter a valid 6-digit OTP'); return; }
+    try {
+      const result = await dispatch(verifyLoginOtp({ email: email.trim(), otp }));
+      if (result.meta.requestStatus === 'fulfilled') {
+        const redirectUrl = result.payload?.redirectUrl || '/';
+        window.location.href = redirectUrl;
+      } else {
+        const err = result.payload || result.error || {};
+        setDynamicError(err.message || 'OTP verification failed');
+      }
+    } catch(err){
+      console.error('OTP verify error:', err);
+      setDynamicError('Failed to connect to server.');
+    }
+  }
+
+
 
   async function onRestore(roleKey, emailId, passVal){
     const map = { coordinator:'coordinators', organizer:'organizers', player:'players' };
@@ -167,12 +192,7 @@ export default function Login() {
   }
 
   const [restoreInputs, setRestoreInputs] = React.useState({ coordinatorEmail:"", coordinatorPass:"", organizerEmail:"", organizerPass:"", playerEmail:"", playerPass:"" });
-   const navigate = useNavigate();
-  
-    const openforogtpasswordform = () => {
-      navigate("/forgot_password");
-    };
-  
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: styles }} />
@@ -198,16 +218,29 @@ export default function Login() {
           {dynamicError && <div className="error">{dynamicError}</div>}
           {dynamicSuccess && <div className="success">{dynamicSuccess}</div>}
 
-          <form action="/login" method="POST" onSubmit={onSubmitLogin}>
-            <div>
-              <label htmlFor="email">Email ID</label>
-              <input type="email" id="email" name="email" required placeholder="Enter your email" value={email} onChange={e=>setEmail(e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor="password">Password</label>
-              <input type="password" id="password" name="password" required placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)} />
-            </div>
-            <button type="submit">Login</button>
+          <form onSubmit={auth.otpSent ? onVerifyOtp : onSubmitLogin}>
+            {!auth.otpSent ? (
+              <>
+                <div>
+                  <label htmlFor="email">Email ID</label>
+                  <input type="email" id="email" name="email" required placeholder="Enter your email" value={email} onChange={e=>setEmail(e.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="password">Password</label>
+                  <input type="password" id="password" name="password" required placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)} />
+                </div>
+                <button type="submit" disabled={auth.loading}>{auth.loading ? 'Sending OTP...' : 'Send OTP'}</button>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="otp">Enter OTP</label>
+                  <input type="text" id="otp" name="otp" required placeholder="Enter 6-digit OTP" value={otp} onChange={e=>setOtp(e.target.value)} maxLength="6" />
+                </div>
+                <button type="submit" disabled={auth.loading}>{auth.loading ? 'Verifying...' : 'Verify OTP'}</button>
+                <button type="button" onClick={() => { setDynamicSuccess(""); setDynamicError(""); dispatch({ type: 'auth/clearError' }); }}>Back</button>
+              </>
+            )}
           </form>
 
           <div className="signup-box">
@@ -215,8 +248,6 @@ export default function Login() {
             <a href="/signup" style={{ textDecoration:'none' }}>
               <button>Sign Up</button>
             </a>
-            <p style={{ marginTop: '1rem', cursor: 'pointer' }} onClick={openforogtpasswordform}>Forgot Password?</p>
-
           </div>
 
           {restoreVisibility.coordinator && (
@@ -270,9 +301,9 @@ export default function Login() {
         <div className="footer-content">
           <p><i className="fas fa-chess-rook"></i> © 2025 Chess Hive – Elevate Your Game</p>
           <div className="footer-socials">
-            <a href="#"><i className="fab fa-facebook-f"></i> Facebook</a>
-            <a href="#"><i className="fab fa-twitter"></i> Twitter</a>
-            <a href="#"><i className="fab fa-instagram"></i> Instagram</a>
+            <a href="https://facebook.com" target="_blank" rel="noreferrer"><i className="fab fa-facebook-f"></i> Facebook</a>
+            <a href="https://twitter.com" target="_blank" rel="noreferrer"><i className="fab fa-twitter"></i> Twitter</a>
+            <a href="https://instagram.com" target="_blank" rel="noreferrer"><i className="fab fa-instagram"></i> Instagram</a>
           </div>
         </div>
       </footer>
