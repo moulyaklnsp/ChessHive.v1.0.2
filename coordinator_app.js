@@ -254,6 +254,71 @@ router.post('/api/tournaments', async (req, res) => {
   }
 });
 
+// Update Tournament API
+router.put('/api/tournaments/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid tournament ID' });
+    }
+
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ 
+      email: req.session.userEmail,
+      role: 'coordinator' 
+    });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not logged in' });
+    }
+    const username = req.session.username || user.name || req.session.userEmail;
+
+    // Accept both camelCase and snake_case from frontend
+    const body = req.body || {};
+    const name = (body.tournamentName ?? body.name);
+    const date = (body.tournamentDate ?? body.date);
+    const time = (body.time ?? body.tournamentTime);
+    const location = (body.location ?? body.tournamentLocation);
+    const entryFee = (body.entryFee ?? body.entry_fee);
+    const type = body.type;
+    const rounds = (body.noOfRounds ?? body.no_of_rounds);
+
+    const $set = {};
+    if (typeof name === 'string' && name.trim()) $set.name = name.trim();
+    if (date) {
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) $set.date = d;
+    }
+    if (typeof time === 'string' && time.trim()) $set.time = time.trim();
+    if (typeof location === 'string' && location.trim()) $set.location = location.trim();
+    if (entryFee !== undefined && entryFee !== null && !isNaN(parseFloat(entryFee))) $set.entry_fee = parseFloat(entryFee);
+    if (typeof type === 'string' && type.trim()) $set.type = type.trim();
+    if (rounds !== undefined && rounds !== null && !isNaN(parseInt(rounds))) $set.noOfRounds = parseInt(rounds);
+
+    if (Object.keys($set).length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields provided to update' });
+    }
+
+    const result = await db.collection('tournaments').updateOne(
+      { _id: new ObjectId(id), coordinator: username },
+      { $set }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Tournament not found or not owned by you' });
+    }
+
+    if (result.modifiedCount === 0) {
+      // Nothing changed but consider it ok
+      return res.json({ success: true, message: 'No changes detected' });
+    }
+
+    return res.json({ success: true, message: 'Tournament updated successfully' });
+  } catch (error) {
+    console.error('Error updating tournament:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update tournament' });
+  }
+});
+
 router.delete('/api/tournaments/:id', async (req, res) => {
   try {
     const id = req.params.id;
@@ -293,13 +358,29 @@ router.get('/api/store/products', async (req, res) => {
 
 router.post('/api/store/addproducts', async (req, res) => {
   try {
-    const { productName, productCategory, price, imageUrl, availability } = req.body;
-    console.log('POST body received:', req.body);
+    // Accept both camelCase and legacy names from frontend
+    const productName = (req.body.productName ?? req.body.name ?? '').toString();
+    const productCategory = (req.body.productCategory ?? req.body.category ?? '').toString();
+    const price = req.body.price; // numeric string or number
+    const imageUrl = (req.body.imageUrl ?? req.body.image_url ?? '').toString();
+    const availability = (req.body.availability !== undefined ? req.body.availability : req.body.stock);
+
+    console.log('POST body received (normalized):', { productName, productCategory, price, imageUrl, availability });
+    console.log('Raw body:', req.body);
     console.log('Session data:', { userEmail: req.session.userEmail, userCollege: req.session.userCollege, collegeName: req.session.collegeName });
 
-    if (!productName || !productCategory || !price || !imageUrl || availability === undefined) {
+    // Basic validation
+    if (!productName || !productCategory || price === undefined || price === '' || !imageUrl || availability === undefined) {
       console.log('Validation failed: Missing fields');
       return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+    const priceNum = parseFloat(price);
+    const availNum = parseInt(availability);
+    if (isNaN(priceNum) || priceNum < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid price value' });
+    }
+    if (isNaN(availNum) || availNum < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid availability value' });
     }
 
     const db = await connectDB();
@@ -320,11 +401,11 @@ router.post('/api/store/addproducts', async (req, res) => {
     }
 
     const product = {
-      name: productName.toString(),
-      category: productCategory.toString(),
-      price: parseFloat(price),
-      image_url: imageUrl.toString(),
-      availability: parseInt(availability) || 0,
+      name: productName.trim(),
+      category: productCategory.trim(),
+      price: priceNum,
+      image_url: imageUrl.trim(),
+      availability: availNum || 0,
       college: college.toString(),
       coordinator: username.toString(),
       added_date: new Date()
@@ -662,14 +743,17 @@ router.post('/api/tournaments/:id/request-feedback', async (req, res) => {
       return res.status(404).json({ error: 'Tournament not found or you are not authorized' });
     }
 
-    // Ensure tournament is completed (use local timezone for consistency)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Allow feedback request once tournament has started (ongoing or completed)
+    // Build start datetime from stored date + time (HH:MM expected)
     const tDate = new Date(tournament.date);
-    tDate.setHours(0, 0, 0, 0);
-    console.log('Tournament date:', tDate, 'Today:', today);
-    if (tDate >= today) {
-      return res.status(400).json({ error: 'Feedback can only be requested for completed tournaments' });
+    const timeStr = (tournament.time || '').toString();
+    const [hh, mm] = (timeStr.match(/^\d{2}:\d{2}$/) ? timeStr.split(':') : ['00', '00']);
+    const start = new Date(tDate);
+    start.setHours(parseInt(hh || '0', 10), parseInt(mm || '0', 10), 0, 0);
+    const now = new Date();
+    console.log('Tournament start:', start, 'Now:', now);
+    if (now < start) {
+      return res.status(400).json({ error: 'Feedback can be requested once the tournament starts' });
     }
 
     // Check if feedback was already requested
@@ -685,10 +769,15 @@ router.post('/api/tournaments/:id/request-feedback', async (req, res) => {
       ...individualPlayers.map(p => p.username),
       ...teamEnrollments.flatMap(t => [t.player1_name, t.player2_name, t.player3_name].filter(Boolean))
     ]);
-
-    // Get user_ids for players
-    const players = await db.collection('users').find({ name: { $in: Array.from(playerUsernames) }, role: 'player' }).toArray();
-    console.log('Players found:', players.length);
+    const names = Array.from(playerUsernames).filter(Boolean);
+    console.log('Player names extracted from enrollments:', names);
+    
+    // Get user_ids for players by name (case-insensitive exact match)
+    const players = await db.collection('users').find({ 
+      role: 'player',
+      name: { $in: names }
+    }).toArray();
+    console.log('Players found in users collection:', players.length, 'Names:', players.map(p => p.name));
     const notifications = players.map(player => ({
       user_id: player._id,
       type: 'feedback_request',
