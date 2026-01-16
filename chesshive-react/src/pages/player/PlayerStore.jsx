@@ -84,8 +84,11 @@ function PlayerStore() {
   };
 
   const buyProduct = async (product) => {
+    // Use discounted price if subscription applies (to match displayed price)
+    const discount = discountPercentage > 0 ? (product.price * discountPercentage) / 100 : 0;
+    const finalPrice = Number((product.price - discount).toFixed(2));
     const payload = {
-      price: product.price,
+      price: finalPrice,
       buyer: playerName,
       college: playerCollege,
       productId: product._id,
@@ -98,6 +101,9 @@ function PlayerStore() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      if (data.success && typeof data.walletBalance === 'number') {
+        setWalletBalance(data.walletBalance);
+      }
       alert(data.message || 'Purchase successful!');
       loadStore();
     } catch (err) {
@@ -184,9 +190,7 @@ function PlayerStore() {
       <div style={styles.container}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 style={styles.h1}>ChessHive Store</h1>
-          <div>
-            <button onClick={toggleTheme} style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
-          </div>
+
         </div>
 
         {/* Alerts */}
