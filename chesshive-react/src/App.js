@@ -1,5 +1,5 @@
 import './App.css';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -17,6 +17,7 @@ import PlayerChat from './pages/player/PlayerChat';
 import PlayerRankings from './pages/player/PlayerRankings';
 import PlayerStore from './pages/player/PlayerStore';
 import PlayerSubscription from './pages/player/PlayerSubscription';
+import PlayerLiveMatch from './pages/player/PlayerLiveMatch';
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard';
 import CoordinatorChat from './pages/coordinator/CoordinatorChat';
 import CoordinatorMeetings from './pages/coordinator/CoordinatorMeetings';
@@ -43,12 +44,14 @@ import AdminOrganizerManagement from './pages/admin/AdminOrganizerManagement';
 import AdminPlayerManagement from './pages/admin/AdminPlayerManagement';
 import AdminPayments from './pages/admin/AdminPayments';
 import ChessStory from './pages/ChessStory';
+import ErrorPage from './pages/ErrorPage';
 
 function App() {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        <Route path="/error" element={<ErrorPage />} />
         <Route path="/" element={
           <motion.div
             initial={{ opacity: 0 }}
@@ -189,6 +192,16 @@ function App() {
             transition={{ duration: 0.5 }}
           >
             <PlayerChat />
+          </motion.div>
+        } />
+        <Route path="/player/live_match" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <PlayerLiveMatch />
           </motion.div>
         } />
         <Route path="/player/rankings" element={
@@ -471,6 +484,11 @@ function App() {
             <AdminPayments />
           </motion.div>
         } />
+
+        <Route
+          path="*"
+          element={<Navigate to="/error?title=Not%20Found&message=The%20page%20you%20requested%20does%20not%20exist.&code=404" replace />}
+        />
       </Routes>
     </AnimatePresence>
   );

@@ -399,3 +399,79 @@ Add the header block with project and team details, then lay out aggregates clea
 - `organizer_app.js` — approve/reject tournaments, store & sales aggregation, meeting endpoints
 - `player_app.js` — matchmaking queue, match endpoints, basic player REST CRUD
 - `chesshive-react/src/pages/*` — UI pages; map by name to backend endpoints (see comments in README above)
+
+---
+
+## 🛣️ Route Types (Application vs Custom vs Error vs Third‑Party)
+This section classifies the routes used in this project and shows where they are implemented and what they do.
+
+> Scope note: This project has **backend HTTP routes (Express)** and **frontend client-side routes (React Router)**.
+
+### Application Routes
+These are your “main feature” routes (tournaments, enrollment, store, meetings, profiles, chat helpers, notifications).
+
+**Where it is**
+- Backend entry + mounts: `Chesshivev1.0.2/app.js`
+- Role routers:
+  - Admin router: `Chesshivev1.0.2/admin_app.js`
+  - Organizer router: `Chesshivev1.0.2/organizer_app.js`
+  - Coordinator router: `Chesshivev1.0.2/coordinator_app.js`
+  - Player router: `Chesshivev1.0.2/player_app.js`
+- Auth/mixed routes: `Chesshivev1.0.2/routes/auth.js`
+
+**What it does**
+- `Chesshivev1.0.2/app.js` defines top-level JSON APIs like login/session/notifications/chat helpers and mounts role routers:
+  - Mount points: `/admin/*`, `/organizer/*`, `/coordinator/*`, `/player/*`
+- Each role router provides role-specific APIs under `/<role>/api/*` (dashboard, tournaments, store, meetings, approvals, etc.)
+- `routes/auth.js` provides signup OTP flow + contact form endpoints (both JSON and some legacy form POST routes)
+
+### Custom Routes
+These are “project-specific routing patterns” you wrote mainly for serving HTML pages and handling subpages.
+
+**Where it is**
+- Catch-all role page routes:
+  - `GET /admin/:subpage?` → `Chesshivev1.0.2/admin_app.js`
+  - `GET /organizer/:subpage?` → `Chesshivev1.0.2/organizer_app.js`
+  - `GET /coordinator/:subpage?` → `Chesshivev1.0.2/coordinator_app.js`
+  - `GET /player/:subpage?` → `Chesshivev1.0.2/player_app.js`
+- Example single custom page route:
+  - `GET /coordinator/feedback_view` → `Chesshivev1.0.2/coordinator_app.js`
+
+**What it does**
+- These routes map “subpage names” to `views/<role>/*.html` files and act like a mini page router for the legacy (non-React) HTML UI.
+
+### Third‑Party Routes
+These are routes created by dependencies (not hand-written `app.get('/...')` endpoints).
+
+**Where it is**
+- Socket.IO server is initialized in `Chesshivev1.0.2/app.js`.
+- Static hosting is enabled via `express.static('public')` in `Chesshivev1.0.2/app.js`.
+
+**What it does**
+- Socket.IO exposes the default endpoint `/socket.io/*` for WebSocket/long-poll connections.
+- `express.static('public')` exposes URLs for files in `Chesshivev1.0.2/public/*` (images, JS, etc.).
+
+> Related (middleware, not routes): `cors`, `express-session`, `method-override` are third-party middleware used in `Chesshivev1.0.2/app.js`.
+
+### Error Routes
+These exist to handle “not found” and “unexpected error” cases consistently.
+
+**Where it is**
+- Global 404 catch-all: `Chesshivev1.0.2/app.js`
+- Global error middleware (4-argument handler): `Chesshivev1.0.2/app.js`
+
+**What it does**
+- Any unmatched backend request triggers the 404 handler (redirects to home with `Page not found`).
+- Any thrown/unhandled server error triggers the error middleware (returns JSON for API requests, plain text for non-API).
+
+### Frontend Routes (React Router)
+These are SPA routes handled in the browser, not on Express.
+
+**Where it is**
+- Router setup: `chesshive-react/src/index.js` (wraps app in `BrowserRouter`)
+- Route list: `chesshive-react/src/App.js` (many `<Route path="..." element={...} />`)
+
+**What it does**
+- Controls which React page component renders for paths like `/login`, `/player/player_dashboard`, `/coordinator/tournament_management`, etc.
+
+> Note: there is currently no React Router `*` (wildcard) route in `chesshive-react/src/App.js` for a frontend “Not Found” page.
