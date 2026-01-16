@@ -133,22 +133,6 @@ The Express server exposes both server-rendered pages and JSON APIs. Important e
 - `contact` — messages from Contact Us
 - `subscriptionstable` — subscription records
 
----
-
-## Known issues / mismatches and recommended fixes
-
-- Contact Us mismatch:
-  - Frontend `ContactUs.jsx` sends JSON to `/api/contactus` and expects JSON response.
-  - Server currently implements `POST /contactus` (form submit + redirect) in `routes/auth.js`.
-  - Fix options:
-    1. Add `POST /api/contactus` that accepts JSON, inserts into `contact`, and returns JSON `{ success: true }`.
-    2. Or change frontend to submit a classic form POST to `/contactus` and handle redirect.
-
-- Dev port conflict: Both backend and frontend default to port `3000`. Use `PORT` env or run React on another port.
-
-- Session and cookies: The backend uses `express-session`. When using CRA dev server, ensure API calls are proxied or cookies are shared properly.
-
----
 
 ## Developer notes & tips
 
@@ -173,9 +157,3 @@ The Express server exposes both server-rendered pages and JSON APIs. Important e
 
 ---
 
-If you want, I can now:
-- Add `POST /api/contactus` JSON endpoint and optionally send admin email (need SMTP creds), or
-- Create an admin UI page to read contact messages, or
-- Translate this README/flow doc to Telugu script.
-
-Tell me which of these you'd like me to implement next.
