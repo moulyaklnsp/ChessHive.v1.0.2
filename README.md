@@ -133,22 +133,6 @@ The Express server exposes both server-rendered pages and JSON APIs. Important e
 - `contact` — messages from Contact Us
 - `subscriptionstable` — subscription records
 
----
-
-## Known issues / mismatches and recommended fixes
-
-- Contact Us mismatch:
-  - Frontend `ContactUs.jsx` sends JSON to `/api/contactus` and expects JSON response.
-  - Server currently implements `POST /contactus` (form submit + redirect) in `routes/auth.js`.
-  - Fix options:
-    1. Add `POST /api/contactus` that accepts JSON, inserts into `contact`, and returns JSON `{ success: true }`.
-    2. Or change frontend to submit a classic form POST to `/contactus` and handle redirect.
-
-- Dev port conflict: Both backend and frontend default to port `3000`. Use `PORT` env or run React on another port.
-
-- Session and cookies: The backend uses `express-session`. When using CRA dev server, ensure API calls are proxied or cookies are shared properly.
-
----
 
 ## Developer notes & tips
 
@@ -163,5 +147,13 @@ The Express server exposes both server-rendered pages and JSON APIs. Important e
   - Option B (socket): emit `io` event to an admin room; admin UI listens for `new-contact` events.
   - Option C (UI): build an admin page that queries `contact` and shows unread messages.
 
-- 
+- Regenerate the Word doc from markdown (we include a script):
+  - `python .\scripts\md_to_docx.py chesshive-react/docs/Website_Flow_Telugu.md chesshive-react/docs/Website_Flow_Telugu.docx`
+
+---
+
+## Where I edited files recently
+- Updated frontend CSS and player pages to use theme variables (dark mode improvements).
+
+---
 
