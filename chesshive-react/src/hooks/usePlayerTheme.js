@@ -4,10 +4,15 @@ const STORAGE_KEY = 'playerTheme'; // 'dark' | 'light'
 
 // Hook returns [isDark, toggleTheme]
 export default function usePlayerTheme() {
+  const hasLocalPreferenceRef = useRef(false);
+  const userToggledRef = useRef(false);
   const [isDark, setIsDark] = useState(() => {
     try {
       const v = localStorage.getItem(STORAGE_KEY);
-      if (v) return v === 'dark';
+      if (v) {
+        hasLocalPreferenceRef.current = true;
+        return v === 'dark';
+      }
     } catch (e) {}
     return false;
   });
@@ -37,6 +42,13 @@ export default function usePlayerTheme() {
     let cancelled = false;
     (async () => {
       try {
+        // If the user already has a local preference (or just toggled), don't let
+        // the server response override it. This prevents "dark mode" appearing
+        // stuck in light mode when `/api/theme` returns 'light'.
+        if (hasLocalPreferenceRef.current || userToggledRef.current) {
+          loadedFromServerRef.current = true;
+          return;
+        }
         const res = await fetch('/api/theme', { credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
@@ -54,7 +66,11 @@ export default function usePlayerTheme() {
     return () => { cancelled = true; };
   }, []);
 
-  const toggleTheme = useCallback(() => setIsDark(s => !s), []);
+  const toggleTheme = useCallback(() => {
+    userToggledRef.current = true;
+    hasLocalPreferenceRef.current = true;
+    setIsDark(s => !s);
+  }, []);
 
   return [isDark, toggleTheme];
 }

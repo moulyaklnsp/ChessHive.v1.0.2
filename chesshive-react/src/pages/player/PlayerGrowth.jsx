@@ -34,14 +34,14 @@ function PlayerGrowth() {
     const ds = datasets.map((d, idx) => ({
       label: d.label,
       data: d.data,
-      borderColor: idx === 0 ? '#2E8B57' : '#87CEEB',
+      borderColor: idx === 0 ? 'var(--sea-green)' : 'var(--sky-blue)',
       backgroundColor: idx === 0 ? gradient : 'rgba(135,206,235,0.2)',
       fill: true,
       tension: 0.3,
       borderWidth: 2,
       pointRadius: 4,
       pointBackgroundColor: idx === 0 ? '#2E8B57' : '#87CEEB',
-      pointBorderColor: '#FFF',
+      pointBorderColor: 'var(--on-accent)',
       pointBorderWidth: 2
     }));
 
@@ -117,25 +117,25 @@ function PlayerGrowth() {
   return (
     <div>
       <style>{`
-        :root { --sea-green:#2E8B57; --cream:#FFFDD0; --sky-blue:#87CEEB; }
+        /* using global theme variables */
         *{ margin:0; padding:0; box-sizing:border-box; }
-        .page{ font-family:'Playfair Display', serif; background-color:var(--cream); min-height:100vh; padding:2rem; }
+        .page{ font-family:'Playfair Display', serif; background-color:var(--page-bg); color:var(--text-color); min-height:100vh; padding:2rem; }
         .container{ max-width:1200px; margin:0 auto; }
         h2{ font-family:'Cinzel', serif; font-size:2.5rem; color:var(--sea-green); margin-bottom:2rem; text-align:center; display:flex; align-items:center; justify-content:center; gap:1rem; }
         h2::before{ content:'📈'; font-size:2.5rem; }
         .stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem; margin-bottom:2rem; }
-        .stat-card{ background:#fff; padding:1.5rem; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.1); text-align:center; transition: transform 0.3s ease; }
+        .stat-card{ background:var(--card-bg); padding:1.5rem; border-radius:15px; box-shadow:none; text-align:center; transition: transform 0.3s ease; border:1px solid var(--card-border); }
         .stat-card:hover{ transform: translateY(-5px); }
         .stat-value{ font-size:2rem; font-weight:bold; color:var(--sea-green); margin-bottom:0.5rem; }
         .stat-label{ color:#666; font-family:'Cinzel', serif; }
-        .chart-container{ background:#fff; border-radius:15px; padding:2rem; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-bottom:2rem; height:400px; }
+        .chart-container{ background:var(--card-bg); border-radius:15px; padding:2rem; box-shadow:none; margin-bottom:2rem; height:400px; border:1px solid var(--card-border); }
         .back-container{ text-align:right; }
-        .back{ display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:#fff; text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; }
+        .back{ display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; }
         .back:hover{ background:#236B43; transform: translateY(-2px); box-shadow:0 4px 8px rgba(0,0,0,0.1); }
-        .compare-box{ background:#fff; padding:1.5rem; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.1); margin-bottom:2rem; }
+        .compare-box{ background:var(--card-bg); padding:1.5rem; border-radius:15px; box-shadow:none; margin-bottom:2rem; border:1px solid var(--card-border); }
         .compare-grid{ display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
         .compare-input{ flex:1; min-width:250px; padding:0.8rem; border:2px solid var(--sea-green); border-radius:8px; font-size:1rem; }
-        .compare-btn{ background:var(--sea-green); color:#fff; padding:0.8rem 1.5rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; }
+        .compare-btn{ background:var(--sea-green); color:var(--on-accent); padding:0.8rem 1.5rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; }
         @media (max-width:768px){ .page{ padding:1rem; } .chart-container{ height:300px; } }
       `}</style>
 
@@ -144,7 +144,7 @@ function PlayerGrowth() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2>Player Growth Analytics</h2>
             <div>
-              <button onClick={toggleTheme} style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
+             
             </div>
           </div>
 

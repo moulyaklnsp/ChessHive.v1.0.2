@@ -138,7 +138,7 @@ function PlayerPairings() {
       .attr('class', 'link')
       .attr('d', d3.linkHorizontal().x((d) => d.y).y((d) => d.x))
       .attr('fill', 'none')
-      .attr('stroke', '#2E8B57')
+      .attr('stroke', 'var(--sea-green)')
       .attr('stroke-width', 2);
 
     const nodes = svg
@@ -159,8 +159,8 @@ function PlayerPairings() {
       .attr('height', 30)
       .attr('rx', 5)
       .attr('ry', 5)
-      .attr('fill', '#2E8B57')
-      .attr('stroke', '#FFFDD0')
+      .attr('fill', 'var(--sea-green)')
+      .attr('stroke', 'var(--sea-green)')
       .attr('stroke-width', 2);
 
     nodes
@@ -168,7 +168,7 @@ function PlayerPairings() {
       .attr('y', 0)
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'middle')
-      .attr('fill', '#fff')
+      .attr('fill', 'var(--on-accent)')
       .style('font-family', 'Playfair Display, serif')
       .style('font-size', '14px')
       .text((d) => {
