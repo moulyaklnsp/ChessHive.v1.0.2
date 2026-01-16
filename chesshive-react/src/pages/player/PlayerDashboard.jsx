@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import '../../styles/playerNeoNoir.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchNotifications, markNotificationRead } from '../../features/notifications/notificationsSlice';
+
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import { useNavigate, Link } from 'react-router-dom';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 function PlayerDashboard() {
   const navigate = useNavigate();
@@ -19,6 +22,7 @@ function PlayerDashboard() {
   const [latestItems, setLatestItems] = useState([]);
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // Error state
   const [errorMsg, setErrorMsg] = useState('');
@@ -197,9 +201,26 @@ function PlayerDashboard() {
   }, []);
 
   useEffect(() => {
+    const saved = localStorage.getItem('player_notifications_enabled');
+    setNotificationsEnabled(saved === null ? true : saved === 'true');
+  }, []);
+
+  useEffect(() => {
     loadDashboard();
     updateUnreadCount();
   }, [loadDashboard, updateUnreadCount]);
+
+  // Player-specific nav links used by AnimatedSidebar
+  const playerLinks = [
+    { path: '/player/player_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/player/growth', label: 'Growth Tracking', icon: 'fas fa-chart-line' },
+    { path: '/player/player_tournament', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/player/live_match', label: 'Live Match', icon: 'fas fa-chess-board' },
+    { path: '/player/subscription', label: 'Manage Subscription', icon: 'fas fa-star' },
+    { path: '/player/store', label: 'E-Commerce Store', icon: 'fas fa-store' },
+    { path: '/player/player_chat', label: 'Live Chat', icon: 'fas fa-comments' },
+    { path: '/player/settings', label: 'Settings', icon: 'fas fa-cog' }
+  ];
 
   // Derived
   const pendingTeamRequests = useMemo(() => {
@@ -215,25 +236,21 @@ function PlayerDashboard() {
     <div style={{ minHeight: '100vh' }}>
       {/* Head styles (scoped) */}
       <style>{`
-        :root {
-          --sea-green: #2E8B57;
-          --cream: #FFFDD0;
-          --sky-blue: #87CEEB;
-        }
+        /* Theme variables provided by .player-neo when on /player pages */
         * { margin:0; padding:0; box-sizing:border-box; }
         body, #root { min-height: 100vh; }
-        .page { font-family: 'Playfair Display', serif; background-color: var(--cream); min-height: 100vh; display:flex; }
-        .sidebar { width:280px; background:var(--sea-green); color:#fff; height:100vh; position:fixed; left:0; top:0; padding-top:1rem; z-index:1000; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
-        .sidebar-header { text-align:center; padding:1rem; border-bottom:2px solid rgba(255,255,255,0.1); margin-bottom:1rem; }
-        .sidebar-header h2 { font-family:'Cinzel', serif; color:var(--cream); font-size:1.5rem; margin-bottom:0.5rem; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        /* Sidebar replaced with site dropdown (AnimatedSidebar) */
+        .sidebar { display: none; }
+        .sidebar-header { display: none; }
         .nav-section { margin-bottom:1rem; padding:0 1rem; }
-        .nav-section-title { color:var(--cream); font-size:0.9rem; text-transform:uppercase; padding:0.5rem 1rem; opacity:0.7; }
-        .sidebar a { display:flex; align-items:center; gap:0.8rem; color:#fff; text-decoration:none; padding:0.8rem 1.5rem; transition:all 0.3s ease; font-family:'Playfair Display', serif; border-radius:5px; margin:0.2rem 0; }
-        .sidebar a:hover { background:rgba(135,206,235,0.2); color:var(--cream); transform: translateX(5px); }
+        .nav-section-title { color:var(--text-color); font-size:0.9rem; text-transform:uppercase; padding:0.5rem 1rem; opacity:0.7; }
+        .sidebar a { display:flex; align-items:center; gap:0.8rem; color:var(--sidebar-text); text-decoration:none; padding:0.8rem 1.5rem; transition:all 0.3s ease; font-family:'Playfair Display', serif; border-radius:5px; margin:0.2rem 0; }
+        .sidebar a:hover { background:rgba(var(--sea-green-rgb),0.12); color:var(--text-color); transform: translateX(5px); }
         .sidebar a i { width:20px; text-align:center; }
-        .content { flex-grow:1; margin-left:280px; padding:2rem; }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
         h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
-        .updates-section { background:#fff; border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
         .updates-section:hover { transform: translateY(-5px); }
         .updates-section h3 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.8rem; font-size:1.5rem; }
         .updates-section ul { list-style:none; }
@@ -241,12 +258,12 @@ function PlayerDashboard() {
         .updates-section li:last-child { border-bottom:none; }
         .updates-section li:hover { background:rgba(135,206,235,0.1); transform: translateX(5px); border-radius:8px; }
         .tournament-info, .item-info { flex-grow:1; }
-        .price-tag { background:var(--sea-green); color:#fff; padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; }
+        .price-tag { background: linear-gradient(90deg, rgba(235,87,87,1), rgba(6,56,80,1)); color: var(--on-accent); padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:600; box-shadow: inset 0 -4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
         .date-tag { color:var(--sea-green); font-style: italic; }
         .logout-box { position:absolute; bottom:2rem; width:100%; padding:0 2rem; }
-        .logout-box button { width:100%; background:var(--sky-blue); color:var(--sea-green); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
-        .logout-box button:hover { transform: translateY(-2px); box-shadow:0 4px 8px rgba(0,0,0,0.1); background:#6CB4D4; }
-        .approve-btn{ padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--cream); }
+        .logout-box button { width:100%; background: linear-gradient(90deg, var(--sky-blue), var(--sea-green)); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.25s ease; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
+        .logout-box button:hover { transform: translateY(-2px); box-shadow:0 8px 24px rgba(6,56,80,0.08); }
+        .approve-btn{ padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); }
         .approve-btn.reject{ background:#ff4d4d; }
         .approve-btn.reject:hover{ background:#cc0000; }
         @media (max-width: 768px){
@@ -254,72 +271,32 @@ function PlayerDashboard() {
           .content{ margin-left:0; padding:1rem; }
           .updates-section{ padding:1rem; }
           h1{ font-size:1.8rem; flex-direction:column; text-align:center; gap:0.5rem; }
-          .menu-btn{ display:block; position:fixed; left:1rem; top:1rem; background:var(--sea-green); color:#fff; border:none; padding:0.8rem; border-radius:8px; cursor:pointer; z-index:1001; transition:all 0.3s ease; }
+          .menu-btn{ display:block; position:fixed; left:1rem; top:1rem; background:var(--sea-green); color:var(--on-accent); border:none; padding:0.8rem; border-radius:8px; cursor:pointer; z-index:1001; transition:all 0.3s ease; }
           .menu-btn:hover{ background:#236B43; transform: scale(1.05); }
         }
         .inbox-icon { position:relative; cursor:pointer; margin-left:auto; }
-        .inbox-icon .unread-count { position:absolute; top:-5px; right:-5px; background:red; color:#fff; border-radius:50%; padding:2px 6px; font-size:0.8rem; }
+        .inbox-icon .unread-count { position:absolute; top:-5px; right:-5px; background: var(--sea-green); color:var(--on-accent); border-radius:50%; padding:2px 6px; font-size:0.8rem; }
         #notifications-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:${notificationsOpen ? 'flex' : 'none'}; justify-content:center; align-items:center; z-index:1002; }
-        .notifications-content { background:#fff; padding:2rem; border-radius:15px; max-width:500px; width:90%; }
+        .notifications-content { background:var(--card-bg); padding:2rem; border-radius:15px; max-width:500px; width:90%; border:1px solid var(--card-border); box-shadow:none; }
         .notifications-list li { margin-bottom:1rem; padding:1rem; background:rgba(135,206,235,0.1); border-radius:8px; }
         #feedback-form { display:${feedbackOpen ? 'block' : 'none'}; margin-top:1rem; }
         #feedback-form select, #feedback-form textarea{ width:100%; margin-bottom:1rem; }
-        #feedback-form button{ background:var(--sea-green); color:#fff; padding:0.5rem 1rem; border:none; border-radius:8px; cursor:pointer; }
+        #feedback-form button{ background:var(--sea-green); color:var(--on-accent); padding:0.5rem 1rem; border:none; border-radius:8px; cursor:pointer; }
       `}</style>
 
-      <div className="page">
-        {/* Mobile menu button */}
-        {isMobile && (
-          <button className="menu-btn" onClick={() => setSidebarOpen(s => !s)}>
-            <i className="fas fa-bars" />
-          </button>
-        )}
+      <div className="page player-neo">
+        {/* Site dropdown sidebar (AnimatedSidebar) */}
+        <AnimatedSidebar links={playerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        {/* Sidebar */}
-        <div className="sidebar">
-          <div className="sidebar-header">
-            <h2><i className="fas fa-chess" /> ChessHive</h2>
-            <p>Welcome, {playerName}!</p>
+        {/* Player quick header (moved from sidebar) */}
+        <div style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {notificationsEnabled && (
             <button className="inbox-icon" onClick={loadNotifications} aria-label={`Open notifications (${unreadCount} unread)`}>
               <i className="fas fa-inbox" aria-hidden="true" />
               <span className="unread-count" aria-hidden="true">{unreadCount}</span>
             </button>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-title">Main Menu</div>
-            <Link to="/player/player_profile" className="nav-item">
-              <i className="fas fa-user" aria-hidden="true" /><span>Profile</span>
-            </Link>
-            <Link to="/player/growth" className="nav-item">
-              <i className="fas fa-chart-line" aria-hidden="true" /><span>Growth Tracking</span>
-            </Link>
-            <Link to="/player/player_tournament" className="nav-item">
-              <i className="fas fa-trophy" aria-hidden="true" /><span>Tournaments</span>
-            </Link>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-title">Services</div>
-            <Link to="/player/subscription" className="nav-item">
-              <i className="fas fa-star" aria-hidden="true" /><span>Manage Subscription</span>
-            </Link>
-            <Link to="/player/store" className="nav-item">
-              <i className="fas fa-store" aria-hidden="true" /><span>E-Commerce Store</span>
-            </Link>
-            <Link to="/player/player_chat" className="nav-item">
-              <i className="fas fa-comments" aria-hidden="true" /><span>Live Chat</span>
-            </Link>
-            <Link to="/player/game_request" className="nav-item">
-              <i className="fas fa-chess-board" aria-hidden="true" /><span>Request Chess Match</span>
-            </Link>
-          </div>
-
-          <div className="logout-box">
-            <button onClick={() => navigate('/login')}>
-              <i className="fas fa-sign-out-alt" /><span>Log Out</span>
-            </button>
-          </div>
+          )}
+          <div style={{ color: 'var(--sea-green)', fontWeight: '600' }}>Welcome, {playerName}</div>
         </div>
 
         {/* Content */}
@@ -332,13 +309,11 @@ function PlayerDashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <h1 style={{ margin: 0 }}>
+            <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <i className="fas fa-chess-king" />
               Welcome to ChessHive, {playerName}!
             </h1>
-            <div>
-              <button onClick={toggleTheme} className="theme-toggle-btn" style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
-            </div>
+            <div />
           </div>
 
           {/* Team Requests */}
@@ -389,18 +364,7 @@ function PlayerDashboard() {
             </ul>
           </div>
 
-          {/* Quick Actions */}
-          <div className="updates-section" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'1rem' }}>
-            <h3><i className="fas fa-bolt" /> Quick Actions</h3>
-            <div style={{ display:'flex', gap:'1rem', flexWrap:'wrap' }}>
-              <Link to="/player/game_request" className="nav-item" style={{ background:'var(--sea-green)', color:'#fff', padding:'0.6rem 1rem', borderRadius:8, textDecoration:'none' }}>
-                <i className="fas fa-chess-board" /> <span>Request Match</span>
-              </Link>
-              <Link to="/player/play_chess" className="nav-item" style={{ background:'var(--sky-blue)', color:'var(--on-accent)', padding:'0.6rem 1rem', borderRadius:8, textDecoration:'none' }}>
-                <i className="fas fa-chess" /> <span>Open Game</span>
-              </Link>
-            </div>
-          </div>
+          {/* Quick Actions removed as requested */}
 
           {/* Latest Store Items */}
           <div className="updates-section">
@@ -420,6 +384,9 @@ function PlayerDashboard() {
             </ul>
           </div>
         </div>
+
+
+
       </div>
 
       {/* Notifications Modal */}

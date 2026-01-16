@@ -11,20 +11,28 @@ const CDN = {
   chessboardJs: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard.min.js',
 };
 
-const DEMO_PLAYERS = ['Moulya', 'Tejaswi', 'Vivash', 'Neelu', 'Ashlesha'];
-
 function OneOnOne() {
   const [isDark, toggleTheme] = usePlayerTheme();
   // UI state
   const [search, setSearch] = useState('');
   const [foundPlayer, setFoundPlayer] = useState(null); // string | null
   const [color, setColor] = useState('white');
-  const [timeControl, setTimeControl] = useState('1+0');
+  const [timeControl, setTimeControl] = useState('5+0');
   const [gameVisible, setGameVisible] = useState(false);
 
   // Chessboard container and instance refs
   const boardContainerRef = useRef(null);
   const boardInstanceRef = useRef(null);
+
+  const devHeaders = useCallback(() => {
+    // Optional local-dev bypass for /player routes (see backend isPlayer middleware)
+    if (process.env.NODE_ENV === 'production') return undefined;
+    return {
+      'x-dev-role': 'player',
+      'x-dev-email': 'devplayer@localhost',
+      'x-dev-username': 'devplayer'
+    };
+  }, []);
 
   // Dynamically load required CSS/JS from CDN
   useEffect(() => {
@@ -59,14 +67,28 @@ function OneOnOne() {
     };
   }, []);
 
-  const searchPlayer = useCallback(() => {
-    if (DEMO_PLAYERS.includes(search.trim())) {
-      setFoundPlayer(search.trim());
-    } else {
+  const searchPlayer = useCallback(async () => {
+    const q = search.trim();
+    if (!q) {
+      alert('Enter player name');
+      setFoundPlayer(null);
+      return;
+    }
+    try {
+      const headers = devHeaders();
+      const res = await fetch(`/player/api/chess/player/${encodeURIComponent(q)}`, {
+        credentials: 'include',
+        headers: headers || undefined
+      });
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      if (!data?.player?.name) throw new Error('Invalid response');
+      setFoundPlayer(data.player.name);
+    } catch {
       alert('Player not found! Try again.');
       setFoundPlayer(null);
     }
-  }, [search]);
+  }, [search, devHeaders]);
 
   const startChessGame = useCallback((chosenColor) => {
     setGameVisible(true);
@@ -127,7 +149,7 @@ function OneOnOne() {
     searchRow: { display: 'flex', gap: '1rem', marginBottom: '2rem' },
     input: { flex: 1, padding: '0.8rem', border: '2px solid var(--sea-green)', borderRadius: 8, fontFamily: 'Playfair Display, serif', background: 'var(--content-bg)', color: 'var(--text-color)' },
     label: { display: 'block', marginBottom: '0.5rem', color: 'var(--sea-green)', fontWeight: 'bold', fontFamily: 'Cinzel, serif' },
-    select: { width: '100%', padding: '0.8rem', marginBottom: '1rem', border: '2px solid var(--sea-green)', borderRadius: 8, fontFamily: 'Playfair Display, serif', background: 'var(--content-bg)', color: 'var(--text-color)' },
+    select: { width: '100%', marginBottom: '1rem' },
     button: { background: 'var(--sea-green)', color: 'var(--content-bg)', border: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
     playerInfo: { background: 'var(--page-bg)', padding: '1.5rem', borderRadius: 8, marginBottom: '2rem' },
     gameArea: { marginTop: '2rem' },
@@ -167,16 +189,17 @@ function OneOnOne() {
               </h3>
 
               <label style={styles.label}>Choose Color:</label>
-              <select style={styles.select} value={color} onChange={(e) => setColor(e.target.value)}>
+              <select className="player-select" style={styles.select} value={color} onChange={(e) => setColor(e.target.value)}>
                 <option value="white">White</option>
                 <option value="black">Black</option>
                 <option value="random">Random</option>
               </select>
 
               <label style={styles.label}>Time Control:</label>
-              <select style={styles.select} value={timeControl} onChange={(e) => setTimeControl(e.target.value)}>
+              <select className="player-select" style={styles.select} value={timeControl} onChange={(e) => setTimeControl(e.target.value)}>
                 <option value="1+0">Bullet (1+0)</option>
                 <option value="3+2">Blitz (3+2)</option>
+                <option value="5+0">Blitz (5+0)</option>
                 <option value="10+0">Rapid (10+0)</option>
               </select>
 
