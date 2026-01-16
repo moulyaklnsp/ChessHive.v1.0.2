@@ -173,9 +173,3 @@ The Express server exposes both server-rendered pages and JSON APIs. Important e
 
 ---
 
-If you want, I can now:
-- Add `POST /api/contactus` JSON endpoint and optionally send admin email (need SMTP creds), or
-- Create an admin UI page to read contact messages, or
-- Translate this README/flow doc to Telugu script.
-
-Tell me which of these you'd like me to implement next.
