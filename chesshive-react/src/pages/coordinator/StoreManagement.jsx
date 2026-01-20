@@ -20,6 +20,8 @@ function StoreManagement() {
     productImage: '',
     availability: ''
   });
+  const [productImageFile, setProductImageFile] = useState(null);
+  const [productImagePreview, setProductImagePreview] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [message, setMessage] = useState(null); // { type: 'success'|'error', text: string }
 
@@ -70,13 +72,15 @@ function StoreManagement() {
     if (isNaN(price)) errors.productPrice = 'Price is required.';
     else if (price < 0) errors.productPrice = 'Price cannot be negative.';
 
-    // Image
-    const isValidImg =
-      imageUrl.startsWith('http://') ||
-      imageUrl.startsWith('https://') ||
-      (imageUrl.startsWith('data:image/') && imageUrl.includes(';base64,'));
-    if (!imageUrl) errors.productImage = 'Image URL is required.';
-    else if (!isValidImg) errors.productImage = 'Provide a valid http/https URL or data:image base64 string.';
+    // Image (either file OR URL)
+    if (!productImageFile) {
+      const isValidImg =
+        imageUrl.startsWith('http://') ||
+        imageUrl.startsWith('https://') ||
+        (imageUrl.startsWith('data:image/') && imageUrl.includes(';base64,'));
+      if (!imageUrl) errors.productImage = 'Upload an image or provide an Image URL.';
+      else if (!isValidImg) errors.productImage = 'Provide a valid http/https URL or data:image base64 string.';
+    }
 
     // Availability
     if (isNaN(availability)) errors.availability = 'Availability is required';
@@ -106,17 +110,30 @@ function StoreManagement() {
         category: payload.productCategory,
         price: payload.price,
         imageUrl: payload.imageUrl,
+        imageFile: productImageFile || undefined,
         availability: payload.availability,
       }));
       if (addProduct.rejected.match(resultAction)) throw new Error(resultAction.payload?.message || 'Failed to add product');
       await dispatch(fetchProducts('coordinator'));
       setForm({ productName: '', productCategory: '', productPrice: '', productImage: '', availability: '' });
+      setProductImageFile(null);
+      setProductImagePreview('');
       showMessage('Product added successfully!', 'success');
     } catch (err) {
       console.error('POST error:', err);
       showMessage(`Failed to add product: ${err.message}`, 'error');
     }
   };
+
+  useEffect(() => {
+    if (!productImageFile) {
+      setProductImagePreview('');
+      return;
+    }
+    const url = URL.createObjectURL(productImageFile);
+    setProductImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [productImageFile]);
 
   const styles = {
     root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
@@ -197,15 +214,34 @@ function StoreManagement() {
               {fieldErrors.productPrice && <div style={styles.error}>{fieldErrors.productPrice}</div>}
             </div>
             <div>
-              <label style={styles.label}><i className="fas fa-image" aria-hidden="true"></i> Image URL:</label>
+              <label style={styles.label}><i className="fas fa-image" aria-hidden="true"></i> Product Image:</label>
+
+              <input
+                style={styles.input(false)}
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const f = e.target.files && e.target.files[0];
+                  setProductImageFile(f || null);
+                }}
+              />
+
+              {productImagePreview && (
+                <div style={{ marginTop: 10 }}>
+                  <img src={productImagePreview} alt="Preview" style={{ width: 220, height: 140, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--card-border)' }} />
+                </div>
+              )}
+
+              <div style={{ marginTop: 10 }}>
+                <div style={{ opacity: 0.85, marginBottom: 6 }}>Or paste an Image URL (optional if you upload a file):</div>
               <input
                 style={styles.input(!!fieldErrors.productImage)}
                 type="text"
                 value={form.productImage}
                 onChange={(e) => setForm({ ...form, productImage: e.target.value })}
-                required
               />
               {fieldErrors.productImage && <div style={styles.error}>{fieldErrors.productImage}</div>}
+              </div>
             </div>
             <div>
               <label style={styles.label}><i className="fas fa-boxes" aria-hidden="true"></i> Availability:</label>

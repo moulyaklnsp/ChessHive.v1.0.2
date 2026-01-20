@@ -98,6 +98,7 @@ function CoordinatorDashboard() {
           <a href="/coordinator/coordinator_profile" style={styles.link}><i className="fas fa-user" /> Profile</a>
           <a href="/coordinator/tournament_management" style={styles.link}><i className="fas fa-trophy" /> Tournaments</a>
           <a href="/coordinator/player_stats" style={styles.link}><i className="fas fa-chess" /> Player Stats</a>
+          <a href="/coordinator/streaming_control" style={styles.link}><i className="fas fa-broadcast-tower" /> Streaming Control</a>
           <a href="/coordinator/store_management" style={styles.link}><i className="fas fa-store" /> Store</a>
           <a href="/coordinator/coordinator_meetings" style={styles.link}><i className="fas fa-calendar" /> Meetings</a>
           <a href="/coordinator/coordinator_chat" style={styles.link}><i className="fas fa-comments" /> Live Chat</a>

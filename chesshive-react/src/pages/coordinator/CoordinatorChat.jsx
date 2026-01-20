@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createSocket } from '../../utils/socket';
 
 // React version of views/coordinator/coordinator_chat.ejs
 // Loads Socket.IO client from backend at /socket.io/socket.io.js (works in dev via CRA proxy).
@@ -62,7 +63,8 @@ function CoordinatorChat() {
       return () => clearTimeout(t);
     }
     if (socketRef.current) return; // already connected
-    const sock = window.io();
+    const sock = createSocket();
+    if (!sock) return;
     socketRef.current = sock;
 
     sock.on('message', (payload) => {

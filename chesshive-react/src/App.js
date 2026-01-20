@@ -17,7 +17,8 @@ import PlayerChat from './pages/player/PlayerChat';
 import PlayerRankings from './pages/player/PlayerRankings';
 import PlayerStore from './pages/player/PlayerStore';
 import PlayerSubscription from './pages/player/PlayerSubscription';
-import PlayerLiveMatch from './pages/player/PlayerLiveMatch';
+import PlayerWatch from './pages/player/PlayerWatch';
+import PlayerTv from './pages/player/PlayerTv';
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard';
 import CoordinatorChat from './pages/coordinator/CoordinatorChat';
 import CoordinatorMeetings from './pages/coordinator/CoordinatorMeetings';
@@ -29,6 +30,7 @@ import CoordinatorPlayerStats from './pages/coordinator/CoordinatorPlayerStats';
 import CoordinatorRankings from './pages/coordinator/CoordinatorRankings';
 import StoreManagement from './pages/coordinator/StoreManagement';
 import TournamentManagement from './pages/coordinator/TournamentManagement';
+import CoordinatorStreamingControl from './pages/coordinator/CoordinatorStreamingControl';
 import CollegeStats from './pages/organizer/CollegeStats';
 import CoordinatorManagement from './pages/organizer/CoordinatorManagement';
 import Meetings from './pages/organizer/Meetings';
@@ -194,14 +196,26 @@ function App() {
             <PlayerChat />
           </motion.div>
         } />
-        <Route path="/player/live_match" element={
+        {/* Live Match removed for player user type */}
+        <Route path="/player/live_match" element={<Navigate to="/player/player_dashboard" replace />} />
+        <Route path="/player/watch" element={
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <PlayerLiveMatch />
+            <PlayerWatch />
+          </motion.div>
+        } />
+        <Route path="/player/tv/:provider" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <PlayerTv />
           </motion.div>
         } />
         <Route path="/player/rankings" element={
@@ -342,6 +356,17 @@ function App() {
             transition={{ duration: 0.5 }}
           >
             <TournamentManagement />
+          </motion.div>
+        } />
+
+        <Route path="/coordinator/streaming_control" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <CoordinatorStreamingControl />
           </motion.div>
         } />
         <Route path="/organizer/college_stats" element={

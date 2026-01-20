@@ -63,6 +63,10 @@ async function initializeCollections(db) {
         phone: { bsonType: 'string' },
         AICF_ID: { bsonType: 'string' },
         FIDE_ID: { bsonType: 'string' },
+        profile_photo_url: { bsonType: 'string' },
+        profile_photo_public_id: { bsonType: 'string' },
+        wallpaper_url: { bsonType: 'string' },
+        wallpaper_public_id: { bsonType: 'string' },
         deleted_by: { bsonType: 'string' },
         deleted_date: { bsonType: 'date' }
       }
@@ -161,6 +165,7 @@ async function initializeCollections(db) {
         name: { bsonType: 'string' },
         price: { bsonType: 'number' },
         image_url: { bsonType: 'string' },
+        image_public_id: { bsonType: 'string' },
         coordinator: { bsonType: 'string' },
         college: { bsonType: 'string' },
         availability: { bsonType: 'int' }

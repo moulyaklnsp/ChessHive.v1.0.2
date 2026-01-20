@@ -3,6 +3,10 @@ const router = express.Router();
 const { connectDB } = require('./databasecongi');
 const { ObjectId } = require('mongodb');
 const { swissPairing, Player } = require('../player_app');
+const { uploadImageBuffer } = require('../utils/cloudinary');
+
+let multer;
+try { multer = require('multer'); } catch (e) { multer = null; }
 
 
 // JSON API endpoint used by the React frontend
@@ -691,10 +695,51 @@ router.post('/player/approve-team-request', async (req, res) => {
 
 // Add Product Route
 router.post('/coordinator/add-product', async (req, res) => {
+  // Optional multipart support for image file upload (field name: "productImage")
+  try {
+    if (multer && (req.headers['content-type'] || '').includes('multipart/form-data')) {
+      const uploader = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 2 * 1024 * 1024 },
+        fileFilter: (r, file, cb) => {
+          const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+          if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+          cb(null, true);
+        }
+      }).single('productImage');
+
+      await new Promise((resolve, reject) => {
+        uploader(req, res, (err) => (err ? reject(err) : resolve()));
+      });
+    }
+  } catch (e) {
+    console.error('Product image upload parse error:', e);
+    return res.status(400).send(e.message || 'Invalid upload');
+  }
+
   const { productName, productPrice, productImage, availability } = req.body;
   const coordinatorName = req.session.username;
   const collegeName = req.session.userCollege;
-  if (!productName || !productPrice || !productImage) {
+
+  let productImageUrl = (productImage || '').toString();
+  let imagePublicId = '';
+
+  if (req.file) {
+    try {
+      const result = await uploadImageBuffer(req.file.buffer, {
+        folder: 'chesshive/product-images',
+        public_id: `product_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        overwrite: false
+      });
+      productImageUrl = result?.secure_url || '';
+      imagePublicId = result?.public_id || '';
+    } catch (e) {
+      console.error('Cloudinary upload failed:', e);
+      return res.status(500).send('Failed to upload product image');
+    }
+  }
+
+  if (!productName || !productPrice || !productImageUrl) {
     console.log('Add product failed: Missing fields');
     return res.send("All fields are required.");
   }
@@ -703,7 +748,8 @@ router.post('/coordinator/add-product', async (req, res) => {
   await db.collection('products').insertOne({
     name: productName,
     price: parseFloat(productPrice),
-    image_url: productImage,
+    image_url: productImageUrl,
+    image_public_id: imagePublicId || undefined,
     coordinator: coordinatorName,
     college: collegeName,
     availability: parseInt(availability)

@@ -10,6 +10,10 @@
   --muted-text: rgba(11,22,34,0.86); /* muted for small text */
   --on-dark: #E9F8FF; /* text used on dark backgrounds */
   --muted-on-dark: rgba(233,248,255,0.85);
+
+  /* Optional wallpaper layers (set dynamically by usePlayerTheme) */
+  --player-wallpaper-layer: none;
+  --player-wallpaper-overlay: none;
 } 
 
 /* Player light theme (default for /player pages)
@@ -242,7 +246,13 @@ body.player-dark .player-neo {
 
 
 /* Player page general adjustments */
-.player-neo .page { background: var(--content-bg); }
+.player-neo .page {
+  background-color: var(--content-bg);
+  background-image: var(--player-wallpaper-overlay), var(--player-wallpaper-layer);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
 .player-neo .content { color: var(--neo-cream); }
 /* Headings: ensure strong cyan headings in dark theme for legibility */
 .player-neo h1, .player-neo h2 {
