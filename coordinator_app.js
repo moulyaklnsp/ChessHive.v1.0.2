@@ -3,8 +3,11 @@ const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const moment = require('moment');
 const utils = require('./utils');
+const { uploadImageBuffer } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
 const path = require('path'); 
+let multer;
+try { multer = require('multer'); } catch (e) { multer = null; }
 
 class Player {
   constructor(id, username, college, gender) {
@@ -81,6 +84,149 @@ function swissPairing(players, totalRounds) {
 }
 
 router.use(express.json());
+
+// ------------------------------------------------------------
+// Streaming (Coordinator control)
+// ------------------------------------------------------------
+
+function normalizePlatform(p) {
+  const v = (p || '').toString().trim().toLowerCase();
+  if (!v) return 'other';
+  if (['youtube', 'twitch', 'lichess', 'chesscom', 'chess.com'].includes(v)) {
+    return v === 'chess.com' ? 'chesscom' : v;
+  }
+  return 'other';
+}
+
+function safeTrim(v) {
+  return (v == null ? '' : String(v)).trim();
+}
+
+router.get('/api/streams', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const createdByEmail = req.session.userEmail;
+    const streams = await db.collection('streams')
+      .find({ createdByEmail })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .toArray();
+    const out = (streams || []).map(s => ({
+      ...s,
+      _id: s._id ? s._id.toString() : undefined,
+    }));
+    return res.json(out);
+  } catch (error) {
+    console.error('Error fetching coordinator streams:', error);
+    return res.status(500).json({ error: 'Failed to fetch streams' });
+  }
+});
+
+router.post('/api/streams', async (req, res) => {
+  try {
+    const title = safeTrim(req.body?.title);
+    const url = safeTrim(req.body?.url);
+    const platform = normalizePlatform(req.body?.platform);
+    const description = safeTrim(req.body?.description);
+    const isLive = !!req.body?.isLive;
+    const featured = !!req.body?.featured;
+    const matchLabel = safeTrim(req.body?.matchLabel);
+
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+    if (!url) return res.status(400).json({ error: 'Stream URL is required' });
+
+    const db = await connectDB();
+
+    const coordinator = await db.collection('users').findOne({
+      email: req.session.userEmail,
+      role: 'coordinator'
+    });
+
+    const now = new Date();
+    const doc = {
+      title,
+      url,
+      platform,
+      description,
+      matchLabel,
+      result: safeTrim(req.body?.result) || '',
+      isLive,
+      featured,
+      endedAt: isLive ? null : now,
+      createdByEmail: req.session.userEmail,
+      createdByName: coordinator?.name || req.session.username || req.session.userEmail,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await db.collection('streams').insertOne(doc);
+    return res.status(201).json({ ...doc, _id: result.insertedId.toString() });
+  } catch (error) {
+    console.error('Error creating stream:', error);
+    return res.status(500).json({ error: 'Failed to create stream' });
+  }
+});
+
+router.patch('/api/streams/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid id' });
+
+    const updates = {};
+    if (req.body?.title != null) updates.title = safeTrim(req.body.title);
+    if (req.body?.url != null) updates.url = safeTrim(req.body.url);
+    if (req.body?.platform != null) updates.platform = normalizePlatform(req.body.platform);
+    if (req.body?.description != null) updates.description = safeTrim(req.body.description);
+    if (req.body?.matchLabel != null) updates.matchLabel = safeTrim(req.body.matchLabel);
+    if (req.body?.result != null) updates.result = safeTrim(req.body.result);
+    if (req.body?.isLive != null) updates.isLive = !!req.body.isLive;
+    if (req.body?.featured != null) updates.featured = !!req.body.featured;
+    updates.updatedAt = new Date();
+
+    // basic validation if present
+    if ('title' in updates && !updates.title) return res.status(400).json({ error: 'Title cannot be empty' });
+    if ('url' in updates && !updates.url) return res.status(400).json({ error: 'Stream URL cannot be empty' });
+
+    const db = await connectDB();
+
+    const filter = { _id: new ObjectId(id), createdByEmail: req.session.userEmail };
+    const existing = await db.collection('streams').findOne(filter);
+    if (!existing) return res.status(404).json({ error: 'Stream not found' });
+
+    // Maintain endedAt when switching live state
+    if ('isLive' in updates) {
+      if (updates.isLive === false && existing.isLive === true) {
+        updates.endedAt = new Date();
+      }
+      if (updates.isLive === true && existing.isLive === false) {
+        updates.endedAt = null;
+      }
+    }
+
+    await db.collection('streams').updateOne(filter, { $set: updates });
+    const updated = await db.collection('streams').findOne(filter);
+    return res.json({
+      ...(updated || {}),
+      _id: updated?._id ? updated._id.toString() : undefined,
+    });
+  } catch (error) {
+    console.error('Error updating stream:', error);
+    return res.status(500).json({ error: 'Failed to update stream' });
+  }
+});
+
+router.delete('/api/streams/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid id' });
+    const db = await connectDB();
+    const result = await db.collection('streams').deleteOne({ _id: new ObjectId(id), createdByEmail: req.session.userEmail });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Stream not found' });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting stream:', error);
+    return res.status(500).json({ error: 'Failed to delete stream' });
+  }
+});
 
 // Name API
 router.get('/api/name', async (req, res) => {
@@ -358,16 +504,45 @@ router.get('/api/store/products', async (req, res) => {
 
 router.post('/api/store/addproducts', async (req, res) => {
   try {
+    // Optional multipart support (for image file upload)
+    if (multer && (req.headers['content-type'] || '').includes('multipart/form-data')) {
+      const uploader = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 2 * 1024 * 1024 },
+        fileFilter: (r, file, cb) => {
+          const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+          if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+          cb(null, true);
+        }
+      }).single('image');
+
+      await new Promise((resolve, reject) => {
+        uploader(req, res, (err) => (err ? reject(err) : resolve()));
+      });
+    }
+
     // Accept both camelCase and legacy names from frontend
     const productName = (req.body.productName ?? req.body.name ?? '').toString();
     const productCategory = (req.body.productCategory ?? req.body.category ?? '').toString();
     const price = req.body.price; // numeric string or number
-    const imageUrl = (req.body.imageUrl ?? req.body.image_url ?? '').toString();
+    let imageUrl = (req.body.imageUrl ?? req.body.image_url ?? '').toString();
+    let imagePublicId = (req.body.imagePublicId ?? req.body.image_public_id ?? '').toString();
     const availability = (req.body.availability !== undefined ? req.body.availability : req.body.stock);
 
     console.log('POST body received (normalized):', { productName, productCategory, price, imageUrl, availability });
     console.log('Raw body:', req.body);
     console.log('Session data:', { userEmail: req.session.userEmail, userCollege: req.session.userCollege, collegeName: req.session.collegeName });
+
+    // If an image file was provided, upload to Cloudinary and use that URL
+    if (req.file) {
+      const result = await uploadImageBuffer(req.file.buffer, {
+        folder: 'chesshive/product-images',
+        public_id: `product_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        overwrite: false
+      });
+      imageUrl = result?.secure_url || '';
+      imagePublicId = result?.public_id || '';
+    }
 
     // Basic validation
     if (!productName || !productCategory || price === undefined || price === '' || !imageUrl || availability === undefined) {
@@ -405,11 +580,15 @@ router.post('/api/store/addproducts', async (req, res) => {
       category: productCategory.trim(),
       price: priceNum,
       image_url: imageUrl.trim(),
+      image_public_id: imagePublicId ? imagePublicId.toString() : undefined,
       availability: availNum || 0,
       college: college.toString(),
       coordinator: username.toString(),
       added_date: new Date()
     };
+
+    // Remove undefined fields (keeps DB clean)
+    Object.keys(product).forEach((k) => product[k] === undefined && delete product[k]);
     console.log('Product to insert:', product);
 
     const result = await db.collection('products').insertOne(product);
