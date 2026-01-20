@@ -3,7 +3,10 @@ const path = require('path');
 const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const utils = require('./utils');
+const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
+let multer;
+try { multer = require('multer'); } catch (e) { multer = null; }
 router.use(express.json()); // Parses JSON
 
 class Player {
@@ -551,6 +554,277 @@ router.get('/api/profile', async (req, res) => {
     },
     subscribed
   });
+});
+
+// Upload/Update player profile photo
+// Expects multipart/form-data with field name: "photo"
+router.post('/api/profile/photo', async (req, res, next) => {
+  if (!multer) {
+    return res.status(500).json({ error: 'Upload support is not available (multer not installed).' });
+  }
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  const uploader = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (r, file, cb) => {
+      const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+      if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+      cb(null, true);
+    }
+  }).single('photo');
+
+  uploader(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    return next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No photo uploaded. Use field name "photo".' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const existingPublicId = (user.profile_photo_public_id || '').toString();
+    const desiredPublicId = existingPublicId || `chesshive/profile-photos/player_${user._id}`;
+
+    const result = await uploadImageBuffer(req.file.buffer, {
+      folder: 'chesshive/profile-photos',
+      public_id: desiredPublicId.split('/').pop(),
+      overwrite: true,
+      invalidate: true
+    });
+
+    const newUrl = result?.secure_url;
+    const newPublicId = result?.public_id;
+    if (!newUrl || !newPublicId) {
+      return res.status(500).json({ error: 'Failed to upload profile photo' });
+    }
+
+    // Best-effort cleanup of previous Cloudinary asset (if public_id changed)
+    if (existingPublicId && existingPublicId !== newPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { profile_photo_url: newUrl, profile_photo_public_id: newPublicId, updated_date: new Date() } }
+    );
+
+    return res.json({ success: true, profile_photo_url: newUrl });
+  } catch (err) {
+    console.error('Error updating profile photo:', err);
+    return res.status(500).json({ error: 'Failed to update profile photo' });
+  }
+});
+
+// Get current player wallpaper
+router.get('/api/profile/wallpaper', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+    return res.json({ success: true, wallpaper_url: user.wallpaper_url || '' });
+  } catch (err) {
+    console.error('Error fetching wallpaper:', err);
+    return res.status(500).json({ error: 'Failed to fetch wallpaper' });
+  }
+});
+
+// Upload/Update player wallpaper
+// Expects multipart/form-data with field name: "wallpaper"
+router.post('/api/profile/wallpaper', async (req, res, next) => {
+  if (!multer) {
+    return res.status(500).json({ error: 'Upload support is not available (multer not installed).' });
+  }
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  const uploader = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 },
+    fileFilter: (r, file, cb) => {
+      const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+      if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+      cb(null, true);
+    }
+  }).single('wallpaper');
+
+  uploader(req, res, (err) => {
+    if (err) {
+      const code = (err && err.code) ? String(err.code) : '';
+      if (code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Wallpaper too large. Max size is 15MB.' });
+      }
+      return res.status(400).json({ error: err.message || 'Upload failed' });
+    }
+    return next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No wallpaper uploaded. Use field name "wallpaper".' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const existingPublicId = (user.wallpaper_public_id || '').toString();
+    const desiredPublicId = existingPublicId || `chesshive/wallpapers/player_${user._id}`;
+
+    const result = await uploadImageBuffer(req.file.buffer, {
+      folder: 'chesshive/wallpapers',
+      public_id: desiredPublicId.split('/').pop(),
+      overwrite: true,
+      invalidate: true
+    });
+
+    const newUrl = result?.secure_url;
+    const newPublicId = result?.public_id;
+    if (!newUrl || !newPublicId) {
+      return res.status(500).json({ error: 'Failed to upload wallpaper' });
+    }
+
+    if (existingPublicId && existingPublicId !== newPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { wallpaper_url: newUrl, wallpaper_public_id: newPublicId, updated_date: new Date() } }
+    );
+
+    return res.json({ success: true, wallpaper_url: newUrl });
+  } catch (err) {
+    console.error('Error updating wallpaper:', err);
+    const isProd = (process.env.NODE_ENV || 'development') === 'production';
+    const msg = (err && err.message) ? String(err.message) : '';
+    const code = (err && (err.code !== undefined)) ? err.code : undefined;
+
+    // Mongo schema validation failure often shows up as code 121
+    if (code === 121 || msg.toLowerCase().includes('document failed validation')) {
+      return res.status(400).json({
+        error: 'Wallpaper update rejected by database schema. Restart backend so validators update, then try again.',
+        ...(isProd ? {} : { detail: msg })
+      });
+    }
+
+    // Cloudinary errors often include http_code/message
+    const httpCode = (err && err.http_code) ? parseInt(err.http_code, 10) : null;
+    const status = (httpCode && httpCode >= 400 && httpCode < 600) ? 502 : 500;
+    return res.status(status).json({
+      error: 'Failed to update wallpaper',
+      ...(isProd ? {} : { detail: msg })
+    });
+  }
+});
+
+// Remove wallpaper
+router.delete('/api/profile/wallpaper', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const existingPublicId = (user.wallpaper_public_id || '').toString();
+    if (existingPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $unset: { wallpaper_url: '', wallpaper_public_id: '' }, $set: { updated_date: new Date() } }
+    );
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Error removing wallpaper:', err);
+    return res.status(500).json({ error: 'Failed to remove wallpaper' });
+  }
+});
+
+// Update player profile fields (JSON)
+router.put('/api/profile', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const { name, dob, phone, AICF_ID, FIDE_ID } = req.body || {};
+
+    const set = {};
+    const unset = {};
+
+    if (name !== undefined) {
+      const v = (name ?? '').toString().trim();
+      if (!v) return res.status(400).json({ error: 'Name is required' });
+      set.name = v;
+    }
+
+    if (phone !== undefined) {
+      const v = (phone ?? '').toString().trim();
+      if (!v) unset.phone = '';
+      else set.phone = v;
+    }
+
+    if (AICF_ID !== undefined) {
+      const v = (AICF_ID ?? '').toString().trim();
+      if (!v) unset.AICF_ID = '';
+      else set.AICF_ID = v;
+    }
+
+    if (FIDE_ID !== undefined) {
+      const v = (FIDE_ID ?? '').toString().trim();
+      if (!v) unset.FIDE_ID = '';
+      else set.FIDE_ID = v;
+    }
+
+    if (dob !== undefined) {
+      const v = (dob ?? '').toString().trim();
+      if (!v) {
+        unset.dob = '';
+      } else {
+        const d = new Date(v);
+        if (Number.isNaN(d.getTime())) {
+          return res.status(400).json({ error: 'Invalid dob. Use YYYY-MM-DD.' });
+        }
+        set.dob = d;
+      }
+    }
+
+    if (Object.keys(set).length === 0 && Object.keys(unset).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const updateDoc = {};
+    if (Object.keys(set).length) updateDoc.$set = { ...set, updated_date: new Date() };
+    if (Object.keys(unset).length) updateDoc.$unset = unset;
+    await db.collection('users').updateOne({ _id: user._id }, updateDoc);
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating player profile:', err);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 router.delete('/api/deleteAccount', async (req, res) => {

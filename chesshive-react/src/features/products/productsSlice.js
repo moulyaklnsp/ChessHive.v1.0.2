@@ -17,23 +17,34 @@ export const fetchProducts = createAsyncThunk('products/fetchProducts', async (m
 
 export const addProduct = createAsyncThunk('products/addProduct', async (payload, thunkAPI) => {
   try {
+    const hasFile = !!payload.imageFile;
+    const body = hasFile ? (() => {
+      const fd = new FormData();
+      fd.append('productName', payload.name ?? '');
+      fd.append('productCategory', payload.category ?? '');
+      fd.append('price', String(payload.price ?? ''));
+      fd.append('availability', String(payload.availability ?? ''));
+      fd.append('image', payload.imageFile);
+      return fd;
+    })() : JSON.stringify({
+      // canonical
+      name: payload.name,
+      category: payload.category,
+      price: payload.price,
+      imageUrl: payload.imageUrl,
+      availability: payload.availability,
+      // legacy/alternate keys for backend flexibility
+      productName: payload.name,
+      productCategory: payload.category,
+      image_url: payload.imageUrl,
+      stock: payload.availability,
+    });
+
     const res = await fetch('/coordinator/api/store/addproducts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: hasFile ? undefined : { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        // canonical
-        name: payload.name,
-        category: payload.category,
-        price: payload.price,
-        imageUrl: payload.imageUrl,
-        availability: payload.availability,
-        // legacy/alternate keys for backend flexibility
-        productName: payload.name,
-        productCategory: payload.category,
-        image_url: payload.imageUrl,
-        stock: payload.availability,
-      }),
+      body,
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return thunkAPI.rejectWithValue(data);
