@@ -68,7 +68,7 @@ function CoordinatorDashboard() {
     link: { display: 'flex', alignItems: 'center', gap: '0.8rem', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', transition: 'all 0.3s ease', borderRadius: 5, margin: '0.2rem 0' },
     content: { flexGrow: 1, marginLeft: isMobile ? 0 : 280, padding: '2rem' },
     h1: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '2rem', fontSize: isMobile ? '1.8rem' : '2.5rem', display: 'flex', alignItems: isMobile ? 'start' : 'center', gap: '1rem', flexDirection: isMobile ? 'column' : 'row' },
-    formContainer: { background: '#fff', padding: '2rem', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    formContainer: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     joinLink: { backgroundColor: '#87CEEB', color: '#2E8B57', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', transition: 'all 0.3s ease', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
     moreRow: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
     moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
@@ -98,6 +98,7 @@ function CoordinatorDashboard() {
           <a href="/coordinator/coordinator_profile" style={styles.link}><i className="fas fa-user" /> Profile</a>
           <a href="/coordinator/tournament_management" style={styles.link}><i className="fas fa-trophy" /> Tournaments</a>
           <a href="/coordinator/player_stats" style={styles.link}><i className="fas fa-chess" /> Player Stats</a>
+          <a href="/coordinator/streaming_control" style={styles.link}><i className="fas fa-broadcast-tower" /> Streaming Control</a>
           <a href="/coordinator/store_management" style={styles.link}><i className="fas fa-store" /> Store</a>
           <a href="/coordinator/coordinator_meetings" style={styles.link}><i className="fas fa-calendar" /> Meetings</a>
           <a href="/coordinator/coordinator_chat" style={styles.link}><i className="fas fa-comments" /> Live Chat</a>

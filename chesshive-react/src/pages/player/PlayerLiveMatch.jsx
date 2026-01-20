@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
+import { getOrCreateSharedSocket } from '../../utils/socket';
 
 const SOCKET_IO_PATH = '/socket.io/socket.io.js';
 const CHESS_JS_CDN = 'https://cdn.jsdelivr.net/npm/chess.js@1.0.0/chess.min.js';
@@ -59,6 +60,7 @@ function squareName(fileIndex, rankIndex) {
 
 /*
 export default function PlayerLiveMatch() {
+  const routerLocation = useLocation();
   const navigate = useNavigate();
   const [isDark, toggleTheme] = usePlayerTheme();
 
@@ -80,16 +82,13 @@ export default function PlayerLiveMatch() {
   const [toast, setToast] = useState('');
   const toastTimerRef = useRef(null);
   const [onlineUsers, setOnlineUsers] = useState([]); // [{username, role}]
-  const [increment, setIncrement] = useState(0);
-  const [targetUsername, setTargetUsername] = useState('');
-  const [onlineUsers, setOnlineUsers] = useState([]); // [{ username, role }]
   const [playerSearch, setPlayerSearch] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [incomingInvite, setIncomingInvite] = useState(null); // { inviteId, from, baseMs, incMs, colorPref }
   const [inviteResult, setInviteResult] = useState('');
   const baseMs = useMemo(() => clamp(minutes, 60, 120) * 60 * 1000, [minutes]);
   const incMsExpanded = useMemo(() => clamp(increment, 0, 90) * 1000, [increment]);
-  const [incomingInvite, setIncomingInvite] = useState(null); // { from, baseMs, incMs, colorPref }
 
   // Match state
     if ((username || '').trim()) {
@@ -334,42 +333,33 @@ export default function PlayerLiveMatch() {
     return () => clearInterval(timer);
   }, [running, activeTurn]);
 
-  const requestMatch = () => {
+  const sendMatchRequest = () => {
     if (!socketRef.current) return;
     const baseMs = clamp(minutes, 60, 120) * 60 * 1000;
     const inc = clamp(increment, 0, 90) * 1000;
     const name = (username || '').trim();
-    if (!name) {
-      alert('Username not found. Please login again.');
-      return;
-    }
-
-    socketRef.current.emit('join', { username: name, role: roleLabel || 'Player' });
-    socketRef.current.emit('matchRequest', { username: name, baseMs, incMs: inc, colorPref });
-  };
-
-  const requestSpecificPlayer = () => {
-    if (!socketRef.current) return;
-    const baseMs = clamp(minutes, 60, 120) * 60 * 1000;
-    const inc = clamp(increment, 0, 90) * 1000;
-    const name = (username || '').trim();
-    const target = (targetUsername || '').trim();
+    const target = (selectedPlayer || '').trim();
+    
     if (!name) {
       alert('Username not found. Please login again.');
       return;
     }
     if (!target) {
-      alert('Enter a player username to request.');
+      alert('Please search and select a player first.');
       return;
     }
+    
     setInviteResult('');
     socketRef.current.emit('join', { username: name, role: roleLabel || 'Player' });
     socketRef.current.emit('matchDirectRequest', { username: name, targetUsername: target, baseMs, incMs: inc, colorPref });
+    setToast(`Match request sent to ${target}`);
   };
 
   const cancelRequest = () => {
     if (!socketRef.current) return;
     socketRef.current.emit('matchCancel');
+    setSelectedPlayer('');
+    setPlayerSearch('');
   };
 
   const acceptInvite = () => {
@@ -493,7 +483,127 @@ export default function PlayerLiveMatch() {
 
         {status !== 'playing' && (
           <div style={{ maxWidth: 720, background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: '1rem', color: 'var(--sea-green)', fontSize: '1.1rem' }}>Start a Live Match</div>
+            
+            <div style={{ position: 'relative', marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Search for a Player</label>
+              <input
+                type="text"
+                value={playerSearch}
+                onChange={(e) => {
+                  setPlayerSearch(e.target.value);
+                  setShowSearchDropdown(true);
+                }}
+                onFocus={() => setShowSearchDropdown(true)}
+                placeholder="Type player username to search..."
+                disabled={status === 'queued'}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 14px', 
+                  borderRadius: 10, 
+                  border: '2px solid var(--sky-blue)', 
+                  background: 'var(--content-bg)', 
+                  color: 'var(--text-color)',
+                  fontSize: '1rem',
+                  fontWeight: 500
+                }}
+              />
+              
+              {showSearchDropdown && playerSearch && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '100%', 
+                  left: 0, 
+                  right: 0, 
+                  maxHeight: 240, 
+                  overflow: 'auto', 
+                  border: '2px solid var(--sky-blue)', 
+                  borderTop: 'none',
+                  borderRadius: '0 0 10px 10px', 
+                  background: 'var(--content-bg)',
+                  zIndex: 100,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                  {(() => {
+                    const q = (playerSearch || '').toLowerCase().trim();
+                    const list = (onlineUsers || [])
+                      .filter(u => u && u.username)
+                      .filter(u => (u.role || '').toString().toLowerCase() === 'player')
+                      .filter(u => u.username !== username)
+                      .filter(u => u.username.toLowerCase().includes(q));
+                    
+                    if (list.length === 0) {
+                      return <div style={{ padding: '1rem', opacity: 0.7, textAlign: 'center' }}>No players found</div>;
+                    }
+                    
+                    return list.slice(0, 20).map((u) => (
+                      <button
+                        key={u.username}
+                        onClick={() => {
+                          setSelectedPlayer(u.username);
+                          setPlayerSearch(u.username);
+                          setShowSearchDropdown(false);
+                        }}
+                        style={{ 
+                          width: '100%', 
+                          textAlign: 'left', 
+                          padding: '0.8rem 1rem', 
+                          border: 'none', 
+                          background: selectedPlayer === u.username ? 'rgba(135,206,235,0.2)' : 'transparent', 
+                          color: 'var(--text-color)', 
+                          cursor: 'pointer', 
+                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          transition: 'background 0.2s',
+                          fontWeight: 500
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(135,206,235,0.15)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = selectedPlayer === u.username ? 'rgba(135,206,235,0.2)' : 'transparent'}
+                      >
+                        <i className="fas fa-user" style={{ marginRight: 8, opacity: 0.7 }}></i>
+                        {u.username}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {selectedPlayer && (
+              <div style={{ 
+                marginBottom: '1rem', 
+                padding: '0.75rem', 
+                borderRadius: 10, 
+                background: 'rgba(135,206,235,0.1)', 
+                border: '1px solid var(--sky-blue)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <span style={{ fontWeight: 600, color: 'var(--sky-blue)' }}>Selected Player:</span>{' '}
+                  <strong>{selectedPlayer}</strong>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedPlayer('');
+                    setPlayerSearch('');
+                  }}
+                  style={{ 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: 'var(--text-color)', 
+                    cursor: 'pointer',
+                    opacity: 0.7,
+                    fontSize: '1.2rem'
+                  }}
+                  title="Clear selection"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Time (minutes)</label>
                 <input
@@ -533,31 +643,43 @@ export default function PlayerLiveMatch() {
               </div>
             </div>
 
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem' }}>
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
               {status !== 'queued' ? (
                 <button
-                  onClick={requestMatch}
-                  disabled={!socketReady || !chessReady}
-                  style={{ background: 'var(--sea-green)', color: 'var(--on-accent)', border: 'none', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
+                  onClick={sendMatchRequest}
+                  disabled={!socketReady || !chessReady || !selectedPlayer}
+                  style={{ 
+                    background: selectedPlayer ? 'var(--sea-green)' : 'rgba(0,128,128,0.3)', 
+                    color: selectedPlayer ? 'var(--on-accent)' : 'rgba(255,255,255,0.5)', 
+                    border: 'none', 
+                    padding: '12px 18px', 
+                    borderRadius: 10, 
+                    cursor: selectedPlayer ? 'pointer' : 'not-allowed', 
+                    fontFamily: 'Cinzel, serif', 
+                    fontWeight: 'bold',
+                    fontSize: '1rem'
+                  }}
                 >
-                  Request Match
+                  <i className="fas fa-paper-plane" style={{ marginRight: 8 }}></i>
+                  Send Match Request
                 </button>
               ) : (
                 <button
                   onClick={cancelRequest}
-                  style={{ background: 'transparent', color: 'var(--sea-green)', border: '2px solid var(--sea-green)', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
+                  style={{ background: 'transparent', color: 'var(--sea-green)', border: '2px solid var(--sea-green)', padding: '12px 18px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
                 >
-                  Cancel
+                  <i className="fas fa-times" style={{ marginRight: 8 }}></i>
+                  Cancel Request
                 </button>
               )}
 
               <div style={{ alignSelf: 'center', opacity: 0.85 }}>
-                {!socketReady ? 'Loading live server…' : (!chessReady ? 'Loading chess engine…' : (status === 'queued' ? 'Searching opponent…' : ''))}
+                {!socketReady ? 'Loading live server…' : (!chessReady ? 'Loading chess engine…' : (status === 'queued' ? 'Waiting for response…' : ''))}
               </div>
             </div>
 
             {inviteResult && (
-              <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1px solid var(--card-border)', background: 'var(--content-bg)' }}>
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: 10, border: '1px solid var(--card-border)', background: 'var(--content-bg)' }}>
                 {inviteResult}
               </div>
             )}
@@ -581,61 +703,6 @@ export default function PlayerLiveMatch() {
                   >
                     Decline
                   </button>
-                </div>
-              </div>
-            )}
-
-            {status !== 'queued' && (
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--sea-green)' }}>Search & Request Player</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
-                  <input
-                    type="text"
-                    value={targetUsername}
-                    onChange={(e) => setTargetUsername(e.target.value)}
-                    placeholder="Enter player username"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--card-border)', background: 'var(--content-bg)', color: 'var(--text-color)' }}
-                  />
-                  <button
-                    onClick={requestSpecificPlayer}
-                    disabled={!socketReady || !chessReady}
-                    style={{ background: 'transparent', border: '2px solid var(--sky-blue)', color: 'var(--sky-blue)', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
-                  >
-                    Request This Player
-                  </button>
-                </div>
-
-                <div style={{ marginTop: '0.75rem' }}>
-                  <input
-                    type="text"
-                    value={playerSearch}
-                    onChange={(e) => setPlayerSearch(e.target.value)}
-                    placeholder="Search online players"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--card-border)', background: 'var(--content-bg)', color: 'var(--text-color)' }}
-                  />
-                </div>
-
-                <div style={{ marginTop: '0.75rem', maxHeight: 180, overflow: 'auto', border: '1px solid var(--card-border)', borderRadius: 12, background: 'var(--content-bg)' }}>
-                  {(() => {
-                    const q = (playerSearch || '').toLowerCase().trim();
-                    const list = (onlineUsers || [])
-                      .filter(u => u && u.username)
-                      .filter(u => (u.role || '').toString().toLowerCase() === 'player')
-                      .filter(u => u.username !== username)
-                      .filter(u => !q || u.username.toLowerCase().includes(q));
-                    if (list.length === 0) {
-                      return <div style={{ padding: '0.75rem', opacity: 0.85 }}>No online players found.</div>;
-                    }
-                    return list.slice(0, 50).map((u) => (
-                      <button
-                        key={u.username}
-                        onClick={() => setTargetUsername(u.username)}
-                        style={{ width: '100%', textAlign: 'left', padding: '0.7rem 0.8rem', border: 'none', background: 'transparent', color: 'var(--text-color)', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-                      >
-                        {u.username}
-                      </button>
-                    ));
-                  })()}
                 </div>
               </div>
             )}
@@ -747,6 +814,7 @@ export default function PlayerLiveMatch() {
 */
 
 export default function PlayerLiveMatch() {
+  const routerLocation = useLocation();
   const navigate = useNavigate();
   const [isDark, toggleTheme] = usePlayerTheme();
 
@@ -771,10 +839,12 @@ export default function PlayerLiveMatch() {
 
   // Player search + direct request
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [targetUsername, setTargetUsername] = useState('');
   const [playerSearch, setPlayerSearch] = useState('');
+  const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [incomingInvite, setIncomingInvite] = useState(null); // { inviteId?, from, baseMs, incMs, colorPref }
   const [inviteResult, setInviteResult] = useState('');
+  const [playOpen, setPlayOpen] = useState(false);
 
   // Match state
   const [status, setStatus] = useState('idle');
@@ -879,7 +949,9 @@ export default function PlayerLiveMatch() {
     if (!socketReady || !window.io) return undefined;
     if (socketRef.current) return undefined;
 
-    const sock = window.io();
+    const sock = window.__chesshiveLiveSocket || getOrCreateSharedSocket('__chesshiveLiveSocket');
+    if (!sock) return undefined;
+    window.__chesshiveLiveSocket = sock;
     socketRef.current = sock;
 
     sock.on('matchQueued', () => setStatus('queued'));
@@ -899,6 +971,8 @@ export default function PlayerLiveMatch() {
         incMs: p.incMs,
         colorPref: p.colorPref || 'random'
       });
+      setToast('New match request');
+      setPlayOpen(true);
     });
 
     sock.on('matchInviteResult', (payload) => {
@@ -940,6 +1014,7 @@ export default function PlayerLiveMatch() {
       lastTickAtRef.current = Date.now();
 
       setIncomingInvite(null);
+      setPlayOpen(false);
       setStatus('playing');
 
       if (p.room) {
@@ -989,12 +1064,37 @@ export default function PlayerLiveMatch() {
         sock.off('chessMove');
         sock.off('matchCancelled');
         sock.off('matchOpponentLeft');
-        sock.disconnect();
       } catch (_) {}
       socketRef.current = null;
       if (inviteResultTimerRef.current) clearTimeout(inviteResultTimerRef.current);
     };
   }, [socketReady, baseMs, incMs]);
+
+  // Auto-accept an invite if this page was opened from the global overlay
+  useEffect(() => {
+    const qs = new URLSearchParams(routerLocation.search || '');
+    const inviteId = (qs.get('accept_invite') || '').trim();
+    const fromUsername = (qs.get('accept_from') || '').trim();
+    if (!inviteId && !fromUsername) return;
+
+    const sock = socketRef.current;
+    const name = (username || '').trim();
+    if (!sock || !name) return;
+
+    try {
+      sock.emit('join', { username: name, role: roleLabel || 'Player' });
+      if (inviteId) sock.emit('matchInviteAccept', { inviteId });
+      else sock.emit('matchInviteAccept', { fromUsername });
+      setToast('Accepting…');
+      // Clear params so refresh doesn't re-accept
+      navigate('/player/live_match', { replace: true });
+    } catch (_) {}
+  }, [routerLocation.search, username, roleLabel, navigate]);
+
+  // Close Play modal automatically if invite disappears
+  useEffect(() => {
+    if (!incomingInvite) setPlayOpen(false);
+  }, [incomingInvite]);
 
   // Keep presence updated once we know the username
   useEffect(() => {
@@ -1042,13 +1142,13 @@ export default function PlayerLiveMatch() {
     const baseMsLocal = clamp(minutes, 60, 120) * 60 * 1000;
     const incLocal = clamp(increment, 0, 90) * 1000;
     const name = (username || '').trim();
-    const target = (targetUsername || '').trim();
+    const target = (selectedPlayer || playerSearch || '').trim();
     if (!name) {
       alert('Username not found. Please login again.');
       return;
     }
     if (!target) {
-      alert('Enter a player username to request.');
+      alert('Search and select a player to request.');
       return;
     }
     setInviteResult('');
@@ -1073,6 +1173,7 @@ export default function PlayerLiveMatch() {
       else socketRef.current.emit('matchInviteAccept', { fromUsername: incomingInvite.from });
     } catch (_) {}
     setIncomingInvite(null);
+    setPlayOpen(false);
   };
 
   const declineInvite = () => {
@@ -1082,6 +1183,7 @@ export default function PlayerLiveMatch() {
       else socketRef.current.emit('matchInviteDecline', { fromUsername: incomingInvite.from });
     } catch (_) {}
     setIncomingInvite(null);
+    setPlayOpen(false);
   };
 
   const tryMove = (from, to) => {
@@ -1175,6 +1277,28 @@ export default function PlayerLiveMatch() {
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button
+              onClick={() => {
+                if (!incomingInvite) {
+                  setToast('No match requests');
+                  return;
+                }
+                setPlayOpen(true);
+              }}
+              style={{
+                background: incomingInvite ? 'var(--sea-green)' : 'transparent',
+                border: incomingInvite ? 'none' : '2px solid var(--sea-green)',
+                color: incomingInvite ? 'var(--on-accent)' : 'var(--sea-green)',
+                padding: '8px 12px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                fontFamily: 'Cinzel, serif',
+                fontWeight: 'bold'
+              }}
+              aria-label="Play (incoming request)"
+            >
+              Play{incomingInvite ? ' (1)' : ''}
+            </button>
+            <button
               onClick={toggleTheme}
               style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
             >
@@ -1189,8 +1313,131 @@ export default function PlayerLiveMatch() {
           </div>
         </div>
 
+        {playOpen && incomingInvite && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setPlayOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              zIndex: 2500,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: 'min(520px, 100%)',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--card-border)',
+                borderRadius: 14,
+                padding: '1rem'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, color: 'var(--sky-blue)' }}>Play Request</div>
+                <button
+                  onClick={() => setPlayOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-color)', cursor: 'pointer', fontSize: 18, opacity: 0.85 }}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ marginTop: 10, opacity: 0.92 }}>
+                <div>
+                  From: <strong>{incomingInvite.from}</strong>
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  Time control: <strong>{Math.round((incomingInvite.baseMs || baseMs) / 60000)}+{Math.round((incomingInvite.incMs || incMs) / 1000)}</strong>
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  Requested color: <strong>{incomingInvite.colorPref || 'random'}</strong>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={acceptInvite}
+                  style={{ background: 'var(--sea-green)', color: 'var(--on-accent)', border: 'none', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', flex: 1 }}
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={declineInvite}
+                  style={{ background: 'transparent', color: 'var(--sea-green)', border: '2px solid var(--sea-green)', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', flex: 1 }}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {status !== 'playing' && (
           <div style={{ maxWidth: 720, background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 14, padding: '1rem' }}>
+
+            <div style={{ position: 'relative', marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Search player</label>
+              <input
+                type="text"
+                value={playerSearch}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setPlayerSearch(v);
+                  setSelectedPlayer('');
+                  setShowSearchDropdown(true);
+                }}
+                onFocus={() => setShowSearchDropdown(true)}
+                placeholder="Type username to search"
+                disabled={status === 'queued'}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '2px solid var(--sky-blue)', background: 'var(--content-bg)', color: 'var(--text-color)' }}
+              />
+
+              {showSearchDropdown && (playerSearch || '').trim() && status !== 'queued' && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, maxHeight: 220, overflow: 'auto', border: '1px solid var(--card-border)', borderTop: 'none', borderRadius: '0 0 10px 10px', background: 'var(--content-bg)' }}>
+                  {(() => {
+                    const q = (playerSearch || '').toLowerCase().trim();
+                    const list = (onlineUsers || [])
+                      .filter((u) => u && u.username)
+                      .filter((u) => (u.role || '').toString().toLowerCase() === 'player')
+                      .filter((u) => u.username !== username)
+                      .filter((u) => u.username.toLowerCase().includes(q));
+
+                    if (list.length === 0) {
+                      return <div style={{ padding: '0.75rem', opacity: 0.85 }}>No matching online players.</div>;
+                    }
+
+                    return list.slice(0, 25).map((u) => (
+                      <button
+                        key={u.username}
+                        onClick={() => {
+                          setSelectedPlayer(u.username);
+                          setPlayerSearch(u.username);
+                          setShowSearchDropdown(false);
+                        }}
+                        style={{ width: '100%', textAlign: 'left', padding: '0.7rem 0.8rem', border: 'none', background: 'transparent', color: 'var(--text-color)', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                      >
+                        {u.username}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {selectedPlayer && (
+              <div style={{ marginBottom: '1rem', opacity: 0.9 }}>
+                Selected: <strong>{selectedPlayer}</strong>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Time (minutes)</label>
@@ -1262,79 +1509,22 @@ export default function PlayerLiveMatch() {
 
             {incomingInvite && (
               <div style={{ marginTop: '0.75rem', padding: '0.75rem', borderRadius: 12, border: '1px solid var(--card-border)', background: 'var(--content-bg)' }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Match request from {incomingInvite.from}</div>
-                <div style={{ opacity: 0.85, marginBottom: 10 }}>
-                  Time control: {Math.round((incomingInvite.baseMs || 0) / 60000)}+{Math.round((incomingInvite.incMs || 0) / 1000)} • Requested color: {(incomingInvite.colorPref || 'random')}
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button
-                    onClick={acceptInvite}
-                    style={{ background: 'var(--sea-green)', color: 'var(--on-accent)', border: 'none', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={declineInvite}
-                    style={{ background: 'transparent', color: 'var(--sea-green)', border: '2px solid var(--sea-green)', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
-                  >
-                    Decline
-                  </button>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Incoming request waiting</div>
+                <div style={{ opacity: 0.85 }}>
+                  Click <strong>Play</strong> to view & respond.
                 </div>
               </div>
             )}
 
             {status !== 'queued' && (
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--sea-green)' }}>Search & Request Player</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
-                  <input
-                    type="text"
-                    value={targetUsername}
-                    onChange={(e) => setTargetUsername(e.target.value)}
-                    placeholder="Enter player username"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--card-border)', background: 'var(--content-bg)', color: 'var(--text-color)' }}
-                  />
-                  <button
-                    onClick={requestSpecificPlayer}
-                    disabled={!socketReady || !chessReady}
-                    style={{ background: 'transparent', border: '2px solid var(--sky-blue)', color: 'var(--sky-blue)', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}
-                  >
-                    Request This Player
-                  </button>
-                </div>
-
-                <div style={{ marginTop: '0.75rem' }}>
-                  <input
-                    type="text"
-                    value={playerSearch}
-                    onChange={(e) => setPlayerSearch(e.target.value)}
-                    placeholder="Search online players"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--card-border)', background: 'var(--content-bg)', color: 'var(--text-color)' }}
-                  />
-                </div>
-
-                <div style={{ marginTop: '0.75rem', maxHeight: 180, overflow: 'auto', border: '1px solid var(--card-border)', borderRadius: 12, background: 'var(--content-bg)' }}>
-                  {(() => {
-                    const q = (playerSearch || '').toLowerCase().trim();
-                    const list = (onlineUsers || [])
-                      .filter((u) => u && u.username)
-                      .filter((u) => (u.role || '').toString().toLowerCase() === 'player')
-                      .filter((u) => u.username !== username)
-                      .filter((u) => !q || u.username.toLowerCase().includes(q));
-                    if (list.length === 0) {
-                      return <div style={{ padding: '0.75rem', opacity: 0.85 }}>No online players found.</div>;
-                    }
-                    return list.slice(0, 50).map((u) => (
-                      <button
-                        key={u.username}
-                        onClick={() => setTargetUsername(u.username)}
-                        style={{ width: '100%', textAlign: 'left', padding: '0.7rem 0.8rem', border: 'none', background: 'transparent', color: 'var(--text-color)', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-                      >
-                        {u.username}
-                      </button>
-                    ));
-                  })()}
-                </div>
+                <button
+                  onClick={requestSpecificPlayer}
+                  disabled={!socketReady || !chessReady || !(selectedPlayer || (playerSearch || '').trim())}
+                  style={{ background: 'transparent', border: '2px solid var(--sky-blue)', color: 'var(--sky-blue)', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', width: '100%' }}
+                >
+                  Send Match Request
+                </button>
               </div>
             )}
 
