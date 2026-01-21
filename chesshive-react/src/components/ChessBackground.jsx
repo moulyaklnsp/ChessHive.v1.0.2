@@ -149,7 +149,7 @@ const MemoizedParticleField = React.memo(function ParticleField({ particles, red
   );
 });
 
-export default function ChessBackground() {
+export default function ChessBackground({ wallpaperUrl } = {}) {
   const reducedMotion = useReducedMotion();
   
   const pieceData = useMemo(() => 
@@ -172,6 +172,10 @@ export default function ChessBackground() {
       delay: Math.random() * 5
     })), []);
 
+  const baseBackground = wallpaperUrl
+    ? `linear-gradient(135deg, rgba(7, 19, 39, 0.88) 0%, rgba(10, 22, 40, 0.75) 35%, rgba(13, 26, 45, 0.72) 65%, rgba(7, 19, 39, 0.9) 100%), url(${wallpaperUrl})`
+    : 'linear-gradient(135deg, #071327 0%, #0a1628 30%, #0d1a2d 60%, #071327 100%)';
+
   return (
     <div style={{
       position: 'fixed',
@@ -179,8 +183,12 @@ export default function ChessBackground() {
       left: 0,
       width: '100%',
       height: '100%',
-      zIndex: -1,
-      background: 'linear-gradient(135deg, #071327 0%, #0a1628 30%, #0d1a2d 60%, #071327 100%)',
+      zIndex: 0,
+      pointerEvents: 'none',
+      backgroundImage: baseBackground,
+      backgroundSize: wallpaperUrl ? 'cover' : undefined,
+      backgroundPosition: wallpaperUrl ? 'center' : undefined,
+      backgroundRepeat: wallpaperUrl ? 'no-repeat' : undefined,
       overflow: 'hidden'
     }}>
       <GridLines reducedMotion={reducedMotion} />

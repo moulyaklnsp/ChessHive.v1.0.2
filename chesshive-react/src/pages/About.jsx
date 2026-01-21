@@ -112,7 +112,7 @@ export default function About() {
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
-      <ChessBackground />
+      <ChessBackground wallpaperUrl="/images/Gemini_Generated_Image_s8nn5ps8nn5ps8nn.png" />
       <AnimatedSidebar />
 
       <motion.main

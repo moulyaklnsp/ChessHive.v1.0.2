@@ -112,7 +112,7 @@ export default function ContactUs() {
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
-      <ChessBackground />
+      <ChessBackground wallpaperUrl="/images/contact-wallpaper.png" />
       <AnimatedSidebar />
 
       <motion.main
