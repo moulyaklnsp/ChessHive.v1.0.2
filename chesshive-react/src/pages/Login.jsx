@@ -117,7 +117,7 @@ export default function Login() {
   return (
     <AnimatePresence>
       <div style={{ minHeight: '100vh', position: 'relative' }}>
-        <ChessBackground />
+        <ChessBackground wallpaperUrl="/images/Gemini_Generated_Image_q5j9ziq5j9ziq5j9.png" />
         <AnimatedSidebar />
 
         <motion.main

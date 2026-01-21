@@ -19,6 +19,16 @@ import PlayerStore from './pages/player/PlayerStore';
 import PlayerSubscription from './pages/player/PlayerSubscription';
 import PlayerWatch from './pages/player/PlayerWatch';
 import PlayerTv from './pages/player/PlayerTv';
+import ThemePreview from './pages/player/ThemePreview';
+import ThemePreview1 from './pages/player/ThemePreview1';
+import ThemePreview2 from './pages/player/ThemePreview2';
+import ThemePreview3 from './pages/player/ThemePreview3';
+import ThemePreview1V2 from './pages/player/ThemePreview1V2';
+import ThemePreview2V2 from './pages/player/ThemePreview2V2';
+import ThemePreview3V2 from './pages/player/ThemePreview3V2';
+import ThemePreview4V2 from './pages/player/ThemePreview4V2';
+import ThemePreview5V2 from './pages/player/ThemePreview5V2';
+import ThemePreview6V2 from './pages/player/ThemePreview6V2';
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard';
 import CoordinatorChat from './pages/coordinator/CoordinatorChat';
 import CoordinatorMeetings from './pages/coordinator/CoordinatorMeetings';
@@ -246,6 +256,106 @@ function App() {
             transition={{ duration: 0.5 }}
           >
             <PlayerSubscription />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-1" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview1 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview2 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-3" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview3 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-1-v2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview1V2 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-2-v2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview2V2 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-3-v2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview3V2 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-4-v2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview4V2 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-5-v2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview5V2 />
+          </motion.div>
+        } />
+        <Route path="/player/theme-preview-6-v2" element={
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ThemePreview6V2 />
           </motion.div>
         } />
         <Route path="/coordinator/coordinator_dashboard" element={

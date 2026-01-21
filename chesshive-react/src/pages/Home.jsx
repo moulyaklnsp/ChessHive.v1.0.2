@@ -195,7 +195,7 @@ export default function Home() {
   return (
     <AnimatePresence>
       <div style={{ minHeight: '100vh', position: 'relative' }}>
-        <ChessBackground />
+        <ChessBackground wallpaperUrl="/images/abstract-chess-pieces-digital-art-style.jpg" />
         <AnimatedSidebar />
 
         <motion.main
