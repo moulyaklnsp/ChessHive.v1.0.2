@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import './App.css';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,8 +59,61 @@ import AdminPayments from './pages/admin/AdminPayments';
 import ChessStory from './pages/ChessStory';
 import ErrorPage from './pages/ErrorPage';
 
+const PLAYER_THEME_STORAGE_KEY = 'playerTheme'; // 'dark' | 'light'
+const PLAYER_WALLPAPER_STORAGE_KEY = 'playerWallpaperUrl';
+const DEFAULT_PLAYER_WALLPAPER_URL = '/images/pd.png?v=20260122';
+
 function App() {
   const location = useLocation();
+
+  // Ensure player pages consistently receive the wallpaper layer + theme classes.
+  // Some player pages don't call usePlayerTheme(), so we set defaults here.
+  useEffect(() => {
+    const pathname = location?.pathname || '';
+    const isThemePreview = pathname.startsWith('/player/theme-preview');
+    const isPlayerRoute = pathname.startsWith('/player') && !isThemePreview;
+
+    try {
+      document.body.classList.toggle('player', isPlayerRoute);
+      if (!isPlayerRoute) {
+        document.body.classList.remove('player-dark');
+        return;
+      }
+
+      let isDark = false;
+      try {
+        const v = localStorage.getItem(PLAYER_THEME_STORAGE_KEY);
+        isDark = v === 'dark';
+      } catch (_) {}
+      document.body.classList.toggle('player-dark', isDark);
+
+      let wallpaperUrl = DEFAULT_PLAYER_WALLPAPER_URL;
+      let hasCustomWallpaper = false;
+      try {
+        const w = localStorage.getItem(PLAYER_WALLPAPER_STORAGE_KEY);
+        if (w) {
+          if (w === '/images/pd.png') {
+            wallpaperUrl = DEFAULT_PLAYER_WALLPAPER_URL;
+            hasCustomWallpaper = false;
+          } else {
+            wallpaperUrl = w;
+            hasCustomWallpaper = true;
+          }
+        }
+      } catch (_) {}
+
+      const root = document.documentElement;
+      root.style.setProperty('--player-wallpaper-layer', `url("${wallpaperUrl}")`);
+      root.style.setProperty(
+        '--player-wallpaper-overlay',
+        isDark
+          ? 'linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55))'
+          : 'linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.74))'
+      );
+      root.style.setProperty('--player-wallpaper-opacity', isDark ? '0.08' : '0.14');
+    } catch (_) {}
+  }, [location.pathname]);
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
