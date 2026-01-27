@@ -217,8 +217,8 @@ function PlayerDashboard() {
     { path: '/player/player_tournament', label: 'Tournaments', icon: 'fas fa-trophy' },
     { path: '/player/watch', label: 'Watch', icon: 'fas fa-video' },
     { path: '/player/subscription', label: 'Manage Subscription', icon: 'fas fa-star' },
-    { path: '/player/store', label: 'E-Commerce Store', icon: 'fas fa-store' },
-    { path: '/player/player_chat', label: 'Live Chat', icon: 'fas fa-comments' },
+    { path: '/player/store', label: 'E-Commerce Store', icon: 'fas fa-shopping-bag' },
+    { path: '/player/chat', label: 'Chat', icon: 'fas fa-comments' },
     { path: '/player/settings', label: 'Settings', icon: 'fas fa-cog' }
   ];
 
