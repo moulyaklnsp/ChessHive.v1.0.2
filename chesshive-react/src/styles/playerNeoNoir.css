@@ -18,7 +18,6 @@
   /* Optional wallpaper layers (set dynamically by usePlayerTheme) */
   --player-wallpaper-layer: none;
   --player-wallpaper-overlay: none;
-  --player-wallpaper-opacity: 0.14;
 } 
 
 /* Player light theme (default for /player pages)
@@ -27,42 +26,47 @@
   in dark mode, otherwise it will override the dark palette variables.
 */
 body.player:not(.player-dark) {
-  /* Light palette */
-  --chess-light-square: #FFF7ED;
-  --chess-dark-square: #22C55E;
-  --cream: #FFF7ED; /* background */
+  /* Light palette (Theme #7: Minimal Rank) */
+  --chess-light-square: #FFFFFF;
+  --chess-dark-square: #EAEAEA;
 
-  --sea-green: #22C55E; /* primary UI */
-  --sea-green-rgb: 34, 197, 94;
+  --cream: #FFFFFF; /* background */
+  --page-bg: #FFFFFF;
+  --content-bg: #FFFFFF;
 
-  --sky-blue: #86EFAC; /* accent */
-  --sky-blue-hover: rgba(134, 239, 172, 0.45);
+  /* Primary UI */
+  --sea-green: #111111;
+  --sea-green-rgb: 17, 17, 17;
+
+  /* Accent */
+  --sky-blue: #5E5E5E;
+  --sky-blue-hover: rgba(94, 94, 94, 0.20);
 
   /* Text */
-  --text-color: #431407; /* main text on light bg */
-  --muted-text: rgba(67, 20, 7, 0.68);
-  --on-accent: #FFFFFF; /* text on primary */
+  --text-color: #111111;
+  --muted-text: rgba(17, 17, 17, 0.68);
+  --on-accent: #FFFFFF;
 
   /* Support colors */
   --slate-accent: var(--sky-blue);
-  --pale-blue: rgba(34, 197, 94, 0.14);
-  --pale-mint: rgba(134, 239, 172, 0.18);
+  --pale-blue: rgba(17, 17, 17, 0.04);
+  --pale-mint: rgba(94, 94, 94, 0.06);
 
-  /* Page + borders (used across Player pages) */
-  --page-bg: var(--cream);
-  --border-color: rgba(var(--sea-green-rgb), 0.16);
+  /* Borders */
+  --border-color: #EAEAEA;
 
   /* Derived vars for AnimatedSidebar */
-  --sidebar-bg: linear-gradient(135deg, rgba(34,197,94,0.92) 0%, rgba(34,197,94,0.92) 60%, rgba(134,239,172,0.36) 100%);
-  --sidebar-border: rgba(var(--sea-green-rgb), 0.18);
-  --sidebar-text: var(--on-accent);
+  --sidebar-bg: linear-gradient(135deg, rgba(17,17,17,0.96) 0%, rgba(17,17,17,0.96) 65%, rgba(94,94,94,0.28) 100%);
+  --sidebar-border: rgba(255,255,255,0.10);
+  --sidebar-text: #FFFFFF;
   --hamburger-bg: var(--sea-green);
   --hamburger-text: var(--on-accent);
-  --hamburger-hover: rgba(var(--sea-green-rgb), 0.90);
+  --hamburger-hover: rgba(17, 17, 17, 0.86);
   --link-hover: var(--slate-accent);
-  --content-bg: #FFEDD5;
-  --card-bg: linear-gradient(180deg, #FFEDD5, rgba(34,197,94,0.10));
-  --card-border: rgba(var(--sea-green-rgb), 0.08);
+
+  /* Cards */
+  --card-bg: #FFFFFF;
+  --card-border: #EAEAEA;
   --card-text: var(--text-color);
 } 
 
@@ -251,61 +255,12 @@ body.player-dark .player-neo {
 
 
 /* Player page general adjustments */
-body.player .page {
+.player-neo .page {
   background-color: var(--content-bg);
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-/* Wallpaper layer (low opacity + animation). Variables are set by usePlayerTheme/App routing:
-   - --player-wallpaper-layer: url("...")
-   - --player-wallpaper-overlay: linear-gradient(...)
-   - --player-wallpaper-opacity: 0..1
-*/
-body.player .page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: var(--player-wallpaper-layer);
+  background-image: var(--player-wallpaper-overlay), var(--player-wallpaper-layer);
   background-size: cover;
   background-position: center;
-  transform: translate3d(0, 0, 0) scale(1.06);
-  opacity: var(--player-wallpaper-opacity);
-  filter: saturate(1.05) contrast(1.04);
-  will-change: transform, opacity;
-  z-index: 0;
-  pointer-events: none;
-  animation: playerWallpaperFadeIn 800ms ease-out both, playerWallpaperDrift 26s ease-in-out infinite;
-}
-
-body.player .page::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--player-wallpaper-overlay);
-  z-index: 0;
-  pointer-events: none;
-}
-
-body.player .page > * {
-  position: relative;
-  z-index: 1;
-}
-
-@keyframes playerWallpaperFadeIn {
-  from { opacity: 0; }
-  to { opacity: var(--player-wallpaper-opacity); }
-}
-
-@keyframes playerWallpaperDrift {
-  0% { transform: translate3d(-1.2%, -0.8%, 0) scale(1.06); }
-  50% { transform: translate3d(1.4%, 1.0%, 0) scale(1.10); }
-  100% { transform: translate3d(-1.2%, -0.8%, 0) scale(1.06); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body.player .page::before { animation: none; }
+  background-attachment: fixed;
 }
 .player-neo .content { color: var(--neo-cream); }
 /* Headings: ensure strong cyan headings in dark theme for legibility */
@@ -378,7 +333,9 @@ body.player .page > * {
   border-radius: 4px;
 } 
 
-/* Subtle chessboard corner removed (we now use ::before for wallpaper). */
+/* Subtle chessboard corner on player pages for brand flair */
+.player .page::before,
+.player-neo .page::before { display: none; } 
 
 /* Emblems removed — classes disabled */
 .emblem-float { display: none !important; }

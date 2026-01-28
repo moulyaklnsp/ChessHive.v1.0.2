@@ -3,10 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const STORAGE_KEY = 'playerTheme'; // 'dark' | 'light'
 const WALLPAPER_KEY = 'playerWallpaperUrl'; // string URL
 
-// Default wallpaper for player pages (served from /public)
-// Light mode: use pd.png.
-const DEFAULT_PLAYER_WALLPAPER_URL = '/images/pd.png?v=20260122';
-
 // Hook returns [isDark, toggleTheme]
 export default function usePlayerTheme() {
   const hasLocalPreferenceRef = useRef(false);
@@ -58,15 +54,11 @@ export default function usePlayerTheme() {
     try {
       const v = localStorage.getItem(WALLPAPER_KEY);
       if (v) {
-        // Back-compat: older builds persisted the default as '/images/pd.png'
-        // (without cache-busting). Normalize it to the current default.
-        if (v === '/images/pd.png') return DEFAULT_PLAYER_WALLPAPER_URL;
         hasLocalWallpaperRef.current = true;
         return v;
       }
     } catch (e) {}
-    // Fall back to the default player wallpaper (still overrideable by server/user setting)
-    return DEFAULT_PLAYER_WALLPAPER_URL;
+    return '';
   });
 
   // Apply theme to body + localStorage + push to server (if user logged in)
@@ -95,31 +87,17 @@ export default function usePlayerTheme() {
   useEffect(() => {
     try {
       const root = document.documentElement;
-
-      const effectiveWallpaperUrl = wallpaperUrl;
-      if (effectiveWallpaperUrl) {
-        root.style.setProperty('--player-wallpaper-layer', `url("${effectiveWallpaperUrl}")`);
-        root.style.setProperty(
-          '--player-wallpaper-overlay',
-          isDark
-            ? 'linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55))'
-            : 'linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.74))'
-        );
-        root.style.setProperty('--player-wallpaper-opacity', isDark ? '0.08' : '0.14');
-
-        // Only persist when the user explicitly chose a wallpaper (local override)
-        // or when we loaded a non-default value from the server.
-        if (hasLocalWallpaperRef.current || wallpaperUrl !== DEFAULT_PLAYER_WALLPAPER_URL) {
-          localStorage.setItem(WALLPAPER_KEY, wallpaperUrl);
-        }
+      if (wallpaperUrl) {
+        root.style.setProperty('--player-wallpaper-layer', `url("${wallpaperUrl}")`);
+        root.style.setProperty('--player-wallpaper-overlay', 'linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.35))');
+        localStorage.setItem(WALLPAPER_KEY, wallpaperUrl);
       } else {
         root.style.setProperty('--player-wallpaper-layer', 'none');
         root.style.setProperty('--player-wallpaper-overlay', 'none');
-        root.style.setProperty('--player-wallpaper-opacity', '0');
         localStorage.removeItem(WALLPAPER_KEY);
       }
     } catch (e) {}
-  }, [wallpaperUrl, isDark]);
+  }, [wallpaperUrl]);
 
   // Load server preference if logged in
   useEffect(() => {
