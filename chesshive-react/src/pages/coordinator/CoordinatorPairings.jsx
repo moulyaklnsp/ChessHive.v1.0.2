@@ -181,7 +181,7 @@ function CoordinatorPairings() {
     container: { maxWidth: 1000, margin: '0 auto' },
     h1: { fontFamily: 'Cinzel, serif', fontSize: '3rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center' },
     h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    pairingsContainer: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    pairingsContainer: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     table: { width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' },
     th: { backgroundColor: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
     td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
@@ -189,7 +189,7 @@ function CoordinatorPairings() {
     bye: { color: '#666', fontStyle: 'italic' },
     navWrap: { textAlign: 'right', marginTop: '2rem' },
     navLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    treeContainer: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginTop: '2rem' },
+    treeContainer: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginTop: '2rem', border: '1px solid var(--card-border)' },
   };
 
   return (

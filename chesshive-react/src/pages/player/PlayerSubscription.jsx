@@ -98,7 +98,7 @@ function PlayerSubscription() {
     planGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, margin: '30px 0' },
     planButton: { backgroundColor: 'var(--sky-blue)', color: 'var(--sea-green)', border: 'none', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
     success: { backgroundColor: 'var(--sea-green)', color: 'var(--content-bg)', padding: 15, borderRadius: 5, marginBottom: 20, textAlign: 'center' },
-    error: { backgroundColor: '#ff6b6b', color: '#fff', padding: 15, borderRadius: 5, marginBottom: 20, textAlign: 'center' },
+    error: { backgroundColor: 'var(--sky-blue)', color: 'var(--on-accent)', padding: 15, borderRadius: 5, marginBottom: 20, textAlign: 'center' },
     backRow: { textAlign: 'center', marginTop: '2rem' },
     backLink: { backgroundColor: 'var(--sky-blue)', color: 'var(--sea-green)', border: 'none', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', width: 'auto', fontFamily: 'Cinzel, serif', textDecoration: 'none', display: 'inline-block', textAlign: 'center' },
     price: { fontSize: 24, fontWeight: 'bold', color: 'var(--sea-green)', margin: '15px 0' },
@@ -111,9 +111,7 @@ function PlayerSubscription() {
       <div style={styles.container}>
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
     <h2 style={styles.h2}>Manage Subscription</h2>
-    <div>
-      <button onClick={toggleTheme} style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
-    </div>
+
   </div>
   {loading ? <p style={{ textAlign: 'center' }}>Loading...</p> : null}
 
@@ -133,7 +131,7 @@ function PlayerSubscription() {
           {plans.map((plan) => {
             const isSubscribed = !!currentSubscription;
             const isCurrent = currentSubscription?.plan === plan.name;
-            const cardStyle = { ...styles.card, ...(isCurrent ? { border: '2px solid #2E8B57', backgroundColor: '#e6ffee' } : {}) };
+            const cardStyle = { ...styles.card, ...(isCurrent ? { border: '2px solid var(--sea-green)', backgroundColor: 'rgba(var(--sea-green-rgb),0.06)' } : {}) };
             return (
               <div key={plan.name} style={cardStyle}>
                 <h3 style={{ ...styles.h2, margin: 0 }}>{plan.name} Plan</h3>
@@ -147,7 +145,7 @@ function PlayerSubscription() {
                   Subscribe
                 </button>
                 {isSubscribed && isCurrent ? (
-                  <div style={{ color: '#2E8B57', fontWeight: 'bold', textAlign: 'center', marginTop: 10 }}>You're on this plan</div>
+                  <div style={{ color: 'var(--sea-green)', fontWeight: 'bold', textAlign: 'center', marginTop: 10 }}>You're on this plan</div>
                 ) : null}
               </div>
             );

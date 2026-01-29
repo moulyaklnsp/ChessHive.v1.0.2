@@ -29,11 +29,42 @@ const OrganizerTournament = () => {
     setError('');
     try {
       const res = await fetch('/organizer/api/tournaments', { credentials: 'include' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setTournaments(Array.isArray(data?.tournaments) ? data.tournaments : []);
+      if (!res.ok) {
+        if (res.status === 403) {
+          setError('Unauthorized. Please login as an organizer.');
+          return;
+        }
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} ${text}`);
+      }
+      const data = await res.json().catch(() => ({}));
+      const raw = Array.isArray(data?.tournaments) ? data.tournaments : [];
+      // Normalize fields (accept both snake_case and camelCase or legacy keys)
+      const normalized = raw.map((t) => {
+        const name = t.name ?? t.tournamentName ?? '';
+        const date = t.date ?? t.tournamentDate ?? null;
+        const location = t.location ?? t.tournamentLocation ?? '';
+        const entry_fee = (t.entry_fee ?? t.entryFee ?? t.fee ?? 0);
+        const type = t.type ?? t.format ?? '';
+        const added_by = t.added_by ?? t.addedBy ?? t.coordinator ?? '';
+        const approved_by = t.approved_by ?? t.approvedBy ?? '';
+        const status = t.status ?? 'Pending';
+        return {
+          _id: t._id || t.id || `${name}-${date}-${location}`,
+          name,
+          date,
+          location,
+          entry_fee,
+          type,
+          added_by,
+          approved_by,
+          status,
+        };
+      });
+      setTournaments(normalized);
       setVisibleCount(5);
     } catch (e) {
+      console.error('Tournaments load error:', e);
       setError('Failed to load tournaments.');
     } finally {
       setLoading(false);
@@ -96,7 +127,7 @@ const OrganizerTournament = () => {
       fontSize: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem'
     },
     h3: { fontFamily: 'Cinzel, serif', color: '#2E8B57', textAlign: 'center', marginBottom: '1.5rem' },
-    tableDiv: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem', overflowX: 'auto' },
+    tableDiv: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', overflowX: 'auto', border: '1px solid var(--card-border)' },
     message: (type) => ({ padding: '1rem', borderRadius: 8, marginBottom: '1.5rem', textAlign: 'center',
       backgroundColor: type === 'success' ? 'rgba(46,139,87,0.1)' : '#ffebee', color: type === 'success' ? '#2E8B57' : '#c62828' }),
     table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' },
@@ -114,7 +145,7 @@ const OrganizerTournament = () => {
     backRight: { textAlign: 'right' },
     backLink: { display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#2E8B57', color: '#FFFDD0', textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
     searchBarContainer: { display: 'flex', alignItems: 'center', gap: 10, padding: 10, background: '#f5f5f5', borderRadius: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.1)', maxWidth: 500, margin: '20px auto' },
-    select: { padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', backgroundColor: '#fff', fontSize: 14 },
+    select: { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--card-border)', backgroundColor: 'var(--card-bg)', fontSize: 14 },
     input: { flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14 },
   };
 

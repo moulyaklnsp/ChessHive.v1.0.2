@@ -59,30 +59,44 @@ function TournamentManagement() {
     [tournaments]
   );
 
-  // Compute status (Completed/Ongoing/Yet to Start/Pending)
+  // Compute status based on 1-hour duration window using date + time
   const computeStatus = (t) => {
     let status = t.status || 'Pending';
     let statusClass = 'pending';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tDate = new Date(t.date);
-    tDate.setHours(0, 0, 0, 0);
-    if (status === 'Approved') {
-      if (tDate < today) {
+    const dateOnly = new Date(t.date);
+    const timeStr = (t.time || '').toString(); // expected HH:MM (24h)
+    // Build start Date from date + time
+    const [hh, mm] = (timeStr.match(/^\d{2}:\d{2}$/) ? timeStr.split(':') : ['00', '00']);
+    const start = new Date(dateOnly);
+    if (!isNaN(parseInt(hh)) && !isNaN(parseInt(mm))) {
+      start.setHours(parseInt(hh, 10), parseInt(mm, 10), 0, 0);
+    }
+    const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour duration
+    const now = new Date();
+
+    if (t.status === 'Approved' || t.status === 'Ongoing') {
+      if (now >= end) {
         status = 'Completed';
         statusClass = 'completed';
-      } else if (tDate.toDateString() === today.toDateString()) {
+      } else if (now >= start && now < end) {
         status = 'Ongoing';
         statusClass = 'ongoing';
-      } else {
+      } else if (now < start) {
         status = 'Yet to Start';
         statusClass = 'yet-to-start';
       }
+    } else if (t.status === 'Completed') {
+      status = 'Completed';
+      statusClass = 'completed';
+    } else if (t.status === 'Removed') {
+      status = 'Removed';
+      statusClass = 'removed';
     } else {
       status = 'Pending';
       statusClass = 'pending';
     }
-    return { status, statusClass, dateObj: tDate };
+
+    return { status, statusClass, dateObj: dateOnly };
   };
 
   const validate = () => {
@@ -145,13 +159,21 @@ function TournamentManagement() {
       return;
     }
     const payload = {
+      // camelCase fields used by React API
       tournamentName: form.tournamentName.trim(),
       tournamentDate: form.tournamentDate,
       time: form.tournamentTime.trim(),
       location: form.tournamentLocation.trim(),
-      entryFee: form.entryFee,
+      entryFee: typeof form.entryFee === 'string' ? parseFloat(form.entryFee) : form.entryFee,
       type: form.type,
-      noOfRounds: form.noOfRounds
+      noOfRounds: typeof form.noOfRounds === 'string' ? parseInt(form.noOfRounds, 10) : form.noOfRounds,
+      // snake_case fields for legacy API compatibility
+      name: form.tournamentName.trim(),
+      date: form.tournamentDate,
+      entry_fee: typeof form.entryFee === 'string' ? parseFloat(form.entryFee) : form.entryFee,
+      no_of_rounds: typeof form.noOfRounds === 'string' ? parseInt(form.noOfRounds, 10) : form.noOfRounds,
+      tournamentTime: form.tournamentTime.trim(),
+      tournamentLocation: form.tournamentLocation.trim(),
     };
     try {
       const endpoint = editingId ? `/coordinator/api/tournaments/${editingId}` : '/coordinator/api/tournaments';
@@ -178,13 +200,13 @@ function TournamentManagement() {
     if (!t) return;
     setEditingId(id);
     setForm({
-      tournamentName: t.name || '',
-      tournamentDate: t.date ? new Date(t.date).toISOString().split('T')[0] : '',
-      tournamentTime: t.time || '',
-      tournamentLocation: t.location || '',
-      entryFee: t.entry_fee ?? '',
+      tournamentName: t.name || t.tournamentName || '',
+      tournamentDate: t.date ? new Date(t.date).toISOString().split('T')[0] : (t.tournamentDate || ''),
+      tournamentTime: t.time || t.tournamentTime || '',
+      tournamentLocation: t.location || t.tournamentLocation || '',
+      entryFee: (typeof t.entry_fee !== 'undefined' ? t.entry_fee : (typeof t.entryFee !== 'undefined' ? t.entryFee : '')),
       type: t.type || '',
-      noOfRounds: t.noOfRounds ?? ''
+      noOfRounds: (typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : (typeof t.noOfRounds !== 'undefined' ? t.noOfRounds : ''))
     });
     // preserve current filters in URL if any (optional)
     setSearchParams((prev) => prev);
@@ -225,13 +247,13 @@ function TournamentManagement() {
     root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
     container: { maxWidth: 1200, margin: '0 auto' },
     h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     label: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: 8, display: 'block' },
     input: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontFamily: 'Playfair Display, serif' }),
-    select: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontFamily: 'Cinzel, serif', color: '#2E8B57', background: '#fff' }),
+    select: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : 'var(--sea-green)'}`, borderRadius: 8, fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', background: 'var(--card-bg)' }),
     error: { color: '#c62828', fontSize: '0.9rem', marginTop: 4 },
     btn: { background: '#2E8B57', color: '#fff', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%' },
-    tableCard: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
+    tableCard: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
     table: { width: '100%', borderCollapse: 'collapse' },
     th: { background: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
     td: { padding: '1rem', borderBottom: '1px solid rgba(46, 139, 87, 0.2)' },
@@ -361,6 +383,7 @@ function TournamentManagement() {
 
           {!loading && !error && activeTournaments.length > 0 && (
             <>
+              <div className="table-responsive">
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -386,9 +409,9 @@ function TournamentManagement() {
                         <td style={styles.td}>{isNaN(dateObj) ? '' : dateObj.toLocaleDateString()}</td>
                         <td style={styles.td}>{t.time}</td>
                         <td style={styles.td}>{t.location}</td>
-                        <td style={styles.td}>₹{t.entry_fee}</td>
+                        <td style={styles.td}>₹{typeof t.entry_fee !== 'undefined' ? t.entry_fee : t.entryFee}</td>
                         <td style={styles.td}>{t.type}</td>
-                        <td style={styles.td}>{t.noOfRounds}</td>
+                        <td style={styles.td}>{typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}</td>
                         <td style={{ ...styles.td, ...styles.status(statusClass) }}><i className="fas fa-circle" aria-hidden="true"></i> {status}</td>
                         <td style={styles.td}>
                           {t.status === 'Approved' && (
@@ -398,7 +421,7 @@ function TournamentManagement() {
                               </Link>
                               {t.type === 'Individual' && (
                                 <>
-                                  <Link to={`/coordinator/pairings?tournament_id=${t._id}&rounds=${t.noOfRounds}`} style={styles.actionBtn}>
+                                  <Link to={`/coordinator/pairings?tournament_id=${t._id}&rounds=${typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}`} style={styles.actionBtn}>
                                     <i className="fas fa-chess-board" aria-hidden="true"></i> Pairings
                                   </Link>
                                   <Link to={`/coordinator/rankings?tournament_id=${t._id}`} style={styles.actionBtn}>
@@ -417,16 +440,20 @@ function TournamentManagement() {
                           <button style={styles.removeBtn} onClick={() => onRemove(t._id)}>
                             <i className="fas fa-trash" aria-hidden="true"></i> Remove
                           </button>
-                          {status === 'Completed' && (
+                          {(['Ongoing', 'Completed'].includes(status)) ? (
                             t.feedback_requested ? (
                               <a href={`/coordinator/feedback_view?tournament_id=${t._id}`} target="_blank" rel="noreferrer" style={styles.actionBtn}>
                                 <i className="fas fa-eye" aria-hidden="true"></i> View Feedback
                               </a>
                             ) : (
                               <button style={styles.actionBtn} onClick={() => requestFeedback(t._id)}>
-                                <i className="fas fa-comment-dots" aria-hidden="true"></i> Ask Feedback
+                                <i className="fas fa-paper-plane" aria-hidden="true"></i> Send Feedback Form
                               </button>
                             )
+                          ) : (
+                            <button style={{ ...styles.actionBtn, opacity: 0.6, cursor: 'not-allowed' }} title="Available when tournament starts" disabled>
+                              <i className="fas fa-paper-plane" aria-hidden="true"></i> Send Feedback Form
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -434,6 +461,7 @@ function TournamentManagement() {
                   })}
                 </tbody>
               </table>
+              </div>
 
               <div style={styles.moreWrap}>
                 {visibleRows < activeTournaments.length && (

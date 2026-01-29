@@ -83,7 +83,7 @@ const OrganizerProfile = () => {
       fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem',
     },
-    profileCard: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    profileCard: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     profileInfo: { display: 'grid', gap: '1.5rem' },
     infoItem: { display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(46, 139, 87, 0.2)' },
     infoIcon: { color: '#2E8B57', fontSize: '1.5rem', width: 30, textAlign: 'center' },

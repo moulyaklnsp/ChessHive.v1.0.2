@@ -39,7 +39,7 @@ function FeedbackView() {
     root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
     h1: { fontFamily: 'Cinzel, serif', color: '#2E8B57', textAlign: 'center', marginBottom: '2rem' },
     container: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' },
-    card: { background: '#fff', borderRadius: 15, padding: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
+    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '1.5rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
     name: { color: '#2E8B57', marginBottom: '0.5rem' },
     rating: { color: '#FFD700', fontSize: '1.2rem' },
     comments: { marginTop: '1rem', fontStyle: 'italic' },

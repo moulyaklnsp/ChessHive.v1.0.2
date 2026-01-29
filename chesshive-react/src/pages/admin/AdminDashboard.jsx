@@ -60,7 +60,7 @@ const AdminDashboard = () => {
     content: { flexGrow: 1, marginLeft: 280, padding: '2rem' },
     h1: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '2rem', fontSize: '2.5rem', display: 'flex', alignItems: 'center', gap: '1rem' },
     menuBtn: { display: isMobile ? 'block' : 'none', position: 'fixed', left: '1rem', top: '1rem', background: '#2E8B57', color: '#fff', border: 'none', padding: '.8rem', borderRadius: 8, cursor: 'pointer', zIndex: 1001, transition: 'all .3s ease' },
-    formContainer: { background: '#fff', padding: '2rem', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    formContainer: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     row: { marginBottom: '1rem', padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
     rowCounter: { textAlign: 'center', marginBottom: '1rem', fontFamily: 'Cinzel, serif', fontSize: '1.2rem', color: '#2E8B57', backgroundColor: 'rgba(46,139,87,0.1)', padding: '.5rem 1rem', borderRadius: 8, display: 'inline-block' },
     pager: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },

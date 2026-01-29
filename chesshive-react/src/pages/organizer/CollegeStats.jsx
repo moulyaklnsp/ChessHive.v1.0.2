@@ -56,7 +56,7 @@ function CollegeStats() {
     root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', color: '#2E8B57', minHeight: '100vh', padding: '2rem' },
     container: { maxWidth: 1200, margin: '0 auto' },
     h1: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '3rem', textAlign: 'center', position: 'relative' },
-    section: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    section: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     h2: { fontFamily: 'Cinzel, serif', color: '#2E8B57', textAlign: 'left', marginBottom: '1rem', fontSize: '1.5rem' },
     table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' },
     th: { background: '#2E8B57', color: '#FFFDD0', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
@@ -174,7 +174,7 @@ function CollegeStats() {
           {!loading && !error && (
             <div>
               {['classical', 'rapid', 'blitz'].map((format) => (
-                <div key={format} style={{ background: '#fff', padding: '1rem 1rem 0.5rem', borderRadius: 12, marginBottom: '1rem' }}>
+                <div key={format} style={{ background: 'var(--card-bg)', padding: '1rem 1rem 0.5rem', borderRadius: 12, marginBottom: '1rem', border: '1px solid var(--card-border)' }}>
                   <h3 style={{ ...styles.h2, marginBottom: '0.5rem' }}>{format.charAt(0).toUpperCase() + format.slice(1)}</h3>
                   <ol style={{ listStylePosition: 'inside', padding: 0 }}>
                     {(stats.topCollegesByFormat?.[format] || []).map((college, index) => (
