@@ -1,25 +1,34 @@
-# Dependencies
-node_modules/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Build outputs
-chesshive-react/build/
-chesshive-react/coverage/
+# dependencies
+/node_modules
+/chesshive-react/node_modules
+/.pnp
+.pnp.js
 
-# Environment files
+# testing
+/coverage
+/chesshive-react/coverage
+
+# production
+/build
+/chesshive-react/build
+
+# misc
+.DS_Store
+Thumbs.db
+
+# environment
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Debug logs
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# OS files
-.DS_Store
-Thumbs.db
 
 # IDE
 .idea/
@@ -27,5 +36,5 @@ Thumbs.db
 *.swp
 *.swo
 
-# Replit
+# cache
 .cache/
