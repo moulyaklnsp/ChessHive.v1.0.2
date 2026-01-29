@@ -255,6 +255,8 @@ function PlayerTournament() {
   // Local UI state: which team join form is open
   const [openJoinFormId, setOpenJoinFormId] = useState(null);
 
+
+
   return (
     <div>
       <style>{`
@@ -317,9 +319,6 @@ function PlayerTournament() {
       <div className="content">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1><i className="fas fa-trophy" /> Tournaments</h1>
-          <div>
-            <button onClick={toggleTheme} style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', letterSpacing: '.5px' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
-          </div>
         </div>
 
         {/* Message banner */}
@@ -348,9 +347,9 @@ function PlayerTournament() {
               min="1"
               required
               style={{
-                backgroundColor: isDark ? '#000' : '#fff',
-                color: isDark ? '#fff' : '#000',
-                borderColor: isDark ? '#444' : '#ddd'
+                backgroundColor: isDark ? '#000' : 'var(--card-bg)',
+                color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
+                borderColor: isDark ? '#444' : 'var(--card-border)'
               }}
             />
             <input type="hidden" name="redirectTo" value="/player/player_tournament" />
@@ -367,18 +366,18 @@ function PlayerTournament() {
             value={searchIndividual}
             onChange={(e) => setSearchIndividual(e.target.value)}
             style={{
-              backgroundColor: isDark ? '#000' : '#fff',
-              color: isDark ? '#fff' : '#000',
-              borderColor: isDark ? '#444' : '#ddd'
+              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
+              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
+              borderColor: isDark ? '#444' : 'var(--card-border)'
             }}
           />
           <select
             value={searchIndividualType}
             onChange={(e) => setSearchIndividualType(e.target.value)}
             style={{
-              backgroundColor: isDark ? '#000' : '#fff',
-              color: isDark ? '#fff' : '#000',
-              borderColor: isDark ? '#444' : '#ddd'
+              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
+              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
+              borderColor: isDark ? '#444' : 'var(--card-border)'
             }}
           >
             <option value="name">Name</option>
@@ -387,6 +386,7 @@ function PlayerTournament() {
           </select>
         </div>
         <div className={`form-container ${loading ? 'loading' : ''}`}>
+          <div className="table-responsive">
           <table>
             <thead>
               <tr>
@@ -429,6 +429,7 @@ function PlayerTournament() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
         <div className="more-container">
           {individualVisibleCount < filteredIndividuals.length && (
@@ -452,18 +453,18 @@ function PlayerTournament() {
             value={searchTeam}
             onChange={(e) => setSearchTeam(e.target.value)}
             style={{
-              backgroundColor: isDark ? '#000' : '#fff',
-              color: isDark ? '#fff' : '#000',
-              borderColor: isDark ? '#444' : '#ddd'
+              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
+              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
+              borderColor: isDark ? '#444' : 'var(--card-border)'
             }}
           />
           <select
             value={searchTeamType}
             onChange={(e) => setSearchTeamType(e.target.value)}
             style={{
-              backgroundColor: isDark ? '#000' : '#fff',
-              color: isDark ? '#fff' : '#000',
-              borderColor: isDark ? '#444' : '#ddd'
+              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
+              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
+              borderColor: isDark ? '#444' : 'var(--card-border)'
             }}
           >
             <option value="name">Name</option>
@@ -472,6 +473,7 @@ function PlayerTournament() {
           </select>
         </div>
         <div className={`form-container ${loading ? 'loading' : ''}`}>
+          <div className="table-responsive">
           <table>
             <thead>
               <tr>
@@ -541,6 +543,7 @@ function PlayerTournament() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
         <div className="more-container">
           {teamVisibleCount < filteredTeams.length && (

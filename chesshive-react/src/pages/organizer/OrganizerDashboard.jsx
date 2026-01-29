@@ -78,7 +78,7 @@ function OrganizerDashboard() {
     logoutBox: { position: 'absolute', bottom: '2rem', width: '100%', padding: '0 2rem' },
     logoutBtn: { width: '100%', background: '#87CEEB', color: '#2E8B57', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
     menuBtn: { display: isMobile ? 'block' : 'none', position: 'fixed', left: 16, top: 16, background: '#2E8B57', color: '#fff', border: 'none', padding: '0.8rem', borderRadius: 8, cursor: 'pointer', zIndex: 1100 },
-    card: { background: '#fff', padding: '2rem', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
+    card: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
     list: { listStyle: 'none', padding: 0, margin: 0 },
     listItem: { padding: '0.6rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' },
     join: { backgroundColor: '#87CEEB', color: '#2E8B57', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },

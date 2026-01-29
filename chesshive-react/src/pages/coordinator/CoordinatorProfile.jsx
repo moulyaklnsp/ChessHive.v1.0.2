@@ -49,7 +49,7 @@ function CoordinatorProfile() {
     root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
     container: { maxWidth: 800, margin: '0 auto' },
     h1: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
+    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
     infoGrid: { display: 'grid', gap: '1.5rem', marginBottom: '2rem' },
     infoItem: { display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
     label: { fontFamily: 'Cinzel, serif', fontWeight: 'bold', color: '#2E8B57', minWidth: 100, display: 'flex', alignItems: 'center', gap: '0.5rem' },

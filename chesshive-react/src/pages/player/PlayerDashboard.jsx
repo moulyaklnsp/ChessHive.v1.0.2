@@ -215,7 +215,7 @@ function PlayerDashboard() {
     { path: '/player/player_profile', label: 'Profile', icon: 'fas fa-user' },
     { path: '/player/growth', label: 'Growth Tracking', icon: 'fas fa-chart-line' },
     { path: '/player/player_tournament', label: 'Tournaments', icon: 'fas fa-trophy' },
-    { path: '/player/live_match', label: 'Live Match', icon: 'fas fa-chess-board' },
+    { path: '/player/watch', label: 'Watch', icon: 'fas fa-video' },
     { path: '/player/subscription', label: 'Manage Subscription', icon: 'fas fa-star' },
     { path: '/player/store', label: 'E-Commerce Store', icon: 'fas fa-store' },
     { path: '/player/player_chat', label: 'Live Chat', icon: 'fas fa-comments' },
