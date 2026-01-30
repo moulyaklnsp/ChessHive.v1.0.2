@@ -2,10 +2,41 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import '../../styles/playerNeoNoir.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchNotifications, markNotificationRead } from '../../features/notifications/notificationsSlice';
-
+import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.12 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+  }
+};
 
 function PlayerDashboard() {
   const navigate = useNavigate();
@@ -75,12 +106,12 @@ function PlayerDashboard() {
   const loadDashboard = useCallback(async () => {
     setErrorMsg('');
     try {
-      const data = await fetchWithRetry('/player/api/dashboard');
-      if (!data) return;
-      setPlayerName(data.playerName || 'Player');
-      setTeamRequests(Array.isArray(data.teamRequests) ? data.teamRequests : []);
-      setLatestTournaments(Array.isArray(data.latestTournaments) ? data.latestTournaments : []);
-      setLatestItems(Array.isArray(data.latestItems) ? data.latestItems : []);
+      const dash = await fetchWithRetry('/player/api/dashboard');
+      if (!dash) return;
+      setPlayerName(dash.playerName || 'Player');
+      setTeamRequests(Array.isArray(dash.teamRequests) ? dash.teamRequests : []);
+      setLatestTournaments(Array.isArray(dash.latestTournaments) ? dash.latestTournaments : []);
+      setLatestItems(Array.isArray(dash.latestItems) ? dash.latestItems : []);
     } catch (err) {
       setErrorMsg(err.message || 'Unknown error. Check console for details.');
       // Fallback mock for local testing
@@ -254,9 +285,9 @@ function PlayerDashboard() {
         .updates-section:hover { transform: translateY(-5px); }
         .updates-section h3 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.8rem; font-size:1.5rem; }
         .updates-section ul { list-style:none; }
-        .updates-section li { padding:1rem; border-bottom:1px solid rgba(46,139,87,0.1); transition:all 0.3s ease; display:flex; align-items:center; gap:1rem; }
+        .updates-section li { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transition:all 0.3s ease; display:flex; align-items:center; gap:1rem; }
         .updates-section li:last-child { border-bottom:none; }
-        .updates-section li:hover { background:rgba(135,206,235,0.1); transform: translateX(5px); border-radius:8px; }
+        .updates-section li:hover { background: rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transform: translateX(5px); border-radius:8px; }
         .tournament-info, .item-info { flex-grow:1; }
         .price-tag { background: linear-gradient(90deg, rgba(235,87,87,1), rgba(6,56,80,1)); color: var(--on-accent); padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:600; box-shadow: inset 0 -4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
         .date-tag { color:var(--sea-green); font-style: italic; }
@@ -278,18 +309,52 @@ function PlayerDashboard() {
         .inbox-icon .unread-count { position:absolute; top:-5px; right:-5px; background: var(--sea-green); color:var(--on-accent); border-radius:50%; padding:2px 6px; font-size:0.8rem; }
         #notifications-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:${notificationsOpen ? 'flex' : 'none'}; justify-content:center; align-items:center; z-index:1002; }
         .notifications-content { background:var(--card-bg); padding:2rem; border-radius:15px; max-width:500px; width:90%; border:1px solid var(--card-border); box-shadow:none; }
-        .notifications-list li { margin-bottom:1rem; padding:1rem; background:rgba(135,206,235,0.1); border-radius:8px; }
+        .notifications-list li { margin-bottom:1rem; padding:1rem; background: rgba(var(--sea-green-rgb, 27, 94, 63), 0.08); border-radius:8px; }
         #feedback-form { display:${feedbackOpen ? 'block' : 'none'}; margin-top:1rem; }
         #feedback-form select, #feedback-form textarea{ width:100%; margin-bottom:1rem; }
         #feedback-form button{ background:var(--sea-green); color:var(--on-accent); padding:0.5rem 1rem; border:none; border-radius:8px; cursor:pointer; }
       `}</style>
 
       <div className="page player-neo">
+        {/* Decorative floating knight – materialize entrance */}
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-chess-knight" />
+        </motion.div>
         {/* Site dropdown sidebar (AnimatedSidebar) */}
         <AnimatedSidebar links={playerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        {/* Player quick header (moved from sidebar) */}
-        <div style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {/* Player quick header: theme toggle, notifications, welcome */}
+        <div className="player-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} aria-hidden="true" />
+          </motion.button>
           {notificationsEnabled && (
             <button className="inbox-icon" onClick={loadNotifications} aria-label={`Open notifications (${unreadCount} unread)`}>
               <i className="fas fa-inbox" aria-hidden="true" />
@@ -299,8 +364,8 @@ function PlayerDashboard() {
           <div style={{ color: 'var(--sea-green)', fontWeight: '600' }}>Welcome, {playerName}</div>
         </div>
 
-        {/* Content */}
-        <div className="content">
+        {/* Content – subtle chess checkerboard drift */}
+        <div className="content chess-dash-checkerboard">
           <div style={styles.errorBox}>
             <strong>Error loading data:</strong> <span>{errorMsg}</span>
             {errorMsg && (
@@ -308,81 +373,169 @@ function PlayerDashboard() {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          <motion.div
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
             <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <i className="fas fa-chess-king" />
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="chess-piece-icon-wrap"
+              >
+                <i className="fas fa-chess-king chess-king-glow chess-piece-breathe" aria-hidden="true" />
+              </motion.span>
               Welcome to ChessHive, {playerName}!
             </h1>
             <div />
-          </div>
+          </motion.div>
 
           {/* Team Requests */}
-          <div className="updates-section team-requests">
-            <h3>Pending Team Tournament Requests</h3>
-            <ul>
+          <motion.div
+            className="updates-section team-requests chess-capture-hover chess-card-magic"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-users chess-piece-breathe" style={{ animationDelay: '0s' }} />
+              </motion.span>
+              Pending Team Tournament Requests
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
               {pendingTeamRequests.length === 0 ? (
-                <li><i className="fas fa-info-circle" /> No pending team requests.</li>
+                <motion.li variants={itemVariants}><i className="fas fa-info-circle" /> No pending team requests.</motion.li>
               ) : (
-                pendingTeamRequests.map(req => (
-                  <li key={req.id}>
-                    <i className="fas fa-users" />
+                pendingTeamRequests.map((req, idx) => (
+                  <motion.li key={req.id} custom={idx} variants={itemVariants}>
+                    <motion.span
+                      className="piece-icon"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ display: 'inline-flex' }}
+                    >
+                      <i className="fas fa-users" />
+                    </motion.span>
                     <div className="tournament-info">
                       <strong>{req.tournamentName}</strong><br />
                       Captain: {req.captainName} | Team: {req.player1_name}, {req.player2_name}, {req.player3_name}
                     </div>
                     <button className="approve-btn" onClick={() => approveTeamRequest(req.id)}>Approve</button>
-                  </li>
+                  </motion.li>
                 ))
               )}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
 
           {/* Latest Tournaments */}
-          <div className="updates-section">
-            <h3><i className="fas fa-trophy" /> Latest Tournaments</h3>
-            <ul>
+          <motion.div
+            className="updates-section chess-capture-hover chess-card-magic"
+            custom={1}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.32, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-trophy chess-piece-breathe" style={{ animationDelay: '0.2s' }} />
+              </motion.span>
+              Latest Tournaments
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
               {(!latestTournaments || latestTournaments.length === 0) ? (
-                <li><i className="fas fa-info-circle" /> No tournaments available at the moment.</li>
+                <motion.li variants={itemVariants}><i className="fas fa-info-circle" /> No tournaments available at the moment.</motion.li>
               ) : (
                 latestTournaments.map((t, idx) => {
                   const formattedDate = new Date(t.date).toLocaleString('en-IN', {
                     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
                   });
                   return (
-                    <li key={idx}>
-                      <i className="fas fa-chess-knight" />
+                    <motion.li key={idx} variants={itemVariants}>
+                      <motion.span
+                        className="piece-icon"
+                        initial={{ opacity: 0, scale: 0.88 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ display: 'inline-flex' }}
+                      >
+                        <i className={`fas fa-chess-knight ${idx === 0 ? 'chess-pawn-march' : 'chess-piece-breathe'}`} />
+                      </motion.span>
                       <div className="tournament-info">
                         <strong>{t.name}</strong>
                         <div className="date-tag">
                           <i className="fas fa-calendar-alt" /> {formattedDate}
                         </div>
                       </div>
-                    </li>
+                    </motion.li>
                   );
                 })
               )}
-            </ul>
-          </div>
-
-          {/* Quick Actions removed as requested */}
+            </motion.ul>
+          </motion.div>
 
           {/* Latest Store Items */}
-          <div className="updates-section">
-            <h3><i className="fas fa-shopping-bag" /> Latest Store Items</h3>
-            <ul>
+          <motion.div
+            className="updates-section chess-capture-hover chess-card-magic"
+            custom={2}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.44, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-shopping-bag chess-piece-breathe" style={{ animationDelay: '0.4s' }} />
+              </motion.span>
+              Latest Store Items
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
               {(!latestItems || latestItems.length === 0) ? (
-                <li><i className="fas fa-info-circle" /> No items available at the moment.</li>
+                <motion.li custom={0} variants={itemVariants}><i className="fas fa-info-circle" /> No items available at the moment.</motion.li>
               ) : (
-                latestItems.map((i, idx) => (
-                  <li key={idx}>
-                    <i className="fas fa-chess-pawn" />
-                    <div className="item-info"><strong>{i.name}</strong></div>
-                    <span className="price-tag"><i className="fas fa-tag" /> ₹{i.price}</span>
-                  </li>
+                latestItems.map((item, idx) => (
+                  <motion.li key={idx} variants={itemVariants}>
+                    <motion.span
+                      className="piece-icon"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ display: 'inline-flex' }}
+                    >
+                      <i className={idx === 0 ? 'fas fa-chess-pawn chess-pawn-march' : 'fas fa-chess-pawn chess-piece-breathe'} />
+                    </motion.span>
+                    <div className="item-info"><strong>{item.name}</strong></div>
+                    <span className="price-tag"><i className="fas fa-tag" /> ₹{item.price}</span>
+                  </motion.li>
                 ))
               )}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
         </div>
 
 
