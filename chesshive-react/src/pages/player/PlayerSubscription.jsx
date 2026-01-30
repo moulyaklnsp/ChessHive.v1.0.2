@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 
 // React conversion of views/player/subscription.html
@@ -7,6 +7,7 @@ import usePlayerTheme from '../../hooks/usePlayerTheme';
 function PlayerSubscription() {
   const [isDark, toggleTheme] = usePlayerTheme();
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [walletBalance, setWalletBalance] = useState(0);
@@ -94,7 +95,7 @@ function PlayerSubscription() {
     walletH3: { color: 'var(--on-accent)', marginTop: 0, marginBottom: '1rem' },
     walletForm: { display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 300, margin: '0 auto' },
     walletInput: { width: '100%', padding: 12, border: '2px solid var(--border-color)', borderRadius: 5, fontSize: 16, boxSizing: 'border-box', background: '#ffffff', color: '#1C1917' },
-    walletButton: { backgroundColor: 'var(--sky-blue)', color: 'var(--on-accent)', border: 'none', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
+    walletButton: { backgroundColor: '#B8860B', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
     planGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, margin: '30px 0' },
     planButton: { backgroundColor: 'var(--sky-blue)', color: 'var(--on-accent)', border: 'none', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
     success: { backgroundColor: 'var(--success)', color: 'var(--on-accent)', padding: 15, borderRadius: 5, marginBottom: 20, textAlign: 'center' },
@@ -164,7 +165,7 @@ function PlayerSubscription() {
         </div>
 
         <div style={styles.backRow}>
-          <Link to="/player/player_dashboard" style={styles.backLink}>Back to Dashboard</Link>
+          <button type="button" style={styles.backLink} onClick={() => navigate('/player/player_dashboard')}>Back to Dashboard</button>
         </div>
       </div>
     </div>

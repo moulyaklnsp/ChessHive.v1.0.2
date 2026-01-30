@@ -260,18 +260,20 @@ function PlayerTournament() {
   return (
     <div>
       <style>{`
-        /* Light page background */
+        /* Theme-aware page styling */
         *{ margin:0; padding:0; box-sizing:border-box; }
-        html,body,#root{ height:100%; background:var(--cream); color:var(--text-color); }
-        .content{ font-family:'Playfair Display', serif; min-height:100vh; width:100vw; padding:2rem clamp(1rem,2vw,2rem); background:var(--cream); }
+        html,body,#root{ height:100%; color:var(--text-color); }
+        body.player:not(.player-dark), body.player:not(.player-dark) #root{ background:#ffffff; }
+        body.player.player-dark, body.player.player-dark #root{ background:#000000; }
+        .content{ font-family:'Playfair Display', serif; min-height:100vh; width:100vw; padding:2rem clamp(1rem,2vw,2rem); background:transparent; }
         h1,h2{ font-family:'Cinzel', serif; color:var(--sky-blue); margin:0 0 1rem 0; letter-spacing:.5px; }
         .black-h2{ color:var(--sea-green); font-family:'Cinzel', serif; margin-top:2rem; margin-bottom:.75rem; }
-        .form-container{ background:#ffffff; padding:20px; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,0.08); margin-bottom:24px; overflow-x:auto; border:1px solid var(--card-border); }
-        table{ width:100%; border-collapse:collapse; background:#ffffff; min-width:760px; font-family:'Playfair Display', serif; }
+        .form-container{ background:var(--card-bg); padding:20px; border-radius:14px; box-shadow:var(--card-shadow); margin-bottom:24px; overflow-x:auto; border:1px solid var(--card-border); }
+        table{ width:100%; border-collapse:collapse; background:var(--card-bg); min-width:760px; font-family:'Playfair Display', serif; }
         th{ background:var(--sea-green); color:var(--on-accent); padding:12px; text-align:left; font-weight:600; font-size:.9rem; letter-spacing:.5px; }
         td{ padding:12px; border:1px solid var(--border-color); color:var(--text-color); font-size:.9rem; }
-        tbody tr:nth-child(even){ background:var(--accent-mint, #f5f0e6); }
-        tr:hover{ background:var(--accent-mint, #f5f0e6); }
+        tbody tr:nth-child(even){ background:var(--row-hover-bg); }
+        tr:hover{ background:var(--row-hover-bg); }
         .status-ongoing{ color:var(--yellow); font-weight:bold; }
         .status-yet-to-start{ color:var(--sea-green); font-weight:bold; }
         .wallet-section{ background:var(--sea-green); color:var(--on-accent); padding:24px 28px; border-radius:18px; text-align:center; margin-bottom:2rem; position:relative; overflow:hidden; }
@@ -280,11 +282,11 @@ function PlayerTournament() {
         .wallet-balance-label{ color:var(--on-accent); font-family:'Cinzel', serif; font-size:1rem; letter-spacing:.6px; margin-bottom:0.35rem; text-transform:uppercase; }
         .wallet-balance-value{ color:var(--on-accent); font-family:'Playfair Display', serif; font-size:2rem; font-weight:700; text-shadow:0 2px 6px rgba(0,0,0,0.25); margin-bottom:1rem; }
         .wallet-section form{ display:flex; flex-direction:column; gap:12px; max-width:340px; margin:0 auto; }
-        .wallet-section input[type='number']{ width:100%; padding:12px; border:2px solid var(--input-border); border-radius:10px; font-size:16px; background:#ffffff; color:var(--text-color); outline:none; font-family:'Playfair Display', serif; }
+        .wallet-section input[type='number']{ width:100%; padding:12px; border:2px solid rgba(255,255,255,0.7); border-radius:10px; font-size:16px; background:#ffffff; color:#1C1917; outline:none; font-family:'Playfair Display', serif; }
         .wallet-section input[type='number']:focus{ box-shadow:0 0 0 3px var(--input-focus); }
-        .wallet-section button{ background:var(--sky-blue); color:var(--on-accent); border:none; padding:14px 24px; border-radius:10px; cursor:pointer; font-weight:600; transition:background .25s, transform .25s; font-family:'Cinzel', serif; letter-spacing:.5px; }
-        .wallet-section button:hover{ background:var(--sky-blue-hover); transform:translateY(-2px); }
-        .back-to-dashboard{ position:fixed; bottom:30px; right:30px; background:var(--sea-green); color:var(--on-accent); padding:12px 24px; border-radius:10px; text-decoration:none; box-shadow:0 4px 18px rgba(0,0,0,0.4); font-weight:600; font-family:'Cinzel', serif; letter-spacing:.5px; }
+        .wallet-section button{ background:#B8860B; color:#FFFFFF; border:1px solid rgba(255,255,255,0.6); padding:14px 24px; border-radius:10px; cursor:pointer; font-weight:700; transition:background .25s, transform .25s, box-shadow .25s; font-family:'Cinzel', serif; letter-spacing:.6px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
+        .wallet-section button:hover{ background:#C99716; transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.3); }
+        .back-to-dashboard{ position:fixed; bottom:30px; right:30px; background:#B8860B; color:#FFFFFF; padding:12px 24px; border-radius:10px; text-decoration:none; box-shadow:0 4px 18px rgba(0,0,0,0.4); font-weight:600; font-family:'Cinzel', serif; letter-spacing:.5px; border:1px solid rgba(255,255,255,0.5); z-index:9999; pointer-events:auto; cursor:pointer; }
         .back-to-dashboard:hover{ filter:brightness(1.08); transform:translateY(-3px); }
         button,.btn{ background:var(--sky-blue); color:var(--on-accent); border:none; padding:10px 18px; border-radius:10px; cursor:pointer; transition:background .25s, transform .25s; font-family:'Cinzel', serif; font-weight:600; letter-spacing:.4px; }
         button:hover,.btn:hover{ background:var(--sky-blue-hover); transform:translateY(-2px); }
@@ -292,9 +294,9 @@ function PlayerTournament() {
         .subscription-message{ background:#102436; color:var(--sky-blue); padding:16px 20px; border-radius:12px; margin-bottom:26px; font-weight:600; font-family:'Playfair Display', serif; border:1px solid var(--border-color); }
         .subscription-message a{ color:var(--sea-green); text-decoration:underline; }
         .search-box{ margin-bottom:1rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
-        .search-box input{ padding:0.65rem 1rem; width:100%; max-width:320px; border:2px solid var(--input-border); border-radius:10px; font-size:.95rem; transition:all 0.25s ease; font-family:'Playfair Display', serif; background:#ffffff; color:var(--text-color); outline:none; }
+        .search-box input{ padding:0.65rem 1rem; width:100%; max-width:320px; border:2px solid var(--input-border); border-radius:10px; font-size:.95rem; transition:all 0.25s ease; font-family:'Playfair Display', serif; background:var(--input-bg); color:var(--text-color); outline:none; }
         .search-box input:focus{ box-shadow:0 0 0 3px var(--input-focus); }
-        .search-box select{ padding:0.65rem 1rem; border:2px solid var(--input-border); border-radius:10px; font-size:.95rem; background:#ffffff; color:var(--text-color); font-family:'Cinzel', serif; cursor:pointer; transition:all 0.25s ease; }
+        .search-box select{ padding:0.65rem 1rem; border:2px solid var(--input-border); border-radius:10px; font-size:.95rem; background:var(--input-bg); color:var(--text-color); font-family:'Cinzel', serif; cursor:pointer; transition:all 0.25s ease; }
         .more-container{ text-align:center; margin:1.25rem 0 1.75rem; display:flex; justify-content:center; gap:1rem; }
         .more,.hide{ display:inline-flex; align-items:center; gap:0.6rem; background:var(--sky-blue); color:var(--on-accent); text-decoration:none; padding:0.85rem 1.6rem; border-radius:10px; transition:all 0.25s ease; font-family:'Cinzel', serif; font-weight:600; letter-spacing:.4px; }
         .more:hover,.hide:hover{ background:var(--sky-blue-hover); transform:translateY(-2px); }
@@ -305,9 +307,9 @@ function PlayerTournament() {
         .status-pill.enrolled{ background:var(--sky-blue); color:var(--on-accent); }
         .status-pill.pending{ background:var(--yellow); color:#000; }
         .btn.small{ padding:8px 14px; font-size:.7rem; border-radius:8px; }
-        .join-form{ margin-top:10px; background:#ffffff; border:1px solid var(--card-border); padding:14px; border-radius:10px; }
+        .join-form{ margin-top:10px; background:var(--card-bg); border:1px solid var(--card-border); padding:14px; border-radius:10px; }
         .join-form label{ color: var(--text-color); font-weight:600; font-size:.8rem; font-family:'Cinzel', serif; }
-        .join-form input{ background:#ffffff; color: var(--text-color); border:2px solid var(--input-border); padding:8px 10px; border-radius:8px; font-family:'Playfair Display', serif; margin-bottom:8px; }
+        .join-form input{ background:var(--input-bg); color: var(--text-color); border:2px solid var(--input-border); padding:8px 10px; border-radius:8px; font-family:'Playfair Display', serif; margin-bottom:8px; }
         .join-form input:focus{ box-shadow:0 0 0 3px var(--input-focus); }
         @media (max-width:768px){
           .content{ padding:1.25rem 1rem 4rem; width:100vw; }
@@ -537,9 +539,9 @@ function PlayerTournament() {
         </div>
       </div>
 
-      <a href="/player/player_dashboard" className="back-to-dashboard">
+      <button type="button" className="back-to-dashboard" onClick={() => navigate('/player/player_dashboard')}>
         <i className="fas fa-arrow-left" /> Back to Dashboard
-      </a>
+      </button>
     </div>
   );
 }
