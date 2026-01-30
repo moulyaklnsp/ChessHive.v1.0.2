@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const ROWS_PER_PAGE = 5;
 
 function PlayerTournament() {
-  const [isDark, toggleTheme] = usePlayerTheme();
+  usePlayerTheme();
   const navigate = useNavigate();
 
   // UI/messages
@@ -260,26 +260,28 @@ function PlayerTournament() {
   return (
     <div>
       <style>{`
-        /* Use global CSS variables from index.css; do not override theme here. */
+        /* Light page background */
         *{ margin:0; padding:0; box-sizing:border-box; }
-        html,body,#root{ height:100%; background:var(--page-bg); color:var(--text-color); }
-        .content{ font-family:'Playfair Display', serif; min-height:100vh; width:100vw; padding:2rem clamp(1rem,2vw,2rem); background:var(--page-bg); }
+        html,body,#root{ height:100%; background:var(--cream); color:var(--text-color); }
+        .content{ font-family:'Playfair Display', serif; min-height:100vh; width:100vw; padding:2rem clamp(1rem,2vw,2rem); background:var(--cream); }
         h1,h2{ font-family:'Cinzel', serif; color:var(--sky-blue); margin:0 0 1rem 0; letter-spacing:.5px; }
-        .black-h2{ color:var(--sky-blue); font-family:'Cinzel', serif; margin-top:2rem; margin-bottom:.75rem; }
-        .form-container{ background:var(--panel-bg); padding:20px; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,0.4); margin-bottom:24px; overflow-x:auto; border:1px solid var(--border-color); }
-        table{ width:100%; border-collapse:collapse; background:var(--panel-bg); min-width:760px; font-family:'Playfair Display', serif; }
+        .black-h2{ color:var(--sea-green); font-family:'Cinzel', serif; margin-top:2rem; margin-bottom:.75rem; }
+        .form-container{ background:#ffffff; padding:20px; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,0.08); margin-bottom:24px; overflow-x:auto; border:1px solid var(--card-border); }
+        table{ width:100%; border-collapse:collapse; background:#ffffff; min-width:760px; font-family:'Playfair Display', serif; }
         th{ background:var(--sea-green); color:var(--on-accent); padding:12px; text-align:left; font-weight:600; font-size:.9rem; letter-spacing:.5px; }
         td{ padding:12px; border:1px solid var(--border-color); color:var(--text-color); font-size:.9rem; }
-        tbody tr:nth-child(even){ background:var(--row-hover-bg); }
-        tr:hover{ background:var(--row-hover-bg); }
+        tbody tr:nth-child(even){ background:var(--accent-mint, #f5f0e6); }
+        tr:hover{ background:var(--accent-mint, #f5f0e6); }
         .status-ongoing{ color:var(--yellow); font-weight:bold; }
         .status-yet-to-start{ color:var(--sea-green); font-weight:bold; }
         .wallet-section{ background:var(--sea-green); color:var(--on-accent); padding:24px 28px; border-radius:18px; text-align:center; margin-bottom:2rem; position:relative; overflow:hidden; }
         .wallet-section::after{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15), transparent 70%); pointer-events:none; }
         .wallet-section h3{ color:var(--on-accent); margin:0 0 1.25rem 0; font-family:'Cinzel', serif; font-size:1.1rem; }
+        .wallet-balance-label{ color:var(--on-accent); font-family:'Cinzel', serif; font-size:1rem; letter-spacing:.6px; margin-bottom:0.35rem; text-transform:uppercase; }
+        .wallet-balance-value{ color:var(--on-accent); font-family:'Playfair Display', serif; font-size:2rem; font-weight:700; text-shadow:0 2px 6px rgba(0,0,0,0.25); margin-bottom:1rem; }
         .wallet-section form{ display:flex; flex-direction:column; gap:12px; max-width:340px; margin:0 auto; }
-        .wallet-section input[type='number']{ width:100%; padding:12px; border:2px solid var(--sky-blue); border-radius:10px; font-size:16px; background:#03101d; color:var(--text-color); outline:none; font-family:'Playfair Display', serif; }
-        .wallet-section input[type='number']:focus{ box-shadow:0 0 0 3px rgba(30,80,255,0.35); }
+        .wallet-section input[type='number']{ width:100%; padding:12px; border:2px solid var(--input-border); border-radius:10px; font-size:16px; background:#ffffff; color:var(--text-color); outline:none; font-family:'Playfair Display', serif; }
+        .wallet-section input[type='number']:focus{ box-shadow:0 0 0 3px var(--input-focus); }
         .wallet-section button{ background:var(--sky-blue); color:var(--on-accent); border:none; padding:14px 24px; border-radius:10px; cursor:pointer; font-weight:600; transition:background .25s, transform .25s; font-family:'Cinzel', serif; letter-spacing:.5px; }
         .wallet-section button:hover{ background:var(--sky-blue-hover); transform:translateY(-2px); }
         .back-to-dashboard{ position:fixed; bottom:30px; right:30px; background:var(--sea-green); color:var(--on-accent); padding:12px 24px; border-radius:10px; text-decoration:none; box-shadow:0 4px 18px rgba(0,0,0,0.4); font-weight:600; font-family:'Cinzel', serif; letter-spacing:.5px; }
@@ -290,9 +292,9 @@ function PlayerTournament() {
         .subscription-message{ background:#102436; color:var(--sky-blue); padding:16px 20px; border-radius:12px; margin-bottom:26px; font-weight:600; font-family:'Playfair Display', serif; border:1px solid var(--border-color); }
         .subscription-message a{ color:var(--sea-green); text-decoration:underline; }
         .search-box{ margin-bottom:1rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
-        .search-box input{ padding:0.65rem 1rem; width:100%; max-width:320px; border:2px solid var(--sky-blue); border-radius:10px; font-size:.95rem; transition:all 0.25s ease; font-family:'Playfair Display', serif; background:#03101d; color:var(--text-color); outline:none; }
-        .search-box input:focus{ box-shadow:0 0 0 3px rgba(30,80,255,0.35); }
-        .search-box select{ padding:0.65rem 1rem; border:2px solid var(--sky-blue); border-radius:10px; font-size:.95rem; background:#03101d; color:var(--text-color); font-family:'Cinzel', serif; cursor:pointer; transition:all 0.25s ease; }
+        .search-box input{ padding:0.65rem 1rem; width:100%; max-width:320px; border:2px solid var(--input-border); border-radius:10px; font-size:.95rem; transition:all 0.25s ease; font-family:'Playfair Display', serif; background:#ffffff; color:var(--text-color); outline:none; }
+        .search-box input:focus{ box-shadow:0 0 0 3px var(--input-focus); }
+        .search-box select{ padding:0.65rem 1rem; border:2px solid var(--input-border); border-radius:10px; font-size:.95rem; background:#ffffff; color:var(--text-color); font-family:'Cinzel', serif; cursor:pointer; transition:all 0.25s ease; }
         .more-container{ text-align:center; margin:1.25rem 0 1.75rem; display:flex; justify-content:center; gap:1rem; }
         .more,.hide{ display:inline-flex; align-items:center; gap:0.6rem; background:var(--sky-blue); color:var(--on-accent); text-decoration:none; padding:0.85rem 1.6rem; border-radius:10px; transition:all 0.25s ease; font-family:'Cinzel', serif; font-weight:600; letter-spacing:.4px; }
         .more:hover,.hide:hover{ background:var(--sky-blue-hover); transform:translateY(-2px); }
@@ -303,10 +305,10 @@ function PlayerTournament() {
         .status-pill.enrolled{ background:var(--sky-blue); color:var(--on-accent); }
         .status-pill.pending{ background:var(--yellow); color:#000; }
         .btn.small{ padding:8px 14px; font-size:.7rem; border-radius:8px; }
-        .join-form{ margin-top:10px; background:#03101d; border:1px solid var(--border-color); padding:14px; border-radius:10px; }
+        .join-form{ margin-top:10px; background:#ffffff; border:1px solid var(--card-border); padding:14px; border-radius:10px; }
         .join-form label{ color: var(--text-color); font-weight:600; font-size:.8rem; font-family:'Cinzel', serif; }
-        .join-form input{ background:#0d2538; color: var(--text-color); border:2px solid var(--sky-blue); padding:8px 10px; border-radius:8px; font-family:'Playfair Display', serif; margin-bottom:8px; }
-        .join-form input:focus{ box-shadow:0 0 0 3px rgba(30,80,255,0.35); }
+        .join-form input{ background:#ffffff; color: var(--text-color); border:2px solid var(--input-border); padding:8px 10px; border-radius:8px; font-family:'Playfair Display', serif; margin-bottom:8px; }
+        .join-form input:focus{ box-shadow:0 0 0 3px var(--input-focus); }
         @media (max-width:768px){
           .content{ padding:1.25rem 1rem 4rem; width:100vw; }
           table{ min-width:640px; }
@@ -338,7 +340,8 @@ function PlayerTournament() {
         {/* Wallet section */}
         <div className="wallet-section">
           <span className="wallet-icon" role="img" aria-label="wallet">💰</span>
-          <h3>Wallet Balance: ₹<span>{walletBalance}</span></h3>
+          <div className="wallet-balance-label">Wallet Balance</div>
+          <div className="wallet-balance-value">₹{walletBalance}</div>
           <form onSubmit={(e) => { e.preventDefault(); const amount = e.currentTarget.amount.value; if (!amount) return; addFunds(amount); e.currentTarget.reset(); }}>
             <input
               type="number"
@@ -346,11 +349,6 @@ function PlayerTournament() {
               placeholder="Enter amount"
               min="1"
               required
-              style={{
-                backgroundColor: isDark ? '#000' : 'var(--card-bg)',
-                color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
-                borderColor: isDark ? '#444' : 'var(--card-border)'
-              }}
             />
             <input type="hidden" name="redirectTo" value="/player/player_tournament" />
             <button type="submit" disabled={loading}>Add Funds</button>
@@ -365,20 +363,10 @@ function PlayerTournament() {
             placeholder="Search individual tournaments..."
             value={searchIndividual}
             onChange={(e) => setSearchIndividual(e.target.value)}
-            style={{
-              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
-              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
-              borderColor: isDark ? '#444' : 'var(--card-border)'
-            }}
           />
           <select
             value={searchIndividualType}
             onChange={(e) => setSearchIndividualType(e.target.value)}
-            style={{
-              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
-              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
-              borderColor: isDark ? '#444' : 'var(--card-border)'
-            }}
           >
             <option value="name">Name</option>
             <option value="location">Location</option>
@@ -452,20 +440,10 @@ function PlayerTournament() {
             placeholder="Search team tournaments..."
             value={searchTeam}
             onChange={(e) => setSearchTeam(e.target.value)}
-            style={{
-              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
-              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
-              borderColor: isDark ? '#444' : 'var(--card-border)'
-            }}
           />
           <select
             value={searchTeamType}
             onChange={(e) => setSearchTeamType(e.target.value)}
-            style={{
-              backgroundColor: isDark ? '#000' : 'var(--card-bg)',
-              color: isDark ? 'var(--on-dark)' : 'var(--text-color)',
-              borderColor: isDark ? '#444' : 'var(--card-border)'
-            }}
           >
             <option value="name">Name</option>
             <option value="location">Location</option>
