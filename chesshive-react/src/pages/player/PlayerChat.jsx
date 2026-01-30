@@ -237,7 +237,7 @@ function PlayerChat() {
     input: { width: '100%', padding: '0.75rem 0.9rem', marginBottom: '0.75rem', border: '2px solid var(--sea-green)', borderRadius: 10, fontFamily: 'Playfair Display, serif', background: 'var(--content-bg)', color: 'var(--text-color)' },
     select: { width: '100%', marginBottom: '0.75rem' },
     chatBox: { height: 400, border: '2px solid var(--border-color)', borderRadius: 12, padding: '1rem', margin: '0.5rem 0 0.75rem 0', overflowY: 'auto', background: 'var(--content-bg)', scrollBehavior: 'smooth', overscrollBehavior: 'contain' },
-    msg: { margin: '0.4rem 0', padding: '0.9rem 1rem', borderRadius: 12, maxWidth: '78%', transition: 'transform 120ms ease, background 120ms ease' },
+    msg: { marginTop: '0.4rem', marginRight: 0, marginBottom: '0.4rem', marginLeft: 0, padding: '0.9rem 1rem', borderRadius: 12, maxWidth: '78%', transition: 'transform 120ms ease, background 120ms ease' },
     sent: { background: 'var(--sea-green)', color: 'var(--on-accent)', marginLeft: 'auto' },
     received: { background: 'var(--sky-blue)', color: 'var(--sea-green)' },
     chatInputRow: { display: 'flex', gap: '0.6rem', marginTop: '0.75rem' },
