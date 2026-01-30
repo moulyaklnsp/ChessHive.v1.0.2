@@ -132,10 +132,16 @@ export default function Signup() {
     ...inputStyle,
     cursor: 'pointer',
     appearance: 'none',
+    backgroundColor: 'rgba(7, 19, 39, 0.9)',
     backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFDD0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 1rem center',
     backgroundSize: '1rem'
+  };
+
+  const optionStyle = {
+    backgroundColor: '#071327',
+    color: '#FFFDD0'
   };
 
   return (
@@ -329,10 +335,10 @@ export default function Signup() {
                         onBlur={() => setTouched(s => ({ ...s, gender: true }))}
                         style={selectStyle}
                       >
-                        <option value="" disabled>Select Gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
+                        <option value="" disabled style={optionStyle}>Select Gender</option>
+                        <option value="male" style={optionStyle}>Male</option>
+                        <option value="female" style={optionStyle}>Female</option>
+                        <option value="other" style={optionStyle}>Other</option>
                       </select>
                       {errors.gender && <div style={{ color: '#ff6b6b', fontSize: '0.8rem', marginTop: '0.3rem' }}>{errors.gender}</div>}
                     </div>
@@ -388,11 +394,11 @@ export default function Signup() {
                         onBlur={() => setTouched(s => ({ ...s, role: true }))}
                         style={selectStyle}
                       >
-                        <option value="" disabled>Select Role</option>
-                        <option value="admin">Admin</option>
-                        <option value="organizer">Organizer</option>
-                        <option value="coordinator">Coordinator</option>
-                        <option value="player">Player</option>
+                        <option value="" disabled style={optionStyle}>Select Role</option>
+                        <option value="admin" style={optionStyle}>Admin</option>
+                        <option value="organizer" style={optionStyle}>Organizer</option>
+                        <option value="coordinator" style={optionStyle}>Coordinator</option>
+                        <option value="player" style={optionStyle}>Player</option>
                       </select>
                       {errors.role && <div style={{ color: '#ff6b6b', fontSize: '0.8rem', marginTop: '0.3rem' }}>{errors.role}</div>}
                     </div>
