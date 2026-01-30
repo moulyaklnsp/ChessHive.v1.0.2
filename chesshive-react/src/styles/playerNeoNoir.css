@@ -1,382 +1,173 @@
-/* Import Light and Dark Theme Styles */
+/* Import Chess Light & Dark Themes */
 @import './lightTheme.css';
 @import './darkTheme.css';
 
-/* Global defaults for theme variables (used on non-player pages) */
 :root {
-  --cream: #EFD3C3; /* warmer & slightly darker background */
-  --card-bg: linear-gradient(180deg,#FFF2EE,#EFD3C3); /* warmer, slightly darker cards */
-  --card-border: rgba(11,79,108,0.08);
-  --text-color: #091216; /* slightly deeper body text for contrast */
-  --sea-green: #0B4F6C;
-  --sky-blue: #FF6B6B;
-  /* Accessibility helpers */
-  --muted-text: rgba(11,22,34,0.86); /* muted for small text */
-  --on-dark: #E9F8FF; /* text used on dark backgrounds */
-  --muted-on-dark: rgba(233,248,255,0.85);
-
-  /* Optional wallpaper layers (set dynamically by usePlayerTheme) */
+  --cream: #F5F0E6;
+  --card-bg: #FFFFFF;
+  --card-border: rgba(44, 24, 16, 0.1);
+  --text-color: #1C1917;
+  --sea-green: #1B5E3F;
+  --sky-blue: #B8860B;
+  --muted-text: rgba(28, 25, 23, 0.65);
+  --on-dark: #F5F0E6;
   --player-wallpaper-layer: none;
   --player-wallpaper-overlay: none;
-} 
-
-/* Player light theme (default for /player pages)
-  NOTE: `AnimatedSidebar` adds `player` on <body>. When dark mode is enabled,
-  `usePlayerTheme` adds `player-dark` on <body>. This selector must NOT match
-  in dark mode, otherwise it will override the dark palette variables.
-*/
-body.player:not(.player-dark) {
-  /* Light palette (Theme #7: Minimal Rank) */
-  --chess-light-square: #FFFFFF;
-  --chess-dark-square: #EAEAEA;
-
-  --cream: #FFFFFF; /* background */
-  --page-bg: #FFFFFF;
-  --content-bg: #FFFFFF;
-
-  /* Primary UI */
-  --sea-green: #111111;
-  --sea-green-rgb: 17, 17, 17;
-
-  /* Accent */
-  --sky-blue: #5E5E5E;
-  --sky-blue-hover: rgba(94, 94, 94, 0.20);
-
-  /* Text */
-  --text-color: #111111;
-  --muted-text: rgba(17, 17, 17, 0.68);
-  --on-accent: #FFFFFF;
-
-  /* Support colors */
-  --slate-accent: var(--sky-blue);
-  --pale-blue: rgba(17, 17, 17, 0.04);
-  --pale-mint: rgba(94, 94, 94, 0.06);
-
-  /* Borders */
-  --border-color: #EAEAEA;
-
-  /* Derived vars for AnimatedSidebar */
-  --sidebar-bg: linear-gradient(135deg, rgba(17,17,17,0.96) 0%, rgba(17,17,17,0.96) 65%, rgba(94,94,94,0.28) 100%);
-  --sidebar-border: rgba(255,255,255,0.10);
-  --sidebar-text: #FFFFFF;
-  --hamburger-bg: var(--sea-green);
-  --hamburger-text: var(--on-accent);
-  --hamburger-hover: rgba(17, 17, 17, 0.86);
-  --link-hover: var(--slate-accent);
-
-  /* Cards */
-  --card-bg: #FFFFFF;
-  --card-border: #EAEAEA;
-  --card-text: var(--text-color);
-} 
-
-/* Light mode headings - energetic gradient */
-/* Light mode headings */
-.player h1, .player h2 {
-  /* Dark fallback color for legibility; gradient for visual flair */
-  color: var(--text-color) !important;
-  background: linear-gradient(90deg, var(--sea-green), var(--sky-blue));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-background-clip: text;
-  text-shadow: 0 1px 0 rgba(186,223,231,0.7);
-  letter-spacing: 0.8px;
-} 
-
-.player .updates-section h3, .player h3 { color: var(--sea-green) !important; border-left: 6px solid rgba(var(--sea-green-rgb),0.18); padding-left: 1rem; font-weight:700; }
-
-
-.player .updates-section h3, .player h3 {
-  color: var(--sea-green) !important;
-  border-left: 4px solid rgba(var(--sea-green-rgb), 0.12);
-  padding-left: 1rem;
-  text-shadow: none;
 }
 
-/* Body text color for better contrast */
-.player .content, .player { color: var(--text-color); }
-
-/* Muted text */
-.player .muted, .player small { color: var(--muted-text); }
-
-
-/* Blood Shed Dark Theme - Red, Silver, Grey & Black
-   IMPORTANT: `usePlayerTheme` toggles `body.player-dark`, so scope dark rules to body.
-*/
-body.player-dark .player,
-body.player-dark .player-neo {
-  /* Blood Shed Color Palette */
-  --blood-red: #DC143C; /* Crimson red - primary accent */
-  --blood-red-rgb: 220, 20, 60;
-  --blood-dark-red: #8B0000; /* Dark red for hover states */
-  --silver: #C0C0C0; /* Silver - secondary accent */
-  --silver-rgb: 192, 192, 192;
-  --steel-grey: #708090; /* Slate grey */
-  --dark-grey: #2B2B2B; /* Dark grey for surfaces */
-  --charcoal: #1A1A1A; /* Charcoal for backgrounds */
-  --pure-black: #0A0A0A; /* Near-black for depth */
-
-  /* Chess board */
-  --chess-light-square: #3A3A3A;
-  --chess-dark-square: #1A1A1A;
-
-  /* Background layers */
-  --cream: var(--pure-black);
-  --page-bg: var(--pure-black);
-  --content-bg: var(--charcoal);
-
-  /* Primary UI - Blood Red theme */
-  --sea-green: var(--blood-red);
-  --sea-green-rgb: var(--blood-red-rgb);
-
-  /* Accent - Silver */
-  --sky-blue: var(--silver);
-  --sky-blue-hover: rgba(192, 192, 192, 0.15);
-
-  /* Text - Silver and Grey tones */
-  --text-color: var(--silver);
-  --muted-text: var(--steel-grey);
-  --on-accent: #FFFFFF;
-
-  /* Support colors */
-  --slate-accent: var(--blood-red);
-  --pale-blue: rgba(220, 20, 60, 0.08);
-  --pale-mint: rgba(192, 192, 192, 0.06);
-
-  /* Borders */
-  --border-color: rgba(220, 20, 60, 0.25);
-
-  /* Neo Noir tokens */
-  --neo-charcoal: var(--charcoal);
-  --neo-cyan: var(--blood-red);
-  --neo-blue: var(--silver);
-  --neo-red: var(--blood-red);
-  --neo-cream: var(--silver);
-  --neo-silver: var(--steel-grey);
-  --neo-violet: var(--blood-red);
-  --neo-pink: var(--blood-red);
-  --neo-lime: var(--blood-red);
-
-  /* Typography accents with blood red */
-  --letter-purple: var(--blood-red);
-  --letter-red: var(--blood-red);
-  --heading-color: var(--blood-red);
-
-  /* Buttons - Blood red gradient */
-  --button-bg: linear-gradient(135deg, var(--blood-red) 0%, var(--blood-dark-red) 100%);
-  --button-text: #FFFFFF;
-
-  /* Chat/tournament emphasis */
-  --pale-yellow: var(--silver);
-  --chat-received-bg: rgba(43, 43, 43, 0.6);
-  --chat-received-text: var(--silver);
-  --chat-sent-bg: var(--blood-red);
-  --chat-sent-text: #FFFFFF;
-
-  color-scheme: dark;
-
-  /* Derived vars for AnimatedSidebar - Blood Shed theme */
-  --sidebar-bg: linear-gradient(135deg, 
-    var(--pure-black) 0%, 
-    var(--charcoal) 40%, 
-    rgba(220, 20, 60, 0.12) 100%);
-  --sidebar-border: rgba(220, 20, 60, 0.3);
-  --sidebar-text: var(--silver);
-  --hamburger-bg: var(--blood-red);
-  --hamburger-text: #FFFFFF;
-  --hamburger-hover: var(--blood-dark-red);
-  --link-hover: var(--blood-red);
-  
-  /* Cards with blood red accents */
-  --card-bg: linear-gradient(135deg, 
-    rgba(26, 26, 26, 0.95) 0%, 
-    rgba(43, 43, 43, 0.9) 100%);
-  --card-border: rgba(220, 20, 60, 0.35);
-  --card-text: var(--silver);
+/* ========== Chess-themed animations ========== */
+@keyframes chessPieceBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes chessPawnMarch {
+  0% { transform: translateY(0) scale(1); opacity: 0.9; }
+  50% { transform: translateY(-3px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 0.9; }
+}
+@keyframes chessCheckerboard {
+  0% { background-position: 0 0, 0 12px, 12px -12px, -12px 0; }
+  100% { background-position: 24px 0, 24px 12px, 36px -12px, 0 0; }
+}
+@keyframes chessCapture {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+  50% { transform: scale(1.02); box-shadow: 0 0 12px 2px rgba(var(--sea-green-rgb, 27, 94, 63), 0.15); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes chessKingGlow {
+  0%, 100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12)); }
+  50% { filter: drop-shadow(0 4px 12px rgba(var(--sea-green-rgb, 27, 94, 63), 0.2)); }
+}
+@keyframes slideGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes chessKnightFloat {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(4px, -3px); }
+  50% { transform: translate(6px, 2px); }
+  75% { transform: translate(2px, 4px); }
+}
+@keyframes chessPieceNod {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes chessPieceBreathe {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-4px) scale(1.03); opacity: 0.95; }
+}
+@keyframes chessMagicShimmer {
+  0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+  20% { opacity: 0.15; }
+  50% { opacity: 0.2; }
+  80% { opacity: 0.1; }
+  100% { transform: translateX(200%) skewX(-12deg); opacity: 0; }
+}
+@keyframes chessPieceMaterialize {
+  0% { opacity: 0; transform: scale(0.85) translateY(8px); filter: blur(4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
 }
 
-/* AnimatedSidebar overrides when player theme active */
-/* Blood Shed hamburger button with red glow */
-.player-neo .hamburger-btn {
-  background: var(--hamburger-bg) !important;
-  color: var(--hamburger-text) !important;
-  box-shadow: 0 6px 20px rgba(220, 20, 60, 0.4) !important;
-  border: 1px solid rgba(220, 20, 60, 0.3);
-  transition: all 0.3s ease;
-}
-.player-neo .hamburger-btn:hover {
-  box-shadow: 0 8px 30px rgba(220, 20, 60, 0.6) !important;
-  transform: translateY(-2px);
-}
+.chess-piece-bob { animation: chessPieceBob 2.5s ease-in-out infinite; }
+.chess-piece-nod { animation: chessPieceNod 2s ease-in-out infinite; }
+.chess-piece-breathe { animation: chessPieceBreathe 3.2s ease-in-out infinite; }
+.chess-piece-materialize { animation: chessPieceMaterialize 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.chess-pawn-march { animation: chessPawnMarch 3s ease-in-out infinite; }
+.chess-king-glow { animation: chessKingGlow 2s ease-in-out infinite; }
+.chess-capture-hover:hover { animation: chessCapture 0.5s ease-out; }
+.chess-knight-float { animation: chessKnightFloat 4s ease-in-out infinite; }
 
-/* dropdown background preview (used on hover) */
-.dropdown-menu { position: relative; overflow: hidden; }
-.dropdown-menu .dropdown-bg {
-  position: absolute;
-  inset: 0.6rem 0.6rem 0.6rem 0.6rem;
-  border-radius: 10px;
-  transform: translateZ(0);
-  filter: blur(12px) saturate(110%);
-  opacity: 0;
-  transition: opacity 240ms ease, transform 360ms ease;
-  pointer-events: none;
-  z-index: 1;
-}.dropdown-menu a { position: relative; z-index: 2; }
-.dropdown-menu a:focus { outline: none; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04); }
-
-
-.player-neo .dropdown-menu {
-  background: var(--sidebar-bg) !important;
-  border: 1px solid var(--sidebar-border) !important;
-  position: relative; /* allow preview bg */
-  overflow: hidden;
-}
-
-.player-neo .dropdown-menu a {
-  color: var(--sidebar-text) !important;
-}
-
-.player-neo .dropdown-menu a:hover {
-  background: rgba(var(--sea-green-rgb), 0.06) !important;
-  color: var(--link-hover) !important;
-}
-
-/* dropdown preview background */
-.dropdown-menu .dropdown-bg {
-  position: absolute;
-  inset: 0.6rem 0.6rem 0.6rem 0.6rem;
-  border-radius: 10px;
-  transform: translateZ(0);
-  filter: blur(10px) saturate(105%);
-  opacity: 0;
-  transition: opacity 240ms ease, transform 360ms ease;
-  pointer-events: none;
-  z-index: 1;
-  display: flex;
+/* Magical section card: subtle shimmer sweep on hover (light only) */
+.chess-piece-icon-wrap {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Preview card inside dropdown background */
-.dropdown-bg .preview { position: relative; width: 100%; height: 100%; padding: 1rem; display: none; opacity: 0; transform: translateY(8px); transition: all 260ms ease; }
-.dropdown-bg[style*="opacity: 1"] .preview { display: block; opacity: 1; transform: translateY(0); }
+.piece-icon {
+  display: inline-flex;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.player-neo .updates-section li:hover .piece-icon {
+  transform: scale(1.08);
+}
 
-.preview .preview-inner { display: none; max-width: 100%; opacity: 0.95; }
-.preview.profile .preview-inner.profile { display: flex; gap: 0.8rem; align-items: center; }
-.preview.growth .preview-inner.growth { display: block; }
-.preview.subscription .preview-inner.subscription { display: block; }
-.preview.store .preview-inner.store { display: block; }
+.chess-card-magic {
+  position: relative;
+  overflow: hidden;
+}
+.chess-card-magic::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  transform: translateX(-100%) skewX(-12deg);
+  opacity: 0;
+}
+body.player:not(.player-dark) .chess-card-magic:hover::after {
+  animation: chessMagicShimmer 1.4s ease-out forwards;
+}
 
-/* Profile preview */
-.preview .avatar { width: 64px; height:64px; border-radius: 999px; background: linear-gradient(135deg,#0B4F6C,#FFF); background-size: cover; box-shadow: 0 8px 24px rgba(0,0,0,0.12); border: 2px solid rgba(255,255,255,0.06); }
-.preview .meta { color: var(--neo-cream, #1f1f1f); font-size: 0.9rem; }
-.preview .name { font-weight:700; margin-bottom: 0.2rem; }
-.preview .info { font-size: 0.85rem; color: var(--muted-text); margin-bottom: 0.6rem; }
-.preview .stats { display:flex; gap:1rem; }
-.preview .stat { background: rgba(255,255,255,0.02); padding: 0.4rem 0.6rem; border-radius:8px; min-width:84px; text-align:center; }
-.preview .stat .label { font-size:0.75rem; opacity:0.8; }
-.preview .stat .value { font-weight:700; font-size:1.05rem; }
+/* Dark mode: keep capture pulse & checkerboard static (no shine); piece animations on */
+body.player-dark .chess-capture-hover:hover { animation: none; }
+body.player-dark .chess-dash-checkerboard::before { animation: none; opacity: 0.03; }
+/* King: gentle bob only in dark (no glow) */
+body.player-dark .chess-king-glow {
+  animation: chessPieceBob 2.5s ease-in-out infinite;
+  filter: none;
+}
 
-/* Growth preview mini bar chart */
-.preview .mini-chart { display:flex; gap:0.4rem; align-items:end; height:44px; margin-bottom:0.6rem; }
-.preview .mini-chart .bar { width: 10px; background: linear-gradient(180deg, rgba(11,79,108,0.9), rgba(255,107,107,0.9)); border-radius:4px; }
-.preview .label { font-size:0.85rem; color:var(--muted-text); }
+/* Player layout – use theme vars only */
+.player .content,
+.player-neo .content { color: var(--text-color); }
+.player .muted,
+.player-neo .muted,
+.player small,
+.player-neo small { color: var(--muted-text); }
 
-/* Subscription card */
-.preview .sub-card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.0)); padding:0.8rem; border-radius:10px; border:1px solid rgba(255,255,255,0.03); }
-.preview .sub-card .tier { font-weight:700; font-size:1.05rem; margin-bottom:0.2rem; }
-.preview .sub-card .price { color:var(--sky-blue); font-weight:700; }
-.preview .sub-card .benefits { font-size:0.82rem; color:var(--muted-text); margin-top:0.4rem; }
+.player h1,
+.player h2,
+.player-neo h1,
+.player-neo h2 {
+  color: var(--text-color);
+  background: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 100%;
+  animation: slideGradient 10s ease-in-out infinite;
+  letter-spacing: 0.5px;
+}
+.player .updates-section h3,
+.player h3,
+.player-neo .updates-section h3,
+.player-neo h3 {
+  color: var(--sea-green);
+  border-left: 4px solid rgba(var(--sea-green-rgb), 0.2);
+  padding-left: 1rem;
+  font-weight: 600;
+}
 
-/* Store grid */
-.preview .store-grid { display:flex; gap:0.6rem; }
-.preview .product { width:64px; text-align:center; }
-.preview .thumb { height:44px; background: linear-gradient(135deg, rgba(11,79,108,0.06), rgba(255,107,107,0.1)); border-radius:6px; margin-bottom:0.3rem; }
-.preview .pname { font-size:0.75rem; color:var(--muted-text); }
-
-/* Skeleton styles */
-.skeleton { display:flex; gap:0.8rem; align-items:center; width:100%; }
-.skeleton * { box-sizing:border-box }
-.skeleton-avatar { width:64px; height:64px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); }
-.skeleton-line { height:12px; background:linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.06)); border-radius:6px; }
-.skeleton-stat { height:34px; width:84px; border-radius:8px; background:linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.06)); }
-.skeleton-bar { width:10px; height:32px; border-radius:4px; background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.06)); }
-.skeleton-thumb { height:44px; width:64px; border-radius:6px; background:linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.06)); }
-
-/* shimmer animation */
-@keyframes skeletonShimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
-.skeleton-line, .skeleton-avatar, .skeleton-stat, .skeleton-bar, .skeleton-thumb { background-image: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 100%); background-size: 200% 100%; animation: skeletonShimmer 1.6s linear infinite; }
-
-
-/* Player page general adjustments */
 .player-neo .page {
-  background-color: var(--content-bg);
+  background-color: var(--page-bg);
   background-image: var(--player-wallpaper-overlay), var(--player-wallpaper-layer);
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
-.player-neo .content { color: var(--neo-cream); }
-/* Headings: ensure strong cyan headings in dark theme for legibility */
-.player-neo h1, .player-neo h2 {
-  color: var(--neo-cyan) !important;
-  -webkit-text-fill-color: var(--neo-cyan) !important;
-  background: none !important;
-  text-shadow: 0 1px 14px rgba(var(--sea-green-rgb), 0.12);
-  letter-spacing: 1px;
-}
-.player-neo .updates-section h3, .player-neo h3 {
-  color: var(--neo-cyan) !important;
-  border-left: 4px solid rgba(var(--sea-green-rgb), 0.12);
-  padding-left: 1rem;
-  text-shadow: none;
-}
-.player-neo .updates-section { background: var(--card-bg); box-shadow: none; border: 1px solid var(--card-border); color: var(--text-color); border-radius: 15px; padding: 1.6rem; }
 
-/* Small helper and empty state readability */
-.empty-message, .help-text, .small-muted { color: var(--muted-text) !important; }
-.notifications-content p { color: var(--muted-text) !important; }
-
-/* Updates list items: subtle divider and slightly tinted background for alternate rows */
-.player-neo .updates-section ul { list-style:none; margin:0; padding:0; }
-.player-neo .updates-section li { padding:1rem; border-bottom:1px solid rgba(11,79,108,0.04); background: transparent; }
-.player-neo .updates-section li:nth-child(odd) { background: linear-gradient(90deg, rgba(244,247,250,0.02), transparent); }
-
-/* Chess embellishments: subtle chessboard watermark on cards and pawn badge for headings */
-.player .updates-section, .player-neo .updates-section {
-  position: relative;
-  overflow: hidden;
-}
-.player .updates-section::after,
-.player-neo .updates-section::after {
-  /* chessboard watermark removed */
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: none;
-  opacity: 0;
-  pointer-events: none;
-} 
-
-/* Pawn badge removed */
-.player .updates-section h3::before,
-.player-neo .updates-section h3::before { display: none; }
-
-/* Slight hover lift & chess-themed accent for cards */
-.player .updates-section:hover,
-.player-neo .updates-section:hover {
-  transform: translateY(-6px);
-  transition: transform 0.28s ease, box-shadow 0.28s ease;
-  box-shadow: 0 8px 24px rgba(var(--sea-green-rgb), 0.10);
-}
-.player .updates-section:hover h3::before,
-.player-neo .updates-section:hover h3::before {
-  transform: scale(1.12);
-  transition: transform 0.28s ease;
-}
-
-/* Heading decorative rule */
 .player h1::after,
 .player-neo h1::after {
   content: '';
@@ -384,438 +175,208 @@ body.player-dark .player-neo {
   width: 100%;
   height: 4px;
   margin-top: 0.8rem;
-  background: linear-gradient(90deg, rgba(var(--sea-green-rgb), 0.18), rgba(59,130,246,0.18));
+  background: linear-gradient(90deg, rgba(var(--sea-green-rgb), 0.25), rgba(184, 134, 11, 0.2));
   border-radius: 4px;
-} 
+  background-size: 200% 100%;
+  animation: slideGradient 10s ease-in-out infinite;
+}
 
-/* Subtle chessboard corner on player pages for brand flair */
-.player .page::before,
-.player-neo .page::before { display: none; } 
-
-/* Emblems removed — classes disabled */
-.emblem-float { display: none !important; }
-.emblem-faint { display: none !important; }
-
-
-
-
-/* animated heading gradient */
-@keyframes slideGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-.player h1, .player h2 { background-size: 200% 100%; animation: slideGradient 8s linear infinite; }
-
-/* pulsing price tag (subtle) */
-@keyframes pulseTag { 0% { box-shadow: inset 0 -4px 12px rgba(0,0,0,0.06); transform: translateY(0); } 50% { box-shadow: 0 8px 30px rgba(235,87,87,0.06); transform: translateY(-2px); } 100% { box-shadow: inset 0 -4px 12px rgba(0,0,0,0.06); transform: translateY(0); } }
-.price-tag { animation: pulseTag 8s ease-in-out infinite; }
-.price-tag:hover { animation: none; transform: translateY(-4px) scale(1.03); box-shadow: 0 12px 36px rgba(6,56,80,0.08); }
-
-
-/* button icon slide-in */
-.btn i { transform: translateX(-10px); opacity: 0; transition: all 0.22s ease; }
-.btn:hover i { transform: translateX(0); opacity: 1; }
-.btn { background: var(--button-bg, linear-gradient(90deg, var(--sea-green), var(--sky-blue))); color: var(--button-text, var(--on-accent)); border: none; border-radius: 8px; padding: 0.6rem 0.9rem; }
-.btn:hover { box-shadow: 0 12px 36px rgba(6,56,80,0.08); transform: translateY(-3px); }
-
-/* Dark headings: Blood red gradient with silver, dramatic glow */
+/* Dark mode: solid heading color, no animated gradient */
 body.player-dark .player h1,
 body.player-dark .player h2,
 body.player-dark .player-neo h1,
 body.player-dark .player-neo h2 {
-  color: var(--blood-red) !important;
-  background: linear-gradient(90deg, var(--blood-red), var(--silver)) !important;
-  background-clip: text !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  text-shadow: 0 0 20px rgba(220, 20, 60, 0.4), 0 0 40px rgba(220, 20, 60, 0.2) !important;
-  filter: drop-shadow(0 2px 8px rgba(220, 20, 60, 0.3));
+  color: var(--text-color);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+}
+body.player-dark .player h1::after,
+body.player-dark .player-neo h1::after {
+  background: var(--sea-green);
+  animation: none;
 }
 
-/* chessboard slow drift */
-@keyframes chessboardShift { 0% { background-position: 0 0, 16px 16px; } 50% { background-position: -32px -32px, -16px -16px; } 100% { background-position: 0 0, 16px 16px; } }
+/* Cards & sections */
+.player-neo .updates-section {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+  border-radius: 16px;
+  padding: 1.6rem;
+  box-shadow: var(--card-shadow, none);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.player .updates-section,
+.player-neo .updates-section { position: relative; overflow: hidden; }
+.player .updates-section ul,
+.player-neo .updates-section ul { list-style: none; margin: 0; padding: 0; }
+.player .updates-section li,
+.player-neo .updates-section li {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(var(--sea-green-rgb), 0.08);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+.player .updates-section li:last-child,
+.player-neo .updates-section li:last-child { border-bottom: none; }
+.player .updates-section li:nth-child(odd),
+.player-neo .updates-section li:nth-child(odd) {
+  background: linear-gradient(90deg, rgba(var(--sea-green-rgb), 0.03), transparent);
+}
+body.player-dark .player-neo .updates-section li:nth-child(odd) { background: rgba(74, 124, 89, 0.04); }
 
-/* heading underline animation */
-.player h1::after, .player-neo h1::after { background-size: 300% 100%; animation: slideGradient 10s linear infinite; }
+.empty-message,
+.help-text,
+.small-muted { color: var(--muted-text); }
+.notifications-content p { color: var(--muted-text); }
 
-/* Blood Shed themed buttons and elements */
-.player-neo .approve-btn { 
-  background: var(--blood-red); 
-  color: #FFFFFF;
-  box-shadow: 0 4px 15px rgba(220, 20, 60, 0.4);
-  transition: all 0.3s ease;
-}
-.player-neo .approve-btn:hover {
-  background: var(--blood-dark-red);
-  box-shadow: 0 6px 20px rgba(220, 20, 60, 0.6);
-  transform: translateY(-2px);
-}
-.player-neo .approve-btn.reject { 
-  background: var(--steel-grey); 
-  color: var(--silver);
-}
-.player-neo .price-tag { 
-  background: var(--blood-red); 
-  color: #FFFFFF;
-  box-shadow: 0 2px 10px rgba(220, 20, 60, 0.3);
-}
-.player-neo .logout-box button { 
-  background: var(--dark-grey); 
-  color: var(--silver);
-  border: 1px solid var(--blood-red);
-}
-.player-neo .logout-box button:hover {
-  background: var(--blood-red);
-  color: #FFFFFF;
-}
-.player-neo .nav-section-title { color: var(--steel-grey); }
-.player-neo .tournament-info strong { color: var(--silver); }
+.player .updates-section h3::before,
+.player-neo .updates-section h3::before { display: none; }
 
-/* Notifications modal - Blood Shed styling */
-.player-neo #notifications-modal .notifications-content { 
-  background: linear-gradient(180deg, rgba(220, 20, 60, 0.08), rgba(26, 26, 26, 0.95)); 
-  color: var(--silver);
-  border: 1px solid rgba(220, 20, 60, 0.3);
+/* Theme toggle */
+.theme-toggle-btn { transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+.theme-toggle-btn:hover { border-color: var(--sea-green); }
+body.player:not(.player-dark) .theme-toggle-btn:hover {
+  background: rgba(var(--sea-green-rgb), 0.12);
 }
-.player-neo .notifications-list li { 
-  background: rgba(43, 43, 43, 0.6); 
-  color: var(--silver);
-  border-left: 3px solid var(--blood-red);
-}
-.player-neo .notifications-list li:hover {
-  background: rgba(220, 20, 60, 0.15);
-  border-left-color: var(--silver);
-}
-.player-neo .notifications-list li small, 
-.player-neo .notifications-content p { 
-  color: var(--steel-grey) !important; 
+body.player-dark .theme-toggle-btn:hover {
+  background: rgba(var(--sea-green-rgb), 0.12);
+  border-color: var(--sea-green);
 }
 
-/* Player-neo dark pages: keep text readable and respect palette variables */
-body.player-dark .player-neo { color-scheme: dark; }
+/* Nav dropdown */
+.dropdown-menu,
+.dropdown-menu-clean { position: relative; overflow: auto; }
+.dropdown-menu a,
+.dropdown-menu-clean a { position: relative; }
+.dropdown-menu a:focus,
+.dropdown-menu-clean a:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08);
+}
+.player-neo .dropdown-menu,
+.player-neo .dropdown-menu-clean {
+  background: var(--sidebar-bg-solid, var(--sidebar-bg));
+  border: 1px solid var(--sidebar-border);
+}
+.player-neo .dropdown-menu a,
+.player-neo .dropdown-menu-clean a { color: var(--sidebar-text); }
+.player-neo .dropdown-menu a:hover,
+.player-neo .dropdown-menu-clean a:hover {
+  background: var(--sidebar-hover);
+  color: var(--link-hover);
+}
 
+body.player-dark .player-neo .dropdown-menu,
+body.player-dark .player-neo .dropdown-menu-clean {
+  background: var(--sidebar-bg-solid);
+  border: 1px solid var(--sidebar-border);
+}
+body.player-dark .player-neo .dropdown-menu a,
+body.player-dark .player-neo .dropdown-menu-clean a { color: var(--sidebar-text); }
+body.player-dark .player-neo .dropdown-menu a:hover,
+body.player-dark .player-neo .dropdown-menu-clean a:hover {
+  background: var(--sidebar-hover);
+  color: var(--link-hover);
+}
+
+/* Hamburger – use theme vars */
+.player-neo .hamburger-btn {
+  background: var(--hamburger-bg);
+  color: var(--hamburger-text);
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.player-neo .hamburger-btn:hover { background: var(--hamburger-hover); }
+body.player-dark .player-neo .hamburger-btn { border-color: var(--sidebar-border); }
+
+/* Buttons, price-tag, notifications – theme vars */
+.player-neo .approve-btn {
+  background: var(--btn-primary, var(--sea-green));
+  color: var(--on-accent);
+  transition: all 0.2s ease;
+}
+.player-neo .approve-btn:hover { background: var(--btn-primary-hover, var(--sea-green-dark)); }
+.player-neo .approve-btn.reject { background: var(--error); color: #fff; }
+.player-neo .approve-btn.reject:hover { filter: brightness(1.1); }
+.player-neo .price-tag { background: var(--sea-green); color: var(--on-accent); }
+.player-neo .logout-box button {
+  background: var(--sea-green);
+  color: var(--on-accent);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.player-neo .logout-box button:hover { background: var(--sea-green-dark); }
+.player-neo .tournament-info strong { color: var(--text-color); }
+
+.player-neo #notifications-modal .notifications-content {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-color);
+}
+.player-neo .notifications-list li {
+  background: rgba(var(--sea-green-rgb), 0.06);
+  border-left: 3px solid var(--sea-green);
+  color: var(--text-color);
+}
+.player-neo .notifications-list li:hover { background: rgba(var(--sea-green-rgb), 0.12); }
+body.player-dark .player-neo .notifications-list li {
+  background: rgba(var(--sea-green-rgb), 0.06);
+  border-left-color: var(--sea-green);
+}
+
+/* Player dark overrides – link hover, etc. */
 body.player-dark .player-neo .content,
 body.player-dark .player-neo .page,
-body.player-dark .player-neo .content p,
 body.player-dark .player-neo p,
 body.player-dark .player-neo li,
 body.player-dark .player-neo .tournament-info,
 body.player-dark .player-neo .item-info,
-body.player-dark .player-neo .nav-section-title,
-body.player-dark .player-neo .updates-section p,
-body.player-dark .player-neo .form-container,
-body.player-dark .player-neo .profile-info,
-body.player-dark .player-neo .info-item,
-body.player-dark .player-neo .notifications-content {
-  color: var(--text-color) !important;
+body.player-dark .player-neo .notifications-content { color: var(--text-color); }
+
+body.player-dark .player .dropdown-menu a:hover,
+body.player-dark .player .dropdown-menu a:focus,
+body.player-dark .player .dropdown-menu-clean a:hover,
+body.player-dark .player .dropdown-menu-clean a:focus { color: var(--link-hover); }
+body.player-dark .player .dropdown-menu,
+body.player-dark .player .dropdown-menu-clean { border-color: var(--card-border); }
+body.player-dark .player .nav-section a:hover,
+body.player-dark .player .nav-item:hover {
+  color: var(--link-hover);
+  background: rgba(var(--sea-green-rgb), 0.1);
+}
+.muted, small { color: var(--muted-text); }
+body.player-dark .player .muted,
+body.player-dark .player small,
+body.player-dark .player-neo .muted,
+body.player-dark .player-neo small { color: var(--muted-text); }
+
+/* Menu button */
+.player-neo .menu-btn {
+  background: var(--hamburger-bg);
+  color: var(--hamburger-text);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(255,255,255,0.15);
 }
 
-body.player-dark .player-neo .dropdown-menu {
-  background: var(--sidebar-bg) !important;
-  border: 1px solid var(--sidebar-border) !important;
+/* Dashboard checkerboard accent (subtle) */
+.chess-dash-checkerboard {
+  position: relative;
+  overflow: hidden;
 }
-body.player-dark .player-neo .dropdown-menu a { color: var(--sidebar-text) !important; }
-body.player-dark .player-neo .dropdown-menu a:hover {
-  background: rgba(var(--sea-green-rgb), 0.06) !important;
-  color: var(--link-hover) !important;
-}
-
-body.player-dark .player-neo #notifications-modal .notifications-content {
-  background: var(--card-bg) !important;
-  color: var(--text-color) !important;
-}
-body.player-dark .player-neo .notifications-list li {
-  background: rgba(255,255,255,0.02);
-  color: var(--text-color) !important;
-  border-radius: 8px;
-}
-
-/* Blood Shed inbox and notification indicators */
-body.player-dark .player-neo .inbox-icon i { 
-  color: var(--blood-red) !important; 
-  filter: drop-shadow(0 0 6px rgba(220, 20, 60, 0.5));
-}
-body.player-dark .player-neo .inbox-icon .unread-count { 
-  background: var(--blood-red) !important; 
-  color: #FFFFFF !important;
-  box-shadow: 0 0 12px rgba(220, 20, 60, 0.6);
-}
-
-/* Blood Shed right-edge accent strip with red glow */
-body.player-dark .player-neo::after {
+.chess-dash-checkerboard::before {
   content: '';
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 6px;
-  background: linear-gradient(180deg, 
-    rgba(220, 20, 60, 0.3) 0%, 
-    rgba(220, 20, 60, 0.6) 50%,
-    rgba(220, 20, 60, 0.3) 100%);
-  box-shadow: 0 0 24px rgba(220, 20, 60, 0.4), 
-              inset 0 0 8px rgba(220, 20, 60, 0.6);
-  z-index: 999;
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(45deg, var(--chess-dark-square) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--chess-dark-square) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--chess-dark-square) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--chess-dark-square) 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+  opacity: 0.05;
   pointer-events: none;
+  animation: chessCheckerboard 24s linear infinite;
 }
-
-@keyframes blood-pulse { 
-  0% { 
-    transform: scale(1); 
-    box-shadow: 0 0 0 0 rgba(220, 20, 60, 0.4); 
-  } 
-  70% { 
-    transform: scale(1.08); 
-    box-shadow: 0 0 20px 10px rgba(220, 20, 60, 0.1); 
-  } 
-  100% { 
-    transform: scale(1); 
-    box-shadow: 0 0 0 0 rgba(220, 20, 60, 0); 
-  } 
-}
-.player-neo.player-dark .inbox-icon .unread-count { 
-  animation: blood-pulse 2.5s ease-in-out infinite; 
-}
-
-/* Blood Shed hamburger button with enhanced styling */
-.player-neo.player-dark .hamburger-btn {
-  border: 1px solid rgba(220, 20, 60, 0.4);
-  box-shadow: 0 8px 30px rgba(220, 20, 60, 0.3), 
-              inset 0 -6px 14px rgba(0, 0, 0, 0.40);
-  transition: transform 0.2s ease, box-shadow 0.24s ease;
-  background: var(--blood-red);
-}
-.player-neo.player-dark .hamburger-btn:hover {
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 12px 44px rgba(220, 20, 60, 0.5), 
-              inset 0 -6px 14px rgba(0, 0, 0, 0.45);
-}
-.player-neo.player-dark .hamburger-btn i { 
-  color: #FFFFFF;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
-}
-
-.player-neo.player-dark a,
-.player-neo.player-dark .nav-item { 
-  color: var(--silver) !important;
-  transition: color 0.3s ease;
-}
-.player-neo.player-dark a:hover,
-.player-neo.player-dark .nav-item:hover { 
-  color: var(--blood-red) !important;
-  text-shadow: 0 0 8px rgba(220, 20, 60, 0.4);
-}
-
-
-/* Responsive tweaks for mobile menu button */
-.player-neo .menu-btn { background: linear-gradient(90deg, var(--sea-green), rgba(var(--sea-green-rgb),0.6)); color: var(--hamburger-text); box-shadow: 0 8px 30px rgba(var(--sea-green-rgb),0.08); border-radius:10px; padding:0.6rem 0.8rem; border:none; }
-
-/* Legacy hardcoded Neo Noir palette removed (now driven by .player.player-dark variables above). */
-
-/* Slightly brighter neon outlines for dark mode */
-.player-neo.player-dark .gaming-frame {
-  box-shadow: 0 4px 30px rgba(0, 240, 255, 0.08), inset 0 0 12px rgba(0,0,0,0.25);
-}
-
-.player-neo.player-dark h1 { color: var(--neo-cyan); text-shadow: 0 0 20px rgba(0,240,255,0.08); }
-.player-neo.player-dark .updates-section { background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.02); }
-.player.player-dark .approve-btn { box-shadow: 0 6px 24px rgba(0,240,255,0.06); }
-
-/* Extra cyan accents for dark mode */
-.player.player-dark .dropdown-menu a:hover,
-.player.player-dark .dropdown-menu a:focus {
-  color: var(--neo-cyan) !important;
-  box-shadow: inset 0 0 18px rgba(0,240,255,0.06);
-}
-
-.player.player-dark .dropdown-menu {
-  border-color: rgba(0,240,255,0.06) !important;
-}
-
-.player.player-dark .nav-section a:hover,
-.player.player-dark .nav-section a:focus,
-.player.player-dark .nav-item:hover {
-  color: var(--neo-cyan) !important;
-  background: rgba(0,240,255,0.03) !important;
-  transform: translateX(5px);
-}
-
-.player.player-dark h1, .player.player-dark h2 {
-  color: var(--neo-cyan);
-  text-shadow: 0 0 24px rgba(0,240,255,0.06);
-}
-
-.player.player-dark .approve-btn {
-  background: linear-gradient(90deg, var(--neo-cyan), var(--neo-red));
-  color: #071018;
-  box-shadow: 0 8px 30px rgba(0,240,255,0.06);
-}
-
-.player.player-dark .price-tag {
-  background: linear-gradient(90deg, var(--neo-red), var(--neo-cyan));
-  color: #071018;
-}
-
-.player.player-dark .neon-text.cyan,
-.player.player-dark .gaming-glow-cyan,
-.player.player-dark .gaming-btn.cyan,
-.player.player-dark .gaming-badge.cyan {
-  color: var(--neo-cyan) !important;
-  text-shadow: 0 0 14px rgba(0,240,255,0.5);
-  box-shadow: 0 0 20px rgba(0,240,255,0.06);
-}
-
-.player.player-dark .inbox-icon .unread-count {
-  background: var(--neo-cyan) !important;
-  color: #001018 !important;
-}
-
-/* subtle cyan outline for cards */
-.player.player-dark .updates-section { border-left: 4px solid rgba(0,240,255,0.04); }
-
-/* Force cyan text across dark mode content for clear neon look */
-.player.player-dark .content,
-.player.player-dark .content p,
-.player.player-dark p,
-.player.player-dark li,
-.player.player-dark .tournament-info,
-.player.player-dark .item-info,
-.player.player-dark .nav-section-title,
-.player.player-dark .updates-section p,
-.player.player-dark .form-container,
-.player.player-dark .profile-info,
-.player.player-dark .info-item,
-.player.player-dark .notifications-content {
-  color: var(--text-color) !important;
-}
-
-/* Links and small text slightly softer cyan */
-.player.player-dark a,
-.player.player-dark .nav-item,
-.player.player-dark .back,
-.player.player-dark .more {
-  color: var(--neo-cyan) !important;
-}
-
-/* Keep muted text readable across themes */
-.muted, small { color: var(--muted-text) !important; }
-.player.player-dark .muted, .player.player-dark small { color: var(--muted-text) !important; }
-.player-neo.player-dark .muted, .player-neo.player-dark small { color: var(--muted-text) !important; }
-
-/* Adjust icon color accents */
-.player.player-dark .info-label i,
-.player.player-dark .updates-section li i {
-  color: var(--neo-cyan) !important;
-}
-
-
-
-
-
-/* ========== BLOOD SHED THEME - Additional Styling ========== */
-
-/* Blood Shed Input Fields */
-body.player-dark input,
-body.player-dark textarea,
-body.player-dark select {
-  background: var(--dark-grey) !important;
-  border: 1px solid rgba(220, 20, 60, 0.3) !important;
-  color: var(--silver) !important;
-  transition: all 0.3s ease;
-}
-body.player-dark input:focus,
-body.player-dark textarea:focus,
-body.player-dark select:focus {
-  border-color: var(--blood-red) !important;
-  box-shadow: 0 0 15px rgba(220, 20, 60, 0.4), inset 0 0 8px rgba(220, 20, 60, 0.1) !important;
-  outline: none;
-}
-body.player-dark input::placeholder,
-body.player-dark textarea::placeholder {
-  color: var(--steel-grey) !important;
-}
-
-/* Blood Shed Tables */
-body.player-dark table {
-  background: var(--charcoal) !important;
-  border: 1px solid rgba(220, 20, 60, 0.2);
-}
-body.player-dark th {
-  background: linear-gradient(135deg, var(--blood-red) 0%, var(--blood-dark-red) 100%) !important;
-  color: #FFFFFF !important;
-  border-bottom: 2px solid var(--blood-red);
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
-}
-body.player-dark td {
-  background: var(--dark-grey) !important;
-  color: var(--silver) !important;
-  border-bottom: 1px solid rgba(220, 20, 60, 0.15);
-}
-body.player-dark tr:hover td {
-  background: rgba(220, 20, 60, 0.1) !important;
-  border-left: 3px solid var(--blood-red);
-}
-
-/* Blood Shed Scrollbar */
-body.player-dark ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-body.player-dark ::-webkit-scrollbar-track {
-  background: var(--pure-black);
-  border-left: 1px solid rgba(220, 20, 60, 0.2);
-}
-body.player-dark ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--blood-red), var(--blood-dark-red));
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(220, 20, 60, 0.5);
-}
-body.player-dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--blood-red);
-  box-shadow: 0 0 15px rgba(220, 20, 60, 0.8);
-}
-
-/* Blood Shed Links */
-body.player-dark a {
-  color: var(--silver) !important;
-  transition: all 0.3s ease;
-}
-body.player-dark a:hover {
-  color: var(--blood-red) !important;
-  text-shadow: 0 0 8px rgba(220, 20, 60, 0.6);
-  text-decoration: none;
-}
-
-/* Blood Shed Cards and Panels */
-body.player-dark .card,
-body.player-dark .panel,
-body.player-dark .updates-section {
-  background: var(--card-bg) !important;
-  border: 1px solid var(--card-border) !important;
-  box-shadow: 0 4px 15px rgba(220, 20, 60, 0.15), inset 0 1px 0 rgba(220, 20, 60, 0.1);
-}
-body.player-dark .card:hover,
-body.player-dark .panel:hover,
-body.player-dark .updates-section:hover {
-  box-shadow: 0 8px 25px rgba(220, 20, 60, 0.3), inset 0 1px 0 rgba(220, 20, 60, 0.2);
-  border-color: rgba(220, 20, 60, 0.5);
-  transform: translateY(-4px);
-}
-
-/* Blood Shed Badge/Tag styling */
-body.player-dark .badge,
-body.player-dark .tag,
-body.player-dark .label {
-  background: var(--blood-red) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 2px 8px rgba(220, 20, 60, 0.4);
-  border: 1px solid rgba(220, 20, 60, 0.6);
-}
-
-/* Blood Shed Selection */
-body.player-dark ::selection {
-  background: var(--blood-red);
-  color: #FFFFFF;
-}
-body.player-dark ::-moz-selection {
-  background: var(--blood-red);
-  color: #FFFFFF;
-}
-

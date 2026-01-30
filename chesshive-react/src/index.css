@@ -241,21 +241,17 @@ html { font-size: 16px; }
   }
 }
 
+/* Player dark: flat theme. Vars here ensure all player pages match when dark. */
 .player-dark {
-  /* Palette: Player Dark Mode */
-  --page-bg: #0A0A0A;      /* Background */
-  --content-bg: #1B1B1B;   /* Surface */
-  --sea-green: #B11226;    /* Primary */
-  --sea-green-rgb: 177, 18, 38;
-  --sky-blue: #888888;     /* Accent */
-  --cream: #F5F5F5;        /* Light neutral (used in some Player headings/UI) */
-  --text-color: #F5F5F5;   /* Text */
-
-  /* Derived helpers (keep existing usage working) */
-  --border-color: rgba(177, 18, 38, 0.22);
-  --row-hover-bg: rgba(177, 18, 38, 0.08);
-  --on-accent: #0A0A0A;
-  --sky-blue-hover: rgba(136, 136, 136, 0.85);
+  --page-bg: #16181c;
+  --content-bg: #16181c;
+  --card-bg: #1c1f24;
+  --card-border: #2d3238;
+  --sea-green: #4a7c59;
+  --sea-green-rgb: 74, 124, 89;
+  --text-color: #e4e7eb;
+  --on-accent: #ffffff;
+  --sidebar-bg-solid: #1c1f24;
 }
 
 .player-dark .page {
@@ -263,44 +259,53 @@ html { font-size: 16px; }
   color: var(--text-color) !important;
 }
 
-.player-dark .content,
+.player-dark .content {
+  background: transparent !important;
+  color: var(--text-color) !important;
+  box-shadow: none !important;
+}
+
 .player-dark .updates-section,
 .player-dark .form-container,
 .player-dark .wallet,
 .player-dark .notifications-content,
 .player-dark .notifications-list li,
 .player-dark .container-player-profile {
-  background: var(--content-bg) !important;
+  background: var(--card-bg) !important;
   color: var(--text-color) !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+  border: 1px solid var(--card-border);
 }
 
-.player-dark .sidebar { 
-  background: var(--page-bg) !important; 
+.player-dark .sidebar {
+  background: var(--sidebar-bg-solid, var(--page-bg)) !important;
 }
 
-.player-dark h1, 
-.player-dark h2, 
-.player-dark h3 { 
-  color: var(--sky-blue) !important; 
+.player-dark h1,
+.player-dark h2,
+.player-dark h3 {
+  color: var(--text-color) !important;
 }
 
-.player-dark a, 
-.player-dark .back { 
-  color: var(--text-color) !important; 
+.player-dark a,
+.player-dark .back {
+  color: var(--text-color) !important;
 }
 
-.player-dark .price-tag { 
-  background: var(--sea-green) !important; 
-  color: var(--on-accent) !important; 
+.player-dark .price-tag {
+  background: var(--sea-green) !important;
+  color: var(--on-accent) !important;
+  box-shadow: none !important;
 }
 
-.player-dark .approve-btn { 
-  background-color: var(--sea-green) !important; 
-  color: var(--on-accent) !important; 
+.player-dark .approve-btn {
+  background-color: var(--sea-green) !important;
+  color: var(--on-accent) !important;
+  box-shadow: none !important;
 }
 
-.player-dark .logout-box button { 
-  background: var(--sky-blue) !important; 
-  color: var(--content-bg) !important; 
+.player-dark .logout-box button {
+  background: var(--sea-green) !important;
+  color: var(--on-accent) !important;
+  box-shadow: none !important;
 }

@@ -8,17 +8,18 @@
 ChessHive is a campus-focused chess community platform with multiple user roles (player, coordinator, organizer, admin). It supports signup/login (OTP-based), tournaments (create/approve/enroll/pairings), matchmaking & live matches, store & product sales, meetings scheduling, notifications, and player profiles.
 
 Key folders:
-- `Chesshivev1.0.2/` — legacy/monolithic backend server (Express + MongoDB + EJS views + API endpoints). Main runtime: `app.js`.
+- Root backend (this folder) — primary Express + MongoDB + Socket.IO server. Main runtime: `app.js`.
 - `chesshive-react/` — React frontend (SPA) using React Router and Redux slices for features.
+- `Chesshivev1.0.2/` — legacy copy kept for reference.
 
 ---
 
 ## 📁 Repo layout (high level)
-- Chesshivev1.0.2/
+- Root backend
   - `app.js` — main Express server; mounts routers and defines global APIs (login, OTP verify, notifications, session, etc.). Uses express-session.
   - `organizer_app.js`, `coordinator_app.js`, `player_app.js`, `admin_app.js` — role-specific routers with REST endpoints.
   - `routes/*` — helper routes like `auth.js` (signup, OTP flow) and `databasecongi.js` (Mongo connection & collection initialization).
-  - `public/js/*` — client side scripts (legacy pages) e.g., `tournament_management.js`.
+  - `public/` — static assets for server-rendered pages.
   - `utils.js` — small helpers used across apps.
 - chesshive-react/
   - `src/pages/*` — React pages (PlayerTournament, Login, Signup, Player dashboard pages, Coordinator/Organizer pages, ContactUs etc.)
@@ -34,7 +35,7 @@ This section describes how pieces fit together and where responsibilities lie.
 - **Auth & Sessions**: `app.js` and `routes/auth.js` handle signup, login, OTP generation and verification, and session establishment (stored in `req.session`).
 - **Data layer (repositories)**: MongoDB collections are defined and validated in `routes/databasecongi.js`. Collections include `users`, `tournaments`, `products`, `sales`, `meetingsdb`, `notifications`, `otps`, `signup_otps`, `user_balances`, `subscriptionstable`, `player_stats`, `tournament_pairings`, etc.
 - **Domain logic**: Coordinators create tournaments and pairings (`coordinator_app.js`), organizers approve/reject tournaments and manage store/sales (`organizer_app.js`), players interact with tournaments and matchmaking (`player_app.js`). Pairings algorithm (Swiss pairing) is implemented in `coordinator_app.js` (`swissPairing`).
-- **Matchmaking & live matches**: `player_app.js` contains in-memory matchmaking structures (`queue`, `tickets`, `matches`, `pendingRequests`) and APIs to request/accept matches and submit moves. Currently implemented as a poll-based or server-push model; `socket.io` is available (dependency present) for future real-time hub work.
+- **Matchmaking & live matches**: `player_app.js` handles match flow; Socket.IO in `app.js` coordinates live matches (join, invite, move updates, clocks). Some matchmaking state may still be in-memory.
 - **Payments & Wallet**: Wallet balances stored in `user_balances` and updated by `/player/add-funds`, subscriptions deducted and stored in `subscriptionstable`, product purchases inserted into `sales`.
 - **Notifications**: Stored in `notifications` collection; player-facing endpoints exist at `/api/notifications` and `/api/notifications/mark-read`.
 
@@ -50,7 +51,7 @@ This section describes how pieces fit together and where responsibilities lie.
 ---
 
 ## 🔗 Detailed API & File Map (key endpoints)
-All backend code is in `Chesshivev1.0.2/` unless specified.
+All backend code is in the root backend unless specified.
 
 ### Authentication & sessions
 - POST `/api/signup` (routes/auth.js) — takes signup form, stores signup data in `signup_otps` and sends OTP.
@@ -92,7 +93,7 @@ All backend code is in `Chesshivev1.0.2/` unless specified.
 - GET `/api/notifications`, POST `/api/notifications/mark-read`
 
 ### Contact & Feedback
-- `/api/contactus` (legacy and JSON): validates submitter and inserts into `contact` collection.
+- `/contactus` — server-rendered form handler that inserts into `contact` collection.
 - Feedback endpoints exist to request feedback for tournaments and insert `feedbacks` documents.
 
 ---
@@ -146,16 +147,16 @@ File: `routes/databasecongi.js` initializes validators for major collections. Ke
 
 ## ⚙️ Server & Run Instructions
 ### Requirements
-- Node.js (a reasonably recent LTS); `Chesshivev1.0.2` lists `node` and uses `socket.io` and `mongodb` driver.
+- Node.js (a reasonably recent LTS); the root backend uses `socket.io` and the `mongodb` driver.
 - MongoDB running locally on `mongodb://localhost:27017` (default DB name: `chesshive`).
 - Optional SMTP env vars for real email delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
 - Optional: set `SESSION_SECRET` and `SESSION_COOKIE_NAME` in env for production.
 
-### Start backend (Chesshivev1.0.2)
-1. cd Chesshivev1.0.2
+### Start backend (root)
+1. cd .\
 2. npm install
 3. Start MongoDB (e.g., `mongod`)
-4. npm start (defaults to `PORT=3001` if not set)
+4. node app.js (defaults to `PORT=3001` if not set)
 
 ### Start frontend (React)
 1. cd chesshive-react
@@ -411,16 +412,16 @@ This section classifies the routes used in this project and shows where they are
 These are your “main feature” routes (tournaments, enrollment, store, meetings, profiles, chat helpers, notifications).
 
 **Where it is**
-- Backend entry + mounts: `Chesshivev1.0.2/app.js`
+- Backend entry + mounts: `app.js`
 - Role routers:
-  - Admin router: `Chesshivev1.0.2/admin_app.js`
-  - Organizer router: `Chesshivev1.0.2/organizer_app.js`
-  - Coordinator router: `Chesshivev1.0.2/coordinator_app.js`
-  - Player router: `Chesshivev1.0.2/player_app.js`
-- Auth/mixed routes: `Chesshivev1.0.2/routes/auth.js`
+  - Admin router: `admin_app.js`
+  - Organizer router: `organizer_app.js`
+  - Coordinator router: `coordinator_app.js`
+  - Player router: `player_app.js`
+- Auth/mixed routes: `routes/auth.js`
 
 **What it does**
-- `Chesshivev1.0.2/app.js` defines top-level JSON APIs like login/session/notifications/chat helpers and mounts role routers:
+- `app.js` defines top-level JSON APIs like login/session/notifications/chat helpers and mounts role routers:
   - Mount points: `/admin/*`, `/organizer/*`, `/coordinator/*`, `/player/*`
 - Each role router provides role-specific APIs under `/<role>/api/*` (dashboard, tournaments, store, meetings, approvals, etc.)
 - `routes/auth.js` provides signup OTP flow + contact form endpoints (both JSON and some legacy form POST routes)
@@ -430,12 +431,12 @@ These are “project-specific routing patterns” you wrote mainly for serving H
 
 **Where it is**
 - Catch-all role page routes:
-  - `GET /admin/:subpage?` → `Chesshivev1.0.2/admin_app.js`
-  - `GET /organizer/:subpage?` → `Chesshivev1.0.2/organizer_app.js`
-  - `GET /coordinator/:subpage?` → `Chesshivev1.0.2/coordinator_app.js`
-  - `GET /player/:subpage?` → `Chesshivev1.0.2/player_app.js`
+  - `GET /admin/:subpage?` → `admin_app.js`
+  - `GET /organizer/:subpage?` → `organizer_app.js`
+  - `GET /coordinator/:subpage?` → `coordinator_app.js`
+  - `GET /player/:subpage?` → `player_app.js`
 - Example single custom page route:
-  - `GET /coordinator/feedback_view` → `Chesshivev1.0.2/coordinator_app.js`
+  - `GET /coordinator/feedback_view` → `coordinator_app.js`
 
 **What it does**
 - These routes map “subpage names” to `views/<role>/*.html` files and act like a mini page router for the legacy (non-React) HTML UI.
@@ -444,21 +445,21 @@ These are “project-specific routing patterns” you wrote mainly for serving H
 These are routes created by dependencies (not hand-written `app.get('/...')` endpoints).
 
 **Where it is**
-- Socket.IO server is initialized in `Chesshivev1.0.2/app.js`.
-- Static hosting is enabled via `express.static('public')` in `Chesshivev1.0.2/app.js`.
+- Socket.IO server is initialized in `app.js`.
+- Static hosting is enabled via `express.static('public')` in `app.js`.
 
 **What it does**
 - Socket.IO exposes the default endpoint `/socket.io/*` for WebSocket/long-poll connections.
-- `express.static('public')` exposes URLs for files in `Chesshivev1.0.2/public/*` (images, JS, etc.).
+- `express.static('public')` exposes URLs for files in `public/*` (images, JS, etc.).
 
-> Related (middleware, not routes): `cors`, `express-session`, `method-override` are third-party middleware used in `Chesshivev1.0.2/app.js`.
+> Related (middleware, not routes): `cors`, `express-session`, `method-override` are third-party middleware used in `app.js`.
 
 ### Error Routes
 These exist to handle “not found” and “unexpected error” cases consistently.
 
 **Where it is**
-- Global 404 catch-all: `Chesshivev1.0.2/app.js`
-- Global error middleware (4-argument handler): `Chesshivev1.0.2/app.js`
+- Global 404 catch-all: `app.js`
+- Global error middleware (4-argument handler): `app.js`
 
 **What it does**
 - Any unmatched backend request triggers the 404 handler (redirects to home with `Page not found`).
