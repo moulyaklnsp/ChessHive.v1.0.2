@@ -6,11 +6,7 @@ export function getSocketServerUrl() {
 
   const { protocol, hostname, port } = window.location;
 
-  // CRA dev server default is :3000 and this project proxies API to :3001.
-  // Socket.IO client script can be proxied, but the connection URL must still point to the backend.
-  if (port === '3000') return `${protocol}//${hostname}:3001`;
-
-  // If running on the same origin (prod / backend-served build), just use current origin.
+  // Use same-origin (works with CRA proxy in dev and direct backend in prod).
   const origin = window.location.origin;
   return origin || `${protocol}//${hostname}${port ? `:${port}` : ''}`;
 }
