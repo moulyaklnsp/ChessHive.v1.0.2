@@ -26,7 +26,7 @@ app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3001'], crede
 // Default Node limit can be too small when many/large cookies or headers are present.
 // Raise to 1MB to tolerate larger Cookie headers from development environments.
 const server = http.createServer({ maxHeaderSize: 1048576 }, app);
-const io = new Server(server, { cors: { origin: ['http://localhost:3000', 'http://localhost:3001'], methods: ['GET', 'POST'] } });
+const io = new Server(server, { cors: { origin: ['http://localhost:3000', 'http://localhost:3001'], methods: ['GET', 'POST'], credentials: true } });
 const PORT = process.env.PORT || 3001;
 
 app.use(session({
