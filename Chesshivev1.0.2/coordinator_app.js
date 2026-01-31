@@ -3,7 +3,7 @@ const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const moment = require('moment');
 const utils = require('./utils');
-const { uploadImageBuffer } = require('./utils/cloudinary');
+const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
 const path = require('path'); 
 let multer;
@@ -287,11 +287,81 @@ router.get('/api/profile', async (req, res) => {
     res.json({
       name: coordinator.name,
       email: coordinator.email,
-      college: coordinator.college || 'N/A'
+      college: coordinator.college || 'N/A',
+      profile_photo_url: coordinator.profile_photo_url || ''
     });
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Upload/Update coordinator profile photo
+// Expects multipart/form-data with field name: "photo"
+router.post('/api/upload-photo', async (req, res, next) => {
+  if (!multer) {
+    return res.status(500).json({ error: 'Upload support is not available (multer not installed).' });
+  }
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  const uploader = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (r, file, cb) => {
+      const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+      if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+      cb(null, true);
+    }
+  }).single('photo');
+
+  uploader(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    return next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No photo uploaded. Use field name "photo".' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'coordinator' });
+    if (!user) return res.status(404).json({ error: 'Coordinator not found' });
+
+    const existingPublicId = (user.profile_photo_public_id || '').toString();
+    const desiredPublicId = existingPublicId || `chesshive/profile-photos/coordinator_${user._id}`;
+
+    console.log('Uploading photo for coordinator:', user.email);
+    const result = await uploadImageBuffer(req.file.buffer, {
+      folder: 'chesshive/profile-photos',
+      public_id: desiredPublicId.split('/').pop(),
+      overwrite: true,
+      invalidate: true
+    });
+
+    const newUrl = result?.secure_url;
+    const newPublicId = result?.public_id;
+    if (!newUrl || !newPublicId) {
+      console.error('Cloudinary upload failed:', result);
+      return res.status(500).json({ error: 'Failed to upload profile photo' });
+    }
+
+    // Best-effort cleanup of previous Cloudinary asset (if public_id changed)
+    if (existingPublicId && existingPublicId !== newPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { profile_photo_url: newUrl, profile_photo_public_id: newPublicId, updated_date: new Date() } }
+    );
+
+    return res.json({ success: true, profile_photo_url: newUrl });
+  } catch (err) {
+    console.error('Error updating profile photo:', err);
+    return res.status(500).json({ error: 'Failed to update profile photo: ' + err.message });
   }
 });
 
@@ -1021,62 +1091,62 @@ router.get('/feedback_view', async (req, res) => {
   });
 });
 
-// ==================== PAGE RENDERING ROUTES ====================
+// // ==================== PAGE RENDERING ROUTES ====================
 
-function sendCoordinatorPage(res, filename) {
-  const filePath = path.join(__dirname, 'views', 'coordinator', `${filename}.html`);
+// function sendCoordinatorPage(res, filename) {
+//   const filePath = path.join(__dirname, 'views', 'coordinator', `${filename}.html`);
 
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error('Error sending HTML file:', filePath, err);
-      res.status(err.status || 500).send('Error loading page');
-    }
-  });
-}
+//   res.sendFile(filePath, (err) => {
+//     if (err) {
+//       console.error('Error sending HTML file:', filePath, err);
+//       res.status(err.status || 500).send('Error loading page');
+//     }
+//   });
+// }
 
-router.get('/:subpage?', async (req, res) => {
-  const subpage = req.params.subpage || 'coordinator_dashboard';
+// router.get('/:subpage?', async (req, res) => {
+//   const subpage = req.params.subpage || 'coordinator_dashboard';
 
-  if (!req.session.userEmail || req.session.userRole !== 'coordinator') {
-    return res.redirect("/?error-message=Please log in as a coordinator");
-  }
+//   if (!req.session.userEmail || req.session.userRole !== 'coordinator') {
+//     return res.redirect("/?error-message=Please log in as a coordinator");
+//   }
 
-  try {
-    switch (subpage) {
-      case 'coordinator_dashboard':
-        sendCoordinatorPage(res, 'coordinator_dashboard');
-        break;
-      case 'tournament_management':
-        sendCoordinatorPage(res, 'tournament_management');
-        break;
-      case 'store_management':
-        sendCoordinatorPage(res, 'store_management');
-        break;
-      case 'coordinator_meetings':
-        sendCoordinatorPage(res, 'coordinator_meetings');
-        break;
-      case 'player_stats':
-        sendCoordinatorPage(res, 'player_stats');
-        break;
-      case 'enrolled_players':
-        sendCoordinatorPage(res, 'enrolled_players');
-        break;
-      case 'pairings':
-        sendCoordinatorPage(res, 'pairings');
-        break;
-      case 'rankings':
-        sendCoordinatorPage(res, 'rankings');
-        break;
-      case 'coordinator_profile':
-        sendCoordinatorPage(res, 'coordinator_profile');
-        break;
-      default:
-        return res.redirect('/coordinator/coordinator_dashboard?error-message=Page not found');
-    }
-  } catch (error) {
-    console.error('Error loading coordinator page:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+//   try {
+//     switch (subpage) {
+//       case 'coordinator_dashboard':
+//         sendCoordinatorPage(res, 'coordinator_dashboard');
+//         break;
+//       case 'tournament_management':
+//         sendCoordinatorPage(res, 'tournament_management');
+//         break;
+//       case 'store_management':
+//         sendCoordinatorPage(res, 'store_management');
+//         break;
+//       case 'coordinator_meetings':
+//         sendCoordinatorPage(res, 'coordinator_meetings');
+//         break;
+//       case 'player_stats':
+//         sendCoordinatorPage(res, 'player_stats');
+//         break;
+//       case 'enrolled_players':
+//         sendCoordinatorPage(res, 'enrolled_players');
+//         break;
+//       case 'pairings':
+//         sendCoordinatorPage(res, 'pairings');
+//         break;
+//       case 'rankings':
+//         sendCoordinatorPage(res, 'rankings');
+//         break;
+//       case 'coordinator_profile':
+//         sendCoordinatorPage(res, 'coordinator_profile');
+//         break;
+//       default:
+//         return res.redirect('/coordinator/coordinator_dashboard?error-message=Page not found');
+//     }
+//   } catch (error) {
+//     console.error('Error loading coordinator page:', error);
+//     res.status(500).send('Internal Server Error');
+//   }
+// });
 
 module.exports = router;
