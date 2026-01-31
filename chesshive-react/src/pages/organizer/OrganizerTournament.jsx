@@ -1,7 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 const OrganizerTournament = () => {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -119,150 +138,209 @@ const OrganizerTournament = () => {
     }
   };
 
-  const styles = {
-    page: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: {
-      fontFamily: 'Cinzel, serif', color: '#2E8B57', textAlign: 'center', marginBottom: '1.5rem',
-      fontSize: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem'
-    },
-    h3: { fontFamily: 'Cinzel, serif', color: '#2E8B57', textAlign: 'center', marginBottom: '1.5rem' },
-    tableDiv: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', overflowX: 'auto', border: '1px solid var(--card-border)' },
-    message: (type) => ({ padding: '1rem', borderRadius: 8, marginBottom: '1.5rem', textAlign: 'center',
-      backgroundColor: type === 'success' ? 'rgba(46,139,87,0.1)' : '#ffebee', color: type === 'success' ? '#2E8B57' : '#c62828' }),
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' },
-    th: { backgroundColor: '#2E8B57', color: '#FFFDD0', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
-    rowHover: { backgroundColor: 'rgba(135,206,235,0.1)' },
-    approvedBy: { fontStyle: 'italic', color: '#2E8B57', fontSize: '.9rem' },
-    actionBtns: { display: 'flex', gap: '.5rem' },
-    approveBtn: { padding: '.6rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', backgroundColor: '#2E8B57', color: '#FFFDD0', display: 'flex', alignItems: 'center', gap: '.5rem' },
-    rejectBtn: { padding: '.6rem 1rem', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', backgroundColor: '#dc3545', color: '#fff', display: 'flex', alignItems: 'center', gap: '.5rem' },
-    statusBadge: (variant) => ({ padding: '.5rem 1rem', borderRadius: 20, fontSize: '.9rem', fontWeight: 'bold', textAlign: 'center', display: 'inline-block',
-      backgroundColor: variant === 'active' ? 'rgba(46,139,87,0.1)' : 'rgba(255,193,7,0.1)', color: variant === 'active' ? '#2E8B57' : '#ffc107' }),
-    moreContainer: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer' },
-    backRight: { textAlign: 'right' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#2E8B57', color: '#FFFDD0', textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    searchBarContainer: { display: 'flex', alignItems: 'center', gap: 10, padding: 10, background: '#f5f5f5', borderRadius: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.1)', maxWidth: 500, margin: '20px auto' },
-    select: { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--card-border)', backgroundColor: 'var(--card-bg)', fontSize: 14 },
-    input: { flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14 },
-  };
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="trophy">🏆</span> Tournament Management</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .table { width:100%; border-collapse:collapse; margin-bottom:1rem; }
+        .th { background:var(--sea-green); color:var(--on-accent); padding:1rem; text-align:left; font-family:'Cinzel', serif; }
+        .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .search-bar { display:flex; align-items:center; gap:10px; padding:10px; background:var(--card-bg); border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:500px; margin:20px auto; border:1px solid var(--card-border); }
+        .select { padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:14px; }
+        .input { flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:14px; }
+        .message { padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; }
+        .message.success { background-color:rgba(var(--sea-green-rgb, 27, 94, 63),0.1); color:var(--sea-green); }
+        .message.error { background-color:#ffebee; color:#c62828; }
+        .approve-btn { padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; background-color:var(--sea-green); color:var(--on-accent); display:flex; align-items:center; gap:0.5rem; }
+        .reject-btn { padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; background-color:#dc3545; color:#fff; display:flex; align-items:center; gap:0.5rem; }
+        .status-badge { padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:bold; text-align:center; display:inline-block; }
+        .status-badge.active { background-color:rgba(var(--sea-green-rgb, 27, 94, 63),0.1); color:var(--sea-green); }
+        .status-badge.pending { background-color:rgba(255,193,7,0.1); color:#ffc107; }
+        .approved-by { font-style:italic; color:var(--sea-green); font-size:0.9rem; }
+        .action-btns { display:flex; gap:0.5rem; }
+        .more-btn { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+        .back-link { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; }
+        .empty { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; }
+      `}</style>
 
-        {message.text && (
-          <div style={styles.message(message.type)}>
-            <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}
-          </div>
-        )}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-trophy" />
+        </motion.div>
+        
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        <div style={styles.tableDiv}>
-          <h3 style={styles.h3}>Tournament Approval &amp; Management</h3>
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
+        </div>
 
-          <div style={styles.searchBarContainer}>
-            <select aria-label="Attribute" value={searchAttr} onChange={(e) => setSearchAttr(e.target.value)} style={styles.select}>
-              <option value="name">Name</option>
-              <option value="date">Date</option>
-              <option value="location">Location</option>
-              <option value="entry_fee">Entry Fee</option>
-              <option value="type">Type</option>
-              <option value="added_by">Added By</option>
-              <option value="status">Status</option>
-            </select>
-            <input aria-label="Search" type="text" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} style={styles.input} />
-          </div>
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-trophy" /> Tournament Management
+          </motion.h1>
 
-          {loading ? (
-            <p>Loading tournaments…</p>
-          ) : error ? (
-            <p style={{ color: '#c62828', textAlign: 'center' }}>{error}</p>
-          ) : (
-            <>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}><i className="fas fa-trophy" /> Name</th>
-                    <th style={styles.th}><i className="fas fa-calendar" /> Date</th>
-                    <th style={styles.th}><i className="fas fa-map-marker-alt" /> Location</th>
-                    <th style={styles.th}><i className="fas fa-coins" /> Entry Fee</th>
-                    <th style={styles.th}><i className="fas fa-users" /> Type</th>
-                    <th style={styles.th}><i className="fas fa-user" /> Added By</th>
-                    <th style={styles.th}><i className="fas fa-info-circle" /> Status</th>
-                    <th style={styles.th}><i className="fas fa-cogs" /> Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td style={styles.td} colSpan={8}>
-                        <div style={{ textAlign: 'center', padding: '2rem' }}>
-                          <i className="fas fa-info-circle" /> No tournaments available for review.
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filtered.slice(0, visibleCount).map((t) => (
-                      <tr key={t._id}>
-                        <td style={styles.td}>{t.name}</td>
-                        <td style={styles.td}>{t.date ? new Date(t.date).toLocaleDateString() : ''}</td>
-                        <td style={styles.td}>{t.location}</td>
-                        <td style={styles.td}>₹{t.entry_fee}</td>
-                        <td style={styles.td}>{t.type}</td>
-                        <td style={styles.td}>{t.added_by}</td>
-                        <td style={styles.td}>
-                          {t.status === 'Approved' ? (
-                            <>
-                              <span style={styles.statusBadge('active')}><i className="fas fa-check-circle" /> Approved</span>
-                              <div style={styles.approvedBy}>by {t.approved_by || ''}</div>
-                            </>
-                          ) : (
-                            <span style={styles.statusBadge('pending')}><i className="fas fa-clock" /> {t.status || 'Pending'}</span>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          {!t.status || t.status === 'Pending' ? (
-                            <div style={styles.actionBtns}>
-                              <button type="button" style={styles.approveBtn} onClick={() => updateTournament(t._id, 'approve')}>
-                                <i className="fas fa-check" /> Approve
-                              </button>
-                              <button type="button" style={styles.rejectBtn} onClick={() => updateTournament(t._id, 'reject')}>
-                                <i className="fas fa-times" /> Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span>{t.status}</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-
-              <div style={styles.moreContainer}>
-                {canShowMore && (
-                  <button type="button" style={styles.moreBtn} onClick={handleMore}>
-                    <i className="fas fa-chevron-down" /> More
-                  </button>
-                )}
-                {visibleCount > 5 && (
-                  <button type="button" style={styles.moreBtn} onClick={handleHide}>
-                    <i className="fas fa-chevron-up" /> Hide
-                  </button>
-                )}
-              </div>
-            </>
+          {message.text && (
+            <div className={`message ${message.type}`}>
+              <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}
+            </div>
           )}
 
-          <div style={styles.backRight}>
-            <Link to="/organizer/organizer_dashboard" style={styles.backLink}>
-              <i className="fas fa-arrow-left" /> Back to Dashboard
-            </Link>
-          </div>
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', textAlign: 'center', marginBottom: '1.5rem', fontSize: '1.8rem' }}>Tournament Approval & Management</h3>
+
+            <div className="search-bar">
+              <select aria-label="Attribute" value={searchAttr} onChange={(e) => setSearchAttr(e.target.value)} className="select">
+                <option value="name">Name</option>
+                <option value="date">Date</option>
+                <option value="location">Location</option>
+                <option value="entry_fee">Entry Fee</option>
+                <option value="type">Type</option>
+                <option value="added_by">Added By</option>
+                <option value="status">Status</option>
+              </select>
+              <input aria-label="Search" type="text" placeholder="Search…" value={query} onChange={(e) => setQuery(e.target.value)} className="input" />
+            </div>
+
+            {loading ? (
+              <p>Loading tournaments…</p>
+            ) : error ? (
+              <p className="empty" style={{ color: '#c62828' }}>{error}</p>
+            ) : (
+              <>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th className="th"><i className="fas fa-trophy" /> Name</th>
+                      <th className="th"><i className="fas fa-calendar" /> Date</th>
+                      <th className="th"><i className="fas fa-map-marker-alt" /> Location</th>
+                      <th className="th"><i className="fas fa-coins" /> Entry Fee</th>
+                      <th className="th"><i className="fas fa-users" /> Type</th>
+                      <th className="th"><i className="fas fa-user" /> Added By</th>
+                      <th className="th"><i className="fas fa-info-circle" /> Status</th>
+                      <th className="th"><i className="fas fa-cogs" /> Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td className="td" colSpan={8}>
+                          <div className="empty">
+                            <i className="fas fa-info-circle" /> No tournaments available for review.
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.slice(0, visibleCount).map((t) => (
+                        <tr key={t._id}>
+                          <td className="td">{t.name}</td>
+                          <td className="td">{t.date ? new Date(t.date).toLocaleDateString() : ''}</td>
+                          <td className="td">{t.location}</td>
+                          <td className="td">₹{t.entry_fee}</td>
+                          <td className="td">{t.type}</td>
+                          <td className="td">{t.added_by}</td>
+                          <td className="td">
+                            {t.status === 'Approved' ? (
+                              <>
+                                <span className="status-badge active"><i className="fas fa-check-circle" /> Approved</span>
+                                <div className="approved-by">by {t.approved_by || ''}</div>
+                              </>
+                            ) : (
+                              <span className="status-badge pending"><i className="fas fa-clock" /> {t.status || 'Pending'}</span>
+                            )}
+                          </td>
+                          <td className="td">
+                            {!t.status || t.status === 'Pending' ? (
+                              <div className="action-btns">
+                                <button type="button" className="approve-btn" onClick={() => updateTournament(t._id, 'approve')}>
+                                  <i className="fas fa-check" /> Approve
+                                </button>
+                                <button type="button" className="reject-btn" onClick={() => updateTournament(t._id, 'reject')}>
+                                  <i className="fas fa-times" /> Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span>{t.status}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+
+                <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                  {canShowMore && (
+                    <button type="button" className="more-btn" onClick={handleMore}>
+                      <i className="fas fa-chevron-down" /> More
+                    </button>
+                  )}
+                  {visibleCount > 5 && (
+                    <button type="button" className="more-btn" onClick={handleHide}>
+                      <i className="fas fa-chevron-up" /> Hide
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+              <Link to="/organizer/organizer_dashboard" className="back-link">
+                <i className="fas fa-arrow-left" /> Back to Dashboard
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

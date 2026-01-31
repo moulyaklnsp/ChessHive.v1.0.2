@@ -1,11 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-// React conversion of views/organizer/coordinator_management.html
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const PAGE_SIZE = 5;
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
 function CoordinatorManagement() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [coordinators, setCoordinators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -79,111 +96,172 @@ function CoordinatorManagement() {
     }
   };
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', color: '#2E8B57', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' },
-    th: { background: '#2E8B57', color: '#FFFDD0', padding: '1.2rem', textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: '1.1rem' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46, 139, 87, 0.2)' },
-    searchRow: { display: 'flex', alignItems: 'center', gap: 10, padding: 10, background: '#f5f5f5', borderRadius: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.1)', maxWidth: 500, margin: '0 auto 20px' },
-    input: { flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14 },
-    select: { padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14 },
-    moreWrap: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    rowCounter: { textAlign: 'center', marginBottom: '1rem', fontFamily: 'Cinzel, serif', fontSize: '1.2rem', color: '#2E8B57', backgroundColor: 'rgba(46, 139, 87, 0.1)', padding: '0.5rem 1rem', borderRadius: 8, display: 'inline-block' },
-    backRow: { textAlign: 'right', marginTop: '2rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    empty: { textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' },
-    removeBtn: { backgroundColor: '#ff6b6b', color: '#fff', border: 'none', padding: '0.6rem 1rem', borderRadius: 5, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    restoreBtn: { backgroundColor: '#87CEEB', color: '#2E8B57', border: 'none', padding: '0.6rem 1rem', borderRadius: 5, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }
-  };
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
 
   const visibleRows = filtered.slice(0, visible);
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="chess">♟️</span> Coordinator Management</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .table { width:100%; border-collapse:collapse; margin-bottom:1rem; }
+        .th { background:var(--sea-green); color:var(--on-accent); padding:1.2rem; text-align:left; font-family:'Cinzel', serif; font-size:1.1rem; }
+        .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .search-row { display:flex; align-items:center; gap:10px; padding:10px; background:var(--card-bg); border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:500px; margin:0 auto 20px; border:1px solid var(--card-border); }
+        .input { flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); font-size:14px; background:var(--page-bg); color:var(--text-color); }
+        .select { padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); font-size:14px; background:var(--page-bg); color:var(--text-color); }
+        .more-btn { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+        .row-counter { text-align:center; margin-bottom:1rem; font-family:'Cinzel', serif; font-size:1.2rem; color:var(--sea-green); background-color:rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); padding:0.5rem 1rem; border-radius:8px; display:inline-block; }
+        .empty { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; }
+        .remove-btn { background-color:#ff6b6b; color:#fff; border:none; padding:0.6rem 1rem; border-radius:5px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; }
+        .restore-btn { background-color:var(--sea-green); color:var(--on-accent); border:none; padding:0.6rem 1rem; border-radius:5px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; }
+        .back-link { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; }
+      `}</style>
 
-        <div style={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-            <div style={styles.rowCounter}>
-              {Math.min(visibleRows.length, filtered.length)} / {filtered.length}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-users-cog" />
+        </motion.div>
+        
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
+
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
+        </div>
+
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-users-cog" /> Coordinator Management
+          </motion.h1>
+
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <div className="row-counter">
+                {Math.min(visibleRows.length, filtered.length)} / {filtered.length}
+              </div>
             </div>
-          </div>
-          <div style={styles.searchRow}>
-            <select style={styles.select} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="removed">Removed</option>
-            </select>
-            <input style={styles.input} placeholder="Search name, email or college…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
+            <div className="search-row">
+              <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="removed">Removed</option>
+              </select>
+              <input className="input" placeholder="Search name, email or college…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
 
-          {loading && (
-            <table style={styles.table}><tbody><tr><td style={styles.td} colSpan={4}><div style={styles.empty}><i className="fas fa-info-circle" aria-hidden="true"></i> Loading coordinators…</div></td></tr></tbody></table>
-          )}
-          {!loading && !!error && (
-            <div style={styles.empty}><i className="fas fa-exclamation-triangle" aria-hidden="true"></i> {error}</div>
-          )}
-          {!loading && !error && (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}><i className="fas fa-user" aria-hidden="true"></i> Name</th>
-                  <th style={styles.th}><i className="fas fa-envelope" aria-hidden="true"></i> Email</th>
-                  <th style={styles.th}><i className="fas fa-university" aria-hidden="true"></i> Assigned College</th>
-                  <th style={styles.th}><i className="fas fa-cog" aria-hidden="true"></i> Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.length === 0 && (
+            {loading && (
+              <table className="table"><tbody><tr><td className="td" colSpan={4}><div className="empty"><i className="fas fa-info-circle" /> Loading coordinators…</div></td></tr></tbody></table>
+            )}
+            {!loading && !!error && (
+              <div className="empty"><i className="fas fa-exclamation-triangle" /> {error}</div>
+            )}
+            {!loading && !error && (
+              <table className="table">
+                <thead>
                   <tr>
-                    <td style={styles.td} colSpan={4}><div style={styles.empty}><i className="fas fa-info-circle" aria-hidden="true"></i> No coordinators available.</div></td>
+                    <th className="th"><i className="fas fa-user" /> Name</th>
+                    <th className="th"><i className="fas fa-envelope" /> Email</th>
+                    <th className="th"><i className="fas fa-university" /> Assigned College</th>
+                    <th className="th"><i className="fas fa-cog" /> Actions</th>
                   </tr>
-                )}
-                {visibleRows.map((c, idx) => (
-                  <tr key={(c.email || idx) + ''}>
-                    <td style={styles.td}>{c.name}</td>
-                    <td style={styles.td}>{c.email}</td>
-                    <td style={styles.td}>{c.college}</td>
-                    <td style={styles.td}>
-                      {c.isDeleted ? (
-                        <button style={styles.restoreBtn} onClick={() => onRestore(c.email)}>
-                          <i className="fas fa-user-plus" aria-hidden="true"></i> Restore
-                        </button>
-                      ) : (
-                        <button style={styles.removeBtn} onClick={() => onRemove(c.email)}>
-                          <i className="fas fa-user-minus" aria-hidden="true"></i> Remove
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          <div style={styles.moreWrap}>
-            {visible < filtered.length && (
-              <button style={styles.moreBtn} onClick={() => setVisible((v) => Math.min(v + PAGE_SIZE, filtered.length))}>
-                <i className="fas fa-chevron-down" aria-hidden="true"></i> More
-              </button>
+                </thead>
+                <tbody>
+                  {visibleRows.length === 0 && (
+                    <tr>
+                      <td className="td" colSpan={4}><div className="empty"><i className="fas fa-info-circle" /> No coordinators available.</div></td>
+                    </tr>
+                  )}
+                  {visibleRows.map((c, idx) => (
+                    <tr key={(c.email || idx) + ''}>
+                      <td className="td">{c.name}</td>
+                      <td className="td">{c.email}</td>
+                      <td className="td">{c.college}</td>
+                      <td className="td">
+                        {c.isDeleted ? (
+                          <button className="restore-btn" onClick={() => onRestore(c.email)}>
+                            <i className="fas fa-user-plus" /> Restore
+                          </button>
+                        ) : (
+                          <button className="remove-btn" onClick={() => onRemove(c.email)}>
+                            <i className="fas fa-user-minus" /> Remove
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-            {visible > PAGE_SIZE && (
-              <button style={styles.moreBtn} onClick={() => setVisible(PAGE_SIZE)}>
-                <i className="fas fa-chevron-up" aria-hidden="true"></i> Hide
-              </button>
-            )}
-          </div>
 
-          <div style={styles.backRow}>
-            <Link to="/organizer/organizer_dashboard" style={styles.backLink}>
-              <i className="fas fa-arrow-left" aria-hidden="true"></i> Back to Dashboard
-            </Link>
-          </div>
+            <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {visible < filtered.length && (
+                <button className="more-btn" onClick={() => setVisible((v) => Math.min(v + PAGE_SIZE, filtered.length))}>
+                  <i className="fas fa-chevron-down" /> More
+                </button>
+              )}
+              {visible > PAGE_SIZE && (
+                <button className="more-btn" onClick={() => setVisible(PAGE_SIZE)}>
+                  <i className="fas fa-chevron-up" /> Hide
+                </button>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+              <Link to="/organizer/organizer_dashboard" className="back-link">
+                <i className="fas fa-arrow-left" /> Back to Dashboard
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

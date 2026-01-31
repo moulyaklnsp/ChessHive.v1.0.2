@@ -1,9 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const PER_PAGE = 10;
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
 const StoreMonitoring = () => {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [products, setProducts] = useState([]);
@@ -95,6 +114,15 @@ const StoreMonitoring = () => {
   const sHasPrev = sPage > 0;
   const sHasNext = sStart + PER_PAGE < filteredSales.length;
 
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
+
   const theme = {
     page: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
     container: { maxWidth: 1200, margin: '0 auto 2rem auto' },
@@ -120,171 +148,263 @@ const StoreMonitoring = () => {
   };
 
   return (
-    <div style={theme.page}>
-      {/* Products Overview */}
-      <div style={theme.container} className="products">
-        <h2 style={theme.h2}><span role="img" aria-label="bag">🛍️</span> Products Overview</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; overflow-x:auto; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .table { width:100%; border-collapse:collapse; margin-bottom:1rem; }
+        .th { background:var(--sea-green); color:var(--on-accent); padding:1.2rem; text-align:left; font-family:'Cinzel', serif; }
+        .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); vertical-align:middle; }
+        .price { font-weight:bold; color:var(--sea-green); }
+        .empty { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem; margin-bottom:2rem; }
+        .stat-card { background:var(--card-bg); padding:1.5rem; border-radius:10px; text-align:center; box-shadow:none; border:1px solid var(--card-border); }
+        .stat-value { font-size:1.8rem; font-weight:bold; color:var(--sea-green); margin-bottom:0.5rem; }
+        .stat-label { color:var(--text-color); font-size:0.9rem; opacity:0.8; }
+        .back-link { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; }
+        .pager { text-align:center; margin:1rem 0; display:flex; justify-content:center; gap:1rem; }
+        .page-btn { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+        .search-bar { display:flex; align-items:center; gap:10px; padding:10px; background:var(--card-bg); border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:500px; margin:20px auto; border:1px solid var(--card-border); }
+        .select { padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:14px; }
+        .input { flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:14px; }
+        .row-counter { text-align:center; margin-bottom:1rem; font-family:'Cinzel', serif; font-size:1.2rem; color:var(--sea-green); background-color:rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); padding:0.5rem 1rem; border-radius:8px; display:inline-block; }
+        .error { color:#c62828; text-align:center; margin-bottom:1rem; }
+      `}</style>
 
-        {error && <div style={theme.error}>{error}</div>}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-store" />
+        </motion.div>
+        
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        <div style={theme.statsGrid}>
-          <div style={theme.statCard}>
-            <div style={theme.statValue}><i className="fas fa-box" /> <span>{totalProducts}</span></div>
-            <div style={theme.statLabel}>Total Products</div>
-          </div>
-          <div style={theme.statCard}>
-            <div style={theme.statValue}>{formatCurrency(totalInventoryValue)}</div>
-            <div style={theme.statLabel}>Total Inventory Value</div>
-          </div>
-          <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-            <Link to="/organizer/sales_analysis" style={theme.backLink}><i className="fas fa-chart-line" /> View Sales Analysis</Link>
-          </div>
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <div style={theme.tableDiv}>
-          <div style={theme.searchBar}>
-            <select aria-label="Product attribute" value={pAttr} onChange={(e) => { setPAttr(e.target.value); setPPage(0); }} style={theme.select}>
-              <option value="name">Product</option>
-              <option value="price">Price</option>
-              <option value="coordinator">Coordinator</option>
-              <option value="college">College</option>
-            </select>
-            <input aria-label="Product search" value={pQuery} onChange={(e) => { setPQuery(e.target.value); setPPage(0); }} placeholder="Search products…" style={theme.input} />
-          </div>
+        <div className="content">
+          {/* Products Overview */}
+          <div className="products">
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <i className="fas fa-box" /> Products Overview
+            </motion.h1>
 
-          {loading ? (
-            <p>Loading…</p>
-          ) : (
-            <>
-              <div style={{ textAlign: 'center' }}>
-                <span style={theme.rowCounter}>{filteredProducts.length} item(s)</span>
+            {error && <div className="error">{error}</div>}
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-value"><i className="fas fa-box" /> <span>{totalProducts}</span></div>
+                <div className="stat-label">Total Products</div>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
-                <thead>
-                  <tr>
-                    <th style={theme.th}><i className="fas fa-tag" /> Product</th>
-                    <th style={theme.th}><i className="fas fa-rupee-sign" /> Price</th>
-                    <th style={theme.th}><i className="fas fa-user" /> Coordinator</th>
-                    <th style={theme.th}><i className="fas fa-university" /> College</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.length === 0 ? (
-                    <tr><td colSpan={4} style={theme.empty}><i className="fas fa-box-open" /> No products available.</td></tr>
-                  ) : (
-                    pSlice.map((p, idx) => (
-                      <tr key={`${p.name}-${idx}`}>
-                        <td style={theme.td}>{p.name}</td>
-                        <td style={{ ...theme.td, ...theme.price }}>{formatCurrency(p.price)}</td>
-                        <td style={theme.td}>{p.coordinator || 'N/A'}</td>
-                        <td style={theme.td}>{p.college || 'N/A'}</td>
+              <div className="stat-card">
+                <div className="stat-value">{formatCurrency(totalInventoryValue)}</div>
+                <div className="stat-label">Total Inventory Value</div>
+              </div>
+              <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                <Link to="/organizer/sales_analysis" className="back-link"><i className="fas fa-chart-line" /> View Sales Analysis</Link>
+              </div>
+            </div>
+
+            <motion.div
+              className="updates-section"
+              custom={0}
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div className="search-bar">
+                <select aria-label="Product attribute" value={pAttr} onChange={(e) => { setPAttr(e.target.value); setPPage(0); }} className="select">
+                  <option value="name">Product</option>
+                  <option value="price">Price</option>
+                  <option value="coordinator">Coordinator</option>
+                  <option value="college">College</option>
+                </select>
+                <input aria-label="Product search" value={pQuery} onChange={(e) => { setPQuery(e.target.value); setPPage(0); }} placeholder="Search products…" className="input" />
+              </div>
+
+              {loading ? (
+                <p>Loading…</p>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center' }}>
+                    <span className="row-counter">{filteredProducts.length} item(s)</span>
+                  </div>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th className="th"><i className="fas fa-tag" /> Product</th>
+                        <th className="th"><i className="fas fa-rupee-sign" /> Price</th>
+                        <th className="th"><i className="fas fa-user" /> Coordinator</th>
+                        <th className="th"><i className="fas fa-university" /> College</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.length === 0 ? (
+                        <tr><td className="td empty" colSpan={4}><i className="fas fa-box-open" /> No products available.</td></tr>
+                      ) : (
+                        pSlice.map((p, idx) => (
+                          <tr key={`${p.name}-${idx}`}>
+                            <td className="td">{p.name}</td>
+                            <td className="td price">{formatCurrency(p.price)}</td>
+                            <td className="td">{p.coordinator || 'N/A'}</td>
+                            <td className="td">{p.college || 'N/A'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
 
-              <div style={theme.pager}>
-                {pHasPrev && (
-                  <button type="button" style={theme.pageBtn} onClick={() => setPPage((v) => Math.max(0, v - 1))}>
-                    <i className="fas fa-chevron-left" /> Previous
-                  </button>
-                )}
-                {pHasNext && (
-                  <button type="button" style={theme.pageBtn} onClick={() => setPPage((v) => v + 1)}>
-                    <i className="fas fa-chevron-right" /> Next
-                  </button>
-                )}
+                  <div className="pager">
+                    {pHasPrev && (
+                      <button type="button" className="page-btn" onClick={() => setPPage((v) => Math.max(0, v - 1))}>
+                        <i className="fas fa-chevron-left" /> Previous
+                      </button>
+                    )}
+                    {pHasNext && (
+                      <button type="button" className="page-btn" onClick={() => setPPage((v) => v + 1)}>
+                        <i className="fas fa-chevron-right" /> Next
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Sales Report */}
+          <div className="sales">
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <i className="fas fa-chart-bar" /> Sales Report
+            </motion.h1>
+
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-value"><i className="fas fa-shopping-cart" /> <span>{totalSalesCount}</span></div>
+                <div className="stat-label">Total Sales</div>
               </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Sales Report */}
-      <div style={theme.container} className="sales">
-        <h2 style={theme.h2}><span role="img" aria-label="bar">📊</span> Sales Report</h2>
-
-        <div style={theme.statsGrid}>
-          <div style={theme.statCard}>
-            <div style={theme.statValue}><i className="fas fa-shopping-cart" /> <span>{totalSalesCount}</span></div>
-            <div style={theme.statLabel}>Total Sales</div>
-          </div>
-          <div style={theme.statCard}>
-            <div style={theme.statValue}>{formatCurrency(totalRevenue)}</div>
-            <div style={theme.statLabel}>Total Revenue</div>
-          </div>
-        </div>
-
-        <div style={theme.tableDiv}>
-          <div style={theme.searchBar}>
-            <select aria-label="Sales attribute" value={sAttr} onChange={(e) => { setSAttr(e.target.value); setSPage(0); }} style={theme.select}>
-              <option value="product">Product</option>
-              <option value="price">Price</option>
-              <option value="coordinator">Coordinator</option>
-              <option value="buyer">Buyer</option>
-              <option value="college">College</option>
-              <option value="date">Date</option>
-            </select>
-            <input aria-label="Sales search" value={sQuery} onChange={(e) => { setSQuery(e.target.value); setSPage(0); }} placeholder="Search sales…" style={theme.input} />
-          </div>
-
-          {loading ? (
-            <p>Loading…</p>
-          ) : (
-            <>
-              <div style={{ textAlign: 'center' }}>
-                <span style={theme.rowCounter}>{filteredSales.length} record(s)</span>
+              <div className="stat-card">
+                <div className="stat-value">{formatCurrency(totalRevenue)}</div>
+                <div className="stat-label">Total Revenue</div>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' }}>
-                <thead>
-                  <tr>
-                    <th style={theme.th}><i className="fas fa-tag" /> Product</th>
-                    <th style={theme.th}><i className="fas fa-rupee-sign" /> Price</th>
-                    <th style={theme.th}><i className="fas fa-user" /> Coordinator</th>
-                    <th style={theme.th}><i className="fas fa-user-check" /> Buyer</th>
-                    <th style={theme.th}><i className="fas fa-university" /> College</th>
-                    <th style={theme.th}><i className="fas fa-calendar" /> Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSales.length === 0 ? (
-                    <tr><td colSpan={6} style={theme.empty}><i className="fas fa-shopping-cart" /> No sales recorded.</td></tr>
-                  ) : (
-                    sSlice.map((s, idx) => (
-                      <tr key={`${s.product}-${s.buyer}-${idx}`}>
-                        <td style={theme.td}>{s.product}</td>
-                        <td style={{ ...theme.td, ...theme.price }}>{formatCurrency(s.price)}</td>
-                        <td style={theme.td}>{s.coordinator || 'N/A'}</td>
-                        <td style={theme.td}>{s.buyer || 'N/A'}</td>
-                        <td style={theme.td}>{s.college || 'N/A'}</td>
-                        <td style={theme.td}>{s.purchase_date ? new Date(s.purchase_date).toLocaleDateString() : ''}</td>
+            </div>
+
+            <motion.div
+              className="updates-section"
+              custom={1}
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div className="search-bar">
+                <select aria-label="Sales attribute" value={sAttr} onChange={(e) => { setSAttr(e.target.value); setSPage(0); }} className="select">
+                  <option value="product">Product</option>
+                  <option value="price">Price</option>
+                  <option value="coordinator">Coordinator</option>
+                  <option value="buyer">Buyer</option>
+                  <option value="college">College</option>
+                  <option value="date">Date</option>
+                </select>
+                <input aria-label="Sales search" value={sQuery} onChange={(e) => { setSQuery(e.target.value); setSPage(0); }} placeholder="Search sales…" className="input" />
+              </div>
+
+              {loading ? (
+                <p>Loading…</p>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center' }}>
+                    <span className="row-counter">{filteredSales.length} record(s)</span>
+                  </div>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th className="th"><i className="fas fa-tag" /> Product</th>
+                        <th className="th"><i className="fas fa-rupee-sign" /> Price</th>
+                        <th className="th"><i className="fas fa-user" /> Coordinator</th>
+                        <th className="th"><i className="fas fa-user-check" /> Buyer</th>
+                        <th className="th"><i className="fas fa-university" /> College</th>
+                        <th className="th"><i className="fas fa-calendar" /> Date</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {filteredSales.length === 0 ? (
+                        <tr><td className="td empty" colSpan={6}><i className="fas fa-shopping-cart" /> No sales recorded.</td></tr>
+                      ) : (
+                        sSlice.map((s, idx) => (
+                          <tr key={`${s.product}-${s.buyer}-${idx}`}>
+                            <td className="td">{s.product}</td>
+                            <td className="td price">{formatCurrency(s.price)}</td>
+                            <td className="td">{s.coordinator || 'N/A'}</td>
+                            <td className="td">{s.buyer || 'N/A'}</td>
+                            <td className="td">{s.college || 'N/A'}</td>
+                            <td className="td">{s.purchase_date ? new Date(s.purchase_date).toLocaleDateString() : ''}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
 
-              <div style={theme.pager}>
-                {sHasPrev && (
-                  <button type="button" style={theme.pageBtn} onClick={() => setSPage((v) => Math.max(0, v - 1))}>
-                    <i className="fas fa-chevron-left" /> Previous
-                  </button>
-                )}
-                {sHasNext && (
-                  <button type="button" style={theme.pageBtn} onClick={() => setSPage((v) => v + 1)}>
-                    <i className="fas fa-chevron-right" /> Next
-                  </button>
-                )}
+                  <div className="pager">
+                    {sHasPrev && (
+                      <button type="button" className="page-btn" onClick={() => setSPage((v) => Math.max(0, v - 1))}>
+                        <i className="fas fa-chevron-left" /> Previous
+                      </button>
+                    )}
+                    {sHasNext && (
+                      <button type="button" className="page-btn" onClick={() => setSPage((v) => v + 1)}>
+                        <i className="fas fa-chevron-right" /> Next
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+                <Link to="/organizer/organizer_dashboard" className="back-link">
+                  <i className="fas fa-arrow-left" /> Back to Dashboard
+                </Link>
               </div>
-            </>
-          )}
-        </div>
-
-        <div style={theme.backRight}>
-          <Link to="/organizer/organizer_dashboard" style={theme.backLink}>
-            <i className="fas fa-arrow-left" /> Back to Dashboard
-          </Link>
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>

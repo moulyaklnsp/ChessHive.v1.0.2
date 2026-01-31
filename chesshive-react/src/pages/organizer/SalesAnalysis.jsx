@@ -3,8 +3,24 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchMonthlySales, fetchYearlySales } from '../../features/sales/salesSlice';
 import { Link } from 'react-router-dom';
 import Chart from 'chart.js/auto';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
-// routes are handled by the sales slice; constants removed to avoid unused warnings
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 const months = [
   { value: 1, label: 'January' },
@@ -22,6 +38,7 @@ const months = [
 ];
 
 const SalesAnalysis = () => {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const chartCanvasRef = useRef(null);
   const chartRef = useRef(null);
   const scrollRef = useRef(null);
@@ -161,106 +178,163 @@ const SalesAnalysis = () => {
     };
   }, [loadMonthly]);
 
-  const styles = {
-    page: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '1rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    controls: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' },
-    filterWrap: { display: 'flex', gap: '.5rem', alignItems: 'center', fontFamily: 'Cinzel, serif' },
-    filterBtn: (active) => ({ background: 'var(--card-bg)', borderRadius: 8, padding: '.5rem .9rem', border: '1px solid var(--card-border)', cursor: 'pointer', fontWeight: 700, color: active ? '#fff' : 'var(--text-color)', backgroundColor: active ? '#2E8B57' : 'var(--card-bg)', transform: active ? 'translateY(-2px)' : 'none', transition: 'all .15s ease' }),
-    select: { padding: '.4rem', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)' },
-    note: { color: '#555', marginTop: '.5rem', fontSize: '.95rem' },
-    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' },
-    statCard: { background: 'var(--card-bg)', padding: '1.5rem', borderRadius: 15, boxShadow: 'none', textAlign: 'center', border: '1px solid var(--card-border)' },
-    statValue: { fontSize: '2rem', fontWeight: 'bold', color: '#2E8B57', marginBottom: '.5rem' },
-    statLabel: { color: '#666', fontFamily: 'Cinzel, serif' },
-    chartWrapper: { background: 'var(--card-bg)', borderRadius: 15, padding: '1.5rem', boxShadow: 'none', marginBottom: '2rem', height: 420, overflow: 'hidden', border: '1px solid var(--card-border)' },
-    chartScroll: { width: '100%', height: 420, overflowX: 'auto', overflowY: 'auto', paddingBottom: 10, WebkitOverflowScrolling: 'touch' },
-    canvas: { display: 'block', height: 360 },
-    backRight: { textAlign: 'right', marginBottom: '1rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    error: { color: '#c62828', textAlign: 'center', marginBottom: '1rem' },
-  };
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="chart">📈</span> Sales Analysis</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .controls { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; }
+        .filter-wrap { display:flex; gap:0.5rem; align-items:center; font-family:'Cinzel', serif; }
+        .filter-btn { background:var(--card-bg); border-radius:8px; padding:0.5rem 0.9rem; border:1px solid var(--card-border); cursor:pointer; font-weight:700; color:var(--text-color); transition:all 0.15s ease; }
+        .filter-btn.active { color:var(--on-accent); background-color:var(--sea-green); transform:translateY(-2px); }
+        .select { padding:0.4rem; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); }
+        .note { color:var(--text-color); margin-top:0.5rem; font-size:0.95rem; opacity:0.7; }
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem; margin-bottom:1.5rem; }
+        .stat-card { background:var(--card-bg); padding:1.5rem; border-radius:15px; box-shadow:none; text-align:center; border:1px solid var(--card-border); }
+        .stat-value { font-size:2rem; font-weight:bold; color:var(--sea-green); margin-bottom:0.5rem; }
+        .stat-label { color:var(--text-color); font-family:'Cinzel', serif; opacity:0.8; }
+        .chart-wrapper { background:var(--card-bg); border-radius:15px; padding:1.5rem; box-shadow:none; margin-bottom:2rem; height:420px; overflow:hidden; border:1px solid var(--card-border); }
+        .chart-scroll { width:100%; height:420px; overflow-x:auto; overflow-y:auto; padding-bottom:10px; -webkit-overflow-scrolling:touch; }
+        .canvas { display:block; height:360px; }
+        .back-link { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; }
+        .error { color:#c62828; text-align:center; margin-bottom:1rem; }
+        .export-btn { background:var(--sea-green); color:var(--on-accent); border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+      `}</style>
 
-        <div style={styles.controls}>
-          <div style={styles.filterWrap}>
-            <span style={{ fontWeight: 700, color: '#2E8B57', marginRight: 6 }}>View:</span>
-            <button type="button" style={styles.filterBtn(mode === 'monthly')} onClick={() => loadMonthly(selectedMonth || '')}>Monthly</button>
-            <button type="button" style={styles.filterBtn(mode === 'yearly')} onClick={loadYearly}>Yearly</button>
-          </div>
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-chart-line" />
+        </motion.div>
+        
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-          <div style={styles.filterWrap}>
-            <label htmlFor="monthSelect" style={{ fontWeight: 700, color: '#2E8B57' }}>Month:</label>
-            <select id="monthSelect" value={selectedMonth} onChange={(e) => loadMonthly(e.target.value)} style={styles.select}>
-              <option value="">Current</option>
-              {months.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ textAlign: 'right' }}>
-            <small style={styles.note}>Default: current month (last 10 days visible). Scroll horizontally to see older days/months.</small>
-          </div>
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        {error && <div style={styles.error}>{error}</div>}
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-chart-line" /> Sales Analysis
+          </motion.h1>
 
-        <div style={styles.statsGrid} aria-live="polite">
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{loading ? '--' : formatCurrency(stats.total)}</div>
-            <div style={styles.statLabel}>Total Sales (visible range)</div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{loading ? '--' : formatCurrency(stats.avg)}</div>
-            <div style={styles.statLabel}>Average Sale</div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{loading ? '--' : stats.count}</div>
-            <div style={styles.statLabel}>Transactions</div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{loading ? '--' : stats.topLabel}</div>
-            <div style={styles.statLabel}>Top Day</div>
-          </div>
-        </div>
+          <div className="controls">
+            <div className="filter-wrap">
+              <span style={{ fontWeight: 700, color: 'var(--sea-green)', marginRight: 6 }}>View:</span>
+              <button type="button" className={`filter-btn ${mode === 'monthly' ? 'active' : ''}`} onClick={() => loadMonthly(selectedMonth || '')}>Monthly</button>
+              <button type="button" className={`filter-btn ${mode === 'yearly' ? 'active' : ''}`} onClick={loadYearly}>Yearly</button>
+            </div>
 
-        <div style={styles.chartWrapper}>
-          <div style={styles.chartScroll} ref={scrollRef}>
-            <canvas ref={chartCanvasRef} style={styles.canvas} />
-          </div>
-        </div>
-        <div style={{ textAlign: 'right', marginBottom: 12 }}>
-          <button aria-label="Export sales CSV" onClick={() => {
-            // CSV export from labels and dataPoints
-            try {
-              const rows = [['Label','Value'], ...labels.map((l, i) => [l, (dataPoints[i] ?? 0)])];
-              const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `sales_export_${mode}_${new Date().toISOString().slice(0,10)}.csv`;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(url);
-            } catch (e) {
-              console.error('CSV export failed', e);
-              alert('CSV export failed');
-            }
-          }} style={{ background: '#2E8B57', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 6 }}>Export CSV</button>
-        </div>
+            <div className="filter-wrap">
+              <label htmlFor="monthSelect" style={{ fontWeight: 700, color: 'var(--sea-green)' }}>Month:</label>
+              <select id="monthSelect" value={selectedMonth} onChange={(e) => loadMonthly(e.target.value)} className="select">
+                <option value="">Current</option>
+                {months.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
 
-        <div style={styles.backRight}>
-          <Link to="/organizer/store_monitoring" style={styles.backLink}>
-            <i className="fas fa-arrow-left" /> Back to Store Monitor
-          </Link>
+            <div style={{ textAlign: 'right' }}>
+              <small className="note">Default: current month (last 10 days visible). Scroll horizontally to see older days/months.</small>
+            </div>
+          </div>
+
+          {error && <div className="error">{error}</div>}
+
+          <div className="stats-grid" aria-live="polite">
+            <div className="stat-card">
+              <div className="stat-value">{loading ? '--' : formatCurrency(stats.total)}</div>
+              <div className="stat-label">Total Sales (visible range)</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{loading ? '--' : formatCurrency(stats.avg)}</div>
+              <div className="stat-label">Average Sale</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{loading ? '--' : stats.count}</div>
+              <div className="stat-label">Transactions</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{loading ? '--' : stats.topLabel}</div>
+              <div className="stat-label">Top Day</div>
+            </div>
+          </div>
+
+          <div className="chart-wrapper">
+            <div className="chart-scroll" ref={scrollRef}>
+              <canvas ref={chartCanvasRef} className="canvas" />
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', marginBottom: 12 }}>
+            <button aria-label="Export sales CSV" onClick={() => {
+              // CSV export from labels and dataPoints
+              try {
+                const rows = [['Label','Value'], ...labels.map((l, i) => [l, (dataPoints[i] ?? 0)])];
+                const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sales_export_${mode}_${new Date().toISOString().slice(0,10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+              } catch (e) {
+                console.error('CSV export failed', e);
+                alert('CSV export failed');
+              }
+            }} className="export-btn">Export CSV</button>
+          </div>
+
+          <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+            <Link to="/organizer/store_monitoring" className="back-link">
+              <i className="fas fa-arrow-left" /> Back to Store Monitor
+            </Link>
+          </div>
         </div>
       </div>
     </div>
