@@ -152,29 +152,15 @@ function StoreManagement() {
     return () => URL.revokeObjectURL(url);
   }, [productImageFile]);
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
-    label: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: 8, display: 'block' },
-    input: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontFamily: 'Playfair Display, serif' }),
-    error: { color: '#c62828', fontSize: '0.9rem', marginTop: 4 },
-    btn: { background: '#2E8B57', color: '#fff', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '2rem', marginTop: '2rem' },
-    cardProd: { background: 'var(--card-bg)', borderRadius: 15, overflow: 'hidden', boxShadow: 'none', border: '1px solid var(--card-border)' },
-    imgWrap: { width: '100%', height: 200, overflow: 'hidden' },
-    img: { width: '100%', height: '100%', objectFit: 'cover' },
-    info: { padding: '1.5rem' },
-    price: { color: '#2E8B57', fontWeight: 'bold', marginBottom: 8 },
-    available: { color: '#666' },
-    moreWrap: { textAlign: 'center', margin: '2rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    backRow: { textAlign: 'right', marginTop: '2rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    empty: { textAlign: 'center', padding: '2rem', color: 'var(--sea-green)', fontStyle: 'italic', background: 'var(--card-bg)', borderRadius: 15, boxShadow: 'none', marginTop: '2rem', border: '1px solid var(--card-border)' },
-    msg: (type) => ({ marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 8, color: type === 'success' ? '#1b5e20' : '#c62828', background: type === 'success' ? 'rgba(76,175,80,0.15)' : 'rgba(198,40,40,0.15)' })
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   // Utility for safe image URLs
   const getImgSrc = (imgSrc) => {
@@ -214,93 +200,19 @@ function StoreManagement() {
         .empty-state { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; background:var(--card-bg); border-radius:15px; margin-top:2rem; border:1px solid var(--card-border); }
       `}</style>
 
-        <div style={styles.card}>
-          {message && (
-            <div style={styles.msg(message.type)}>
-              <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} aria-hidden="true" /> {message.text}
-            </div>
-          )}
-          <form onSubmit={onSubmit}>
-            <div>
-              <label style={styles.label}><i className="fas fa-tag" aria-hidden="true"></i> Product Name:</label>
-              <input
-                style={styles.input(!!fieldErrors.productName)}
-                type="text"
-                value={form.productName}
-                onChange={(e) => setForm({ ...form, productName: e.target.value })}
-                required
-              />
-              {fieldErrors.productName && <div style={styles.error}>{fieldErrors.productName}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-tag" aria-hidden="true"></i> Product Category:</label>
-              <input
-                style={styles.input(!!fieldErrors.productCategory)}
-                type="text"
-                value={form.productCategory}
-                onChange={(e) => setForm({ ...form, productCategory: e.target.value })}
-                required
-              />
-              {fieldErrors.productCategory && <div style={styles.error}>{fieldErrors.productCategory}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-rupee-sign" aria-hidden="true"></i> Price:</label>
-              <input
-                style={styles.input(!!fieldErrors.productPrice)}
-                type="number"
-                step="0.01"
-                value={form.productPrice}
-                onChange={(e) => setForm({ ...form, productPrice: e.target.value })}
-                required
-              />
-              {fieldErrors.productPrice && <div style={styles.error}>{fieldErrors.productPrice}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-image" aria-hidden="true"></i> Product Image:</label>
-
-              <input
-                style={styles.input(false)}
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const f = e.target.files && e.target.files[0];
-                  setProductImageFile(f || null);
-                }}
-              />
-
-              {productImagePreview && (
-                <div style={{ marginTop: 10 }}>
-                  <img src={productImagePreview} alt="Preview" style={{ width: 220, height: 140, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--card-border)' }} />
-                </div>
-              )}
-
-              <div style={{ marginTop: 10 }}>
-                <div style={{ opacity: 0.85, marginBottom: 6 }}>Or paste an Image URL (optional if you upload a file):</div>
-              <input
-                style={styles.input(!!fieldErrors.productImage)}
-                type="text"
-                value={form.productImage}
-                onChange={(e) => setForm({ ...form, productImage: e.target.value })}
-              />
-              {fieldErrors.productImage && <div style={styles.error}>{fieldErrors.productImage}</div>}
-              </div>
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-boxes" aria-hidden="true"></i> Availability:</label>
-              <input
-                style={styles.input(!!fieldErrors.availability)}
-                type="number"
-                value={form.availability}
-                onChange={(e) => setForm({ ...form, availability: e.target.value })}
-                required
-              />
-              {fieldErrors.availability && <div style={styles.error}>{fieldErrors.availability}</div>}
-            </div>
-            <button type="submit" style={styles.btn}>
-              <i className="fas fa-plus-circle" aria-hidden="true"></i> Add Product
-            </button>
-          </form>
-        </div>
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-shopping-bag" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
         <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
           <motion.button
