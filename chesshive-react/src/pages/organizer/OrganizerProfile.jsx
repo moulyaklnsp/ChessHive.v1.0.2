@@ -1,8 +1,27 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 const OrganizerProfile = () => {
   const navigate = useNavigate();
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [profile, setProfile] = useState({ name: '', email: '', college: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -76,81 +95,129 @@ const OrganizerProfile = () => {
     }
   };
 
-  const styles = {
-    page: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 800, margin: '0 auto' },
-    h2: {
-      fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem',
-    },
-    profileCard: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
-    profileInfo: { display: 'grid', gap: '1.5rem' },
-    infoItem: { display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(46, 139, 87, 0.2)' },
-    infoIcon: { color: '#2E8B57', fontSize: '1.5rem', width: 30, textAlign: 'center' },
-    infoLabel: { fontFamily: 'Cinzel, serif', fontWeight: 'bold', color: '#2E8B57', minWidth: 100 },
-    infoValue: { color: '#333', flexGrow: 1 },
-    deleteContainer: { textAlign: 'right', marginTop: '1rem' },
-    deleteButton: {
-      display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#c62828', color: '#FFFDD0',
-      textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease',
-      fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none'
-    },
-    backLink: {
-      display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#2E8B57', color: '#FFFDD0',
-      textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease',
-      fontFamily: 'Cinzel, serif', fontWeight: 'bold'
-    },
-    msg: { textAlign: 'center', marginTop: '1rem' },
-    msgError: { backgroundColor: 'rgba(198,40,40,0.1)', color: '#c62828', padding: '1rem', borderRadius: 5 },
-    msgSuccess: { backgroundColor: 'rgba(46,125,50,0.1)', color: '#1b5e20', padding: '1rem', borderRadius: 5 },
-  };
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="profile">👤</span> Chess Organizer Profile</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .info-grid { display:grid; gap:1.5rem; margin-bottom:2rem; }
+        .info-item { display:flex; align-items:center; gap:1rem; padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .info-label { font-family:'Cinzel', serif; font-weight:bold; color:var(--sea-green); min-width:100px; display:flex; align-items:center; gap:0.5rem; }
+        .info-value { color:var(--text-color); flex-grow:1; }
+        .actions-row { display:flex; justify-content:space-between; align-items:center; margin-top:2rem; gap:1rem; flex-wrap:wrap; }
+        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:0.8rem 1.5rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; text-decoration:none; }
+        .btn-danger { background:#d32f2f; color:var(--on-accent); border:none; padding:0.8rem 1.5rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; }
+        .error-text { color:#b71c1c; margin-bottom:1rem; text-align:center; }
+      `}</style>
 
-        <div style={styles.profileCard}>
-          {loading ? (
-            <p>Loading profile…</p>
-          ) : error ? (
-            <p style={styles.msgError}>{error}</p>
-          ) : (
-            <div style={styles.profileInfo}>
-              <div style={styles.infoItem}>
-                <i className="fas fa-user" style={styles.infoIcon} />
-                <span style={styles.infoLabel}>Name:</span>
-                <span style={styles.infoValue}>{profile.name}</span>
-              </div>
-              <div style={styles.infoItem}>
-                <i className="fas fa-envelope" style={styles.infoIcon} />
-                <span style={styles.infoLabel}>Email:</span>
-                <span style={styles.infoValue}>{profile.email}</span>
-              </div>
-              <div style={styles.infoItem}>
-                <i className="fas fa-university" style={styles.infoIcon} />
-                <span style={styles.infoLabel}>College:</span>
-                <span style={styles.infoValue}>{profile.college}</span>
-              </div>
-            </div>
-          )}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-user" />
+        </motion.div>
+        
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
+
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <div style={styles.deleteContainer}>
-          <button type="button" style={styles.deleteButton} onClick={handleDelete}>
-            Delete Account <i className="fas fa-trash" />
-          </button>
-        </div>
-        <div style={styles.msg}>
-          {message.text && (
-            <p style={message.type === 'error' ? styles.msgError : styles.msgSuccess}>{message.text}</p>
-          )}
-        </div>
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-user" /> Organizer Profile
+          </motion.h1>
 
-        <div style={{ textAlign: 'left', marginTop: '1rem' }}>
-          <Link to="/organizer/organizer_dashboard" style={styles.backLink}>
-            <i className="fas fa-arrow-left" /> Back to Dashboard
-          </Link>
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {error && <div className="error-text">{error}</div>}
+            {loading ? (
+              <p>Loading profile…</p>
+            ) : (
+              <>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <div className="info-label"><i className="fas fa-user" /> Name:</div>
+                    <div className="info-value">{profile.name}</div>
+                  </div>
+                  <div className="info-item">
+                    <div className="info-label"><i className="fas fa-envelope" /> Email:</div>
+                    <div className="info-value">{profile.email}</div>
+                  </div>
+                  <div className="info-item">
+                    <div className="info-label"><i className="fas fa-university" /> College:</div>
+                    <div className="info-value">{profile.college}</div>
+                  </div>
+                </div>
+
+                <div className="actions-row">
+                  <Link to="/organizer/organizer_dashboard" className="btn-primary"><i className="fas fa-arrow-left" /> Back to Dashboard</Link>
+                  <button type="button" className="btn-danger" onClick={handleDelete}><i className="fas fa-trash" /> Delete Account</button>
+                </div>
+              </>
+            )}
+            
+            {message.text && (
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '1rem', 
+                borderRadius: 8, 
+                textAlign: 'center',
+                backgroundColor: message.type === 'error' ? 'rgba(198,40,40,0.1)' : 'rgba(46,125,50,0.1)', 
+                color: message.type === 'error' ? '#c62828' : '#1b5e20' 
+              }}>
+                {message.text}
+              </div>
+            )}
+          </motion.div>
         </div>
       </div>
     </div>
