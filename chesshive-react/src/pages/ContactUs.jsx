@@ -86,6 +86,40 @@ export default function ContactUs() {
       setSubmitting(false);
       return;
     }
+
+    try {
+      const res = await fetch('/api/contactus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          message: message.trim()
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.success) {
+        const fieldErrors = data?.errors || {};
+        if (Object.keys(fieldErrors).length) {
+          setErrors(prev => ({ ...prev, ...fieldErrors }));
+        }
+        setSuccess(data?.message || 'Failed to send message. Please try again.');
+      } else {
+        setSuccess(data?.message || 'Message sent successfully!');
+        setName('');
+        setEmail('');
+        setMessage('');
+        setWordCount(0);
+        setTouched({ name: false, email: false, message: false });
+      }
+    } catch (err) {
+      console.error('Contact form submit failed:', err);
+      setSuccess('Failed to send message. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const inputStyle = {
