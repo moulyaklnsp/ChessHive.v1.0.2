@@ -77,113 +77,72 @@ function CoordinatorDashboard() {
     load();
   }, []);
 
-  const styles = useMemo(() => ({
-    errorBox: {
-      background: '#ffdddd',
-      color: '#cc0000',
-      padding: '1rem',
-      borderRadius: 8,
-      marginBottom: '1rem',
-      display: error ? 'block' : 'none'
-    }
-  }), [error]);
+  useEffect(() => {
+    if (!isMobile) setSidebarOpen(true);
+    else setSidebarOpen(false);
+  }, [isMobile]);
 
-  // Coordinator-specific nav links used by AnimatedSidebar
-  const coordinatorLinks = [
-    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
-    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
-    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
-    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
-    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
-    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
-    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
-  ];
+  const styles = {
+    root: { display: 'flex', minHeight: '100vh', backgroundColor: '#FFFDD0', fontFamily: 'Playfair Display, serif' },
+    sidebar: {
+      width: 280,
+      backgroundColor: '#2E8B57',
+      color: '#fff',
+      height: '100vh',
+      position: isMobile ? 'fixed' : 'fixed',
+      left: isMobile ? (sidebarOpen ? 0 : '-100%') : 0,
+      top: 0,
+      paddingTop: '1rem',
+      zIndex: 1000,
+      boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
+      transition: 'left 0.3s ease',
+    },
+    sidebarHeader: { textAlign: 'center', padding: '1rem', borderBottom: '2px solid rgba(255,255,255,0.1)', marginBottom: '1rem' },
+    navSection: { marginBottom: '1rem', padding: '0 1rem' },
+    navTitle: { color: '#FFFDD0', fontSize: '0.9rem', textTransform: 'uppercase', padding: '0.5rem 1rem', opacity: 0.7 },
+    link: { display: 'flex', alignItems: 'center', gap: '0.8rem', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', transition: 'all 0.3s ease', borderRadius: 5, margin: '0.2rem 0' },
+    content: { flexGrow: 1, marginLeft: isMobile ? 0 : 280, padding: '2rem' },
+    h1: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '2rem', fontSize: isMobile ? '1.8rem' : '2.5rem', display: 'flex', alignItems: isMobile ? 'start' : 'center', gap: '1rem', flexDirection: isMobile ? 'column' : 'row' },
+    formContainer: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
+    joinLink: { backgroundColor: '#87CEEB', color: '#2E8B57', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', transition: 'all 0.3s ease', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
+    moreRow: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
+    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
+    logoutBox: { position: 'absolute', bottom: '2rem', width: '100%', padding: '0 2rem' },
+    logoutBtn: { width: '100%', background: '#87CEEB', color: '#2E8B57', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', transition: 'all 0.3s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
+    menuBtn: { display: isMobile ? 'block' : 'none', position: 'fixed', left: '1rem', top: '1rem', background: '#2E8B57', color: '#fff', border: 'none', padding: '0.8rem', borderRadius: 8, cursor: 'pointer', zIndex: 1001 },
+    ul: { listStyle: 'none', paddingLeft: 0, display: 'grid', gap: '0.5rem' },
+    li: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0', borderBottom: '1px solid rgba(0,0,0,0.06)' },
+    emptyText: { color: '#666' },
+  };
 
   const visibleMeetings = useMemo(() => meetings.slice(0, visibleCount), [meetings, visibleCount]);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      {/* Head styles (scoped) */}
-      <style>{`
-        /* Theme variables provided by .player-neo when on /coordinator pages */
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body, #root { min-height: 100vh; }
-        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
-        .sidebar { display: none; }
-        .sidebar-header { display: none; }
-        .nav-section { margin-bottom:1rem; padding:0 1rem; }
-        .nav-section-title { color:var(--text-color); font-size:0.9rem; text-transform:uppercase; padding:0.5rem 1rem; opacity:0.7; }
-        .sidebar a { display:flex; align-items:center; gap:0.8rem; color:var(--sidebar-text); text-decoration:none; padding:0.8rem 1.5rem; transition:all 0.3s ease; font-family:'Playfair Display', serif; border-radius:5px; margin:0.2rem 0; }
-        .sidebar a:hover { background:rgba(var(--sea-green-rgb),0.12); color:var(--text-color); transform: translateX(5px); }
-        .sidebar a i { width:20px; text-align:center; }
-        .content { flex-grow:1; margin-left:0; padding:2rem; }
-        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
-        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
-        .updates-section:hover { transform: translateY(-5px); }
-        .updates-section h3 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.8rem; font-size:1.5rem; }
-        .updates-section ul { list-style:none; }
-        .updates-section li { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transition:all 0.3s ease; display:flex; align-items:center; gap:1rem; }
-        .updates-section li:last-child { border-bottom:none; }
-        .updates-section li:hover { background: rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transform: translateX(5px); border-radius:8px; }
-        .meeting-info { flex-grow:1; }
-        .join-link { background: linear-gradient(90deg, rgba(235,87,87,1), rgba(6,56,80,1)); color: var(--on-accent); padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:600; box-shadow: inset 0 -4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; }
-        .date-tag { color:var(--sea-green); font-style: italic; }
-        .logout-box { position:absolute; bottom:2rem; width:100%; padding:0 2rem; }
-        .logout-box button { width:100%; background: linear-gradient(90deg, var(--sky-blue), var(--sea-green)); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.25s ease; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
-        .logout-box button:hover { transform: translateY(-2px); box-shadow:0 8px 24px rgba(6,56,80,0.08); }
-        .more-btn{ padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); }
-        @media (max-width: 768px){
-          .sidebar{ width:100%; left:${sidebarOpen ? '0' : '-100%'}; transition:0.3s; }
-          .content{ margin-left:0; padding:1rem; }
-          .updates-section{ padding:1rem; }
-          h1{ font-size:1.8rem; flex-direction:column; text-align:center; gap:0.5rem; }
-          .menu-btn{ display:block; position:fixed; left:1rem; top:1rem; background:var(--sea-green); color:var(--on-accent); border:none; padding:0.8rem; border-radius:8px; cursor:pointer; z-index:1001; transition:all 0.3s ease; }
-          .menu-btn:hover{ background:#236B43; transform: scale(1.05); }
-        }
-      `}</style>
+    <div style={styles.root}>
+      <button style={styles.menuBtn} onClick={() => setSidebarOpen((v) => !v)} aria-label="Open menu">
+        <i className="fas fa-bars" />
+      </button>
 
-      <div className="page player-neo">
-        {/* Decorative floating chess piece */}
-        <motion.div
-          className="chess-knight-float"
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 0.14, scale: 1 }}
-          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
-          aria-hidden="true"
-        >
-          <i className="fas fa-chess-rook" />
-        </motion.div>
-        
-        {/* Site dropdown sidebar (AnimatedSidebar) */}
-        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
-
-        {/* Coordinator quick header: theme toggle, welcome */}
-        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <motion.button
-            type="button"
-            className="theme-toggle-btn"
-            onClick={toggleTheme}
-            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.94 }}
-            style={{
-              background: 'var(--card-bg)',
-              border: '1px solid var(--card-border)',
-              color: 'var(--text-color)',
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '1.1rem'
-            }}
-          >
-            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} aria-hidden="true" />
-          </motion.button>
-          <div style={{ color: 'var(--sea-green)', fontWeight: '600' }}>Welcome, {name}</div>
+      <aside style={styles.sidebar} aria-hidden={!sidebarOpen && isMobile}>
+        <div style={styles.sidebarHeader}>
+          <h2><i className="fas fa-chess" /> ChessHive</h2>
+        </div>
+          <div style={styles.navSection}>
+          <div style={styles.navTitle}>Main Menu</div>
+          {/* Keep server routes for now to avoid SPA 404s for pages not yet migrated */}
+          <a href="/coordinator/coordinator_profile" style={styles.link}><i className="fas fa-user" /> Profile</a>
+          <a href="/coordinator/tournament_management" style={styles.link}><i className="fas fa-trophy" /> Tournaments</a>
+          <a href="/coordinator/player_stats" style={styles.link}><i className="fas fa-chess" /> Player Stats</a>
+          <a href="/coordinator/streaming_control" style={styles.link}><i className="fas fa-broadcast-tower" /> Streaming Control</a>
+          <a href="/coordinator/store_management" style={styles.link}><i className="fas fa-store" /> Store</a>
+          <a href="/coordinator/coordinator_meetings" style={styles.link}><i className="fas fa-calendar" /> Meetings</a>
+          <a href="/coordinator/coordinator_chat" style={styles.link}><i className="fas fa-comments" /> Live Chat</a>
+        </div>
+        <div style={styles.logoutBox}>
+          <button style={styles.logoutBtn} onClick={() => { window.location.href = '/login'; }}>
+            <i className="fas fa-sign-out-alt" />
+            <span>Log Out</span>
+          </button>
         </div>
 
         {/* Content */}

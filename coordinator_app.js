@@ -3,8 +3,11 @@ const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const moment = require('moment');
 const utils = require('./utils');
+const { uploadImageBuffer } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
 const path = require('path'); 
+let multer;
+try { multer = require('multer'); } catch (e) { multer = null; }
 
 class Player {
   constructor(id, username, college, gender) {
@@ -81,6 +84,149 @@ function swissPairing(players, totalRounds) {
 }
 
 router.use(express.json());
+
+// ------------------------------------------------------------
+// Streaming (Coordinator control)
+// ------------------------------------------------------------
+
+function normalizePlatform(p) {
+  const v = (p || '').toString().trim().toLowerCase();
+  if (!v) return 'other';
+  if (['youtube', 'twitch', 'lichess', 'chesscom', 'chess.com'].includes(v)) {
+    return v === 'chess.com' ? 'chesscom' : v;
+  }
+  return 'other';
+}
+
+function safeTrim(v) {
+  return (v == null ? '' : String(v)).trim();
+}
+
+router.get('/api/streams', async (req, res) => {
+  try {
+    const db = await connectDB();
+    const createdByEmail = req.session.userEmail;
+    const streams = await db.collection('streams')
+      .find({ createdByEmail })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .toArray();
+    const out = (streams || []).map(s => ({
+      ...s,
+      _id: s._id ? s._id.toString() : undefined,
+    }));
+    return res.json(out);
+  } catch (error) {
+    console.error('Error fetching coordinator streams:', error);
+    return res.status(500).json({ error: 'Failed to fetch streams' });
+  }
+});
+
+router.post('/api/streams', async (req, res) => {
+  try {
+    const title = safeTrim(req.body?.title);
+    const url = safeTrim(req.body?.url);
+    const platform = normalizePlatform(req.body?.platform);
+    const description = safeTrim(req.body?.description);
+    const isLive = !!req.body?.isLive;
+    const featured = !!req.body?.featured;
+    const matchLabel = safeTrim(req.body?.matchLabel);
+
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+    if (!url) return res.status(400).json({ error: 'Stream URL is required' });
+
+    const db = await connectDB();
+
+    const coordinator = await db.collection('users').findOne({
+      email: req.session.userEmail,
+      role: 'coordinator'
+    });
+
+    const now = new Date();
+    const doc = {
+      title,
+      url,
+      platform,
+      description,
+      matchLabel,
+      result: safeTrim(req.body?.result) || '',
+      isLive,
+      featured,
+      endedAt: isLive ? null : now,
+      createdByEmail: req.session.userEmail,
+      createdByName: coordinator?.name || req.session.username || req.session.userEmail,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await db.collection('streams').insertOne(doc);
+    return res.status(201).json({ ...doc, _id: result.insertedId.toString() });
+  } catch (error) {
+    console.error('Error creating stream:', error);
+    return res.status(500).json({ error: 'Failed to create stream' });
+  }
+});
+
+router.patch('/api/streams/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid id' });
+
+    const updates = {};
+    if (req.body?.title != null) updates.title = safeTrim(req.body.title);
+    if (req.body?.url != null) updates.url = safeTrim(req.body.url);
+    if (req.body?.platform != null) updates.platform = normalizePlatform(req.body.platform);
+    if (req.body?.description != null) updates.description = safeTrim(req.body.description);
+    if (req.body?.matchLabel != null) updates.matchLabel = safeTrim(req.body.matchLabel);
+    if (req.body?.result != null) updates.result = safeTrim(req.body.result);
+    if (req.body?.isLive != null) updates.isLive = !!req.body.isLive;
+    if (req.body?.featured != null) updates.featured = !!req.body.featured;
+    updates.updatedAt = new Date();
+
+    // basic validation if present
+    if ('title' in updates && !updates.title) return res.status(400).json({ error: 'Title cannot be empty' });
+    if ('url' in updates && !updates.url) return res.status(400).json({ error: 'Stream URL cannot be empty' });
+
+    const db = await connectDB();
+
+    const filter = { _id: new ObjectId(id), createdByEmail: req.session.userEmail };
+    const existing = await db.collection('streams').findOne(filter);
+    if (!existing) return res.status(404).json({ error: 'Stream not found' });
+
+    // Maintain endedAt when switching live state
+    if ('isLive' in updates) {
+      if (updates.isLive === false && existing.isLive === true) {
+        updates.endedAt = new Date();
+      }
+      if (updates.isLive === true && existing.isLive === false) {
+        updates.endedAt = null;
+      }
+    }
+
+    await db.collection('streams').updateOne(filter, { $set: updates });
+    const updated = await db.collection('streams').findOne(filter);
+    return res.json({
+      ...(updated || {}),
+      _id: updated?._id ? updated._id.toString() : undefined,
+    });
+  } catch (error) {
+    console.error('Error updating stream:', error);
+    return res.status(500).json({ error: 'Failed to update stream' });
+  }
+});
+
+router.delete('/api/streams/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ error: 'Invalid id' });
+    const db = await connectDB();
+    const result = await db.collection('streams').deleteOne({ _id: new ObjectId(id), createdByEmail: req.session.userEmail });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Stream not found' });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting stream:', error);
+    return res.status(500).json({ error: 'Failed to delete stream' });
+  }
+});
 
 // Name API
 router.get('/api/name', async (req, res) => {
@@ -254,6 +400,71 @@ router.post('/api/tournaments', async (req, res) => {
   }
 });
 
+// Update Tournament API
+router.put('/api/tournaments/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid tournament ID' });
+    }
+
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ 
+      email: req.session.userEmail,
+      role: 'coordinator' 
+    });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not logged in' });
+    }
+    const username = req.session.username || user.name || req.session.userEmail;
+
+    // Accept both camelCase and snake_case from frontend
+    const body = req.body || {};
+    const name = (body.tournamentName ?? body.name);
+    const date = (body.tournamentDate ?? body.date);
+    const time = (body.time ?? body.tournamentTime);
+    const location = (body.location ?? body.tournamentLocation);
+    const entryFee = (body.entryFee ?? body.entry_fee);
+    const type = body.type;
+    const rounds = (body.noOfRounds ?? body.no_of_rounds);
+
+    const $set = {};
+    if (typeof name === 'string' && name.trim()) $set.name = name.trim();
+    if (date) {
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) $set.date = d;
+    }
+    if (typeof time === 'string' && time.trim()) $set.time = time.trim();
+    if (typeof location === 'string' && location.trim()) $set.location = location.trim();
+    if (entryFee !== undefined && entryFee !== null && !isNaN(parseFloat(entryFee))) $set.entry_fee = parseFloat(entryFee);
+    if (typeof type === 'string' && type.trim()) $set.type = type.trim();
+    if (rounds !== undefined && rounds !== null && !isNaN(parseInt(rounds))) $set.noOfRounds = parseInt(rounds);
+
+    if (Object.keys($set).length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields provided to update' });
+    }
+
+    const result = await db.collection('tournaments').updateOne(
+      { _id: new ObjectId(id), coordinator: username },
+      { $set }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Tournament not found or not owned by you' });
+    }
+
+    if (result.modifiedCount === 0) {
+      // Nothing changed but consider it ok
+      return res.json({ success: true, message: 'No changes detected' });
+    }
+
+    return res.json({ success: true, message: 'Tournament updated successfully' });
+  } catch (error) {
+    console.error('Error updating tournament:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update tournament' });
+  }
+});
+
 router.delete('/api/tournaments/:id', async (req, res) => {
   try {
     const id = req.params.id;
@@ -293,13 +504,58 @@ router.get('/api/store/products', async (req, res) => {
 
 router.post('/api/store/addproducts', async (req, res) => {
   try {
-    const { productName, productCategory, price, imageUrl, availability } = req.body;
-    console.log('POST body received:', req.body);
+    // Optional multipart support (for image file upload)
+    if (multer && (req.headers['content-type'] || '').includes('multipart/form-data')) {
+      const uploader = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 2 * 1024 * 1024 },
+        fileFilter: (r, file, cb) => {
+          const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+          if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+          cb(null, true);
+        }
+      }).single('image');
+
+      await new Promise((resolve, reject) => {
+        uploader(req, res, (err) => (err ? reject(err) : resolve()));
+      });
+    }
+
+    // Accept both camelCase and legacy names from frontend
+    const productName = (req.body.productName ?? req.body.name ?? '').toString();
+    const productCategory = (req.body.productCategory ?? req.body.category ?? '').toString();
+    const price = req.body.price; // numeric string or number
+    let imageUrl = (req.body.imageUrl ?? req.body.image_url ?? '').toString();
+    let imagePublicId = (req.body.imagePublicId ?? req.body.image_public_id ?? '').toString();
+    const availability = (req.body.availability !== undefined ? req.body.availability : req.body.stock);
+
+    console.log('POST body received (normalized):', { productName, productCategory, price, imageUrl, availability });
+    console.log('Raw body:', req.body);
     console.log('Session data:', { userEmail: req.session.userEmail, userCollege: req.session.userCollege, collegeName: req.session.collegeName });
 
-    if (!productName || !productCategory || !price || !imageUrl || availability === undefined) {
+    // If an image file was provided, upload to Cloudinary and use that URL
+    if (req.file) {
+      const result = await uploadImageBuffer(req.file.buffer, {
+        folder: 'chesshive/product-images',
+        public_id: `product_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        overwrite: false
+      });
+      imageUrl = result?.secure_url || '';
+      imagePublicId = result?.public_id || '';
+    }
+
+    // Basic validation
+    if (!productName || !productCategory || price === undefined || price === '' || !imageUrl || availability === undefined) {
       console.log('Validation failed: Missing fields');
       return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+    const priceNum = parseFloat(price);
+    const availNum = parseInt(availability);
+    if (isNaN(priceNum) || priceNum < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid price value' });
+    }
+    if (isNaN(availNum) || availNum < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid availability value' });
     }
 
     const db = await connectDB();
@@ -320,15 +576,19 @@ router.post('/api/store/addproducts', async (req, res) => {
     }
 
     const product = {
-      name: productName.toString(),
-      category: productCategory.toString(),
-      price: parseFloat(price),
-      image_url: imageUrl.toString(),
-      availability: parseInt(availability) || 0,
+      name: productName.trim(),
+      category: productCategory.trim(),
+      price: priceNum,
+      image_url: imageUrl.trim(),
+      image_public_id: imagePublicId ? imagePublicId.toString() : undefined,
+      availability: availNum || 0,
       college: college.toString(),
       coordinator: username.toString(),
       added_date: new Date()
     };
+
+    // Remove undefined fields (keeps DB clean)
+    Object.keys(product).forEach((k) => product[k] === undefined && delete product[k]);
     console.log('Product to insert:', product);
 
     const result = await db.collection('products').insertOne(product);
@@ -662,14 +922,17 @@ router.post('/api/tournaments/:id/request-feedback', async (req, res) => {
       return res.status(404).json({ error: 'Tournament not found or you are not authorized' });
     }
 
-    // Ensure tournament is completed (use local timezone for consistency)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Allow feedback request once tournament has started (ongoing or completed)
+    // Build start datetime from stored date + time (HH:MM expected)
     const tDate = new Date(tournament.date);
-    tDate.setHours(0, 0, 0, 0);
-    console.log('Tournament date:', tDate, 'Today:', today);
-    if (tDate >= today) {
-      return res.status(400).json({ error: 'Feedback can only be requested for completed tournaments' });
+    const timeStr = (tournament.time || '').toString();
+    const [hh, mm] = (timeStr.match(/^\d{2}:\d{2}$/) ? timeStr.split(':') : ['00', '00']);
+    const start = new Date(tDate);
+    start.setHours(parseInt(hh || '0', 10), parseInt(mm || '0', 10), 0, 0);
+    const now = new Date();
+    console.log('Tournament start:', start, 'Now:', now);
+    if (now < start) {
+      return res.status(400).json({ error: 'Feedback can be requested once the tournament starts' });
     }
 
     // Check if feedback was already requested
@@ -685,10 +948,15 @@ router.post('/api/tournaments/:id/request-feedback', async (req, res) => {
       ...individualPlayers.map(p => p.username),
       ...teamEnrollments.flatMap(t => [t.player1_name, t.player2_name, t.player3_name].filter(Boolean))
     ]);
-
-    // Get user_ids for players
-    const players = await db.collection('users').find({ name: { $in: Array.from(playerUsernames) }, role: 'player' }).toArray();
-    console.log('Players found:', players.length);
+    const names = Array.from(playerUsernames).filter(Boolean);
+    console.log('Player names extracted from enrollments:', names);
+    
+    // Get user_ids for players by name (case-insensitive exact match)
+    const players = await db.collection('users').find({ 
+      role: 'player',
+      name: { $in: names }
+    }).toArray();
+    console.log('Players found in users collection:', players.length, 'Names:', players.map(p => p.name));
     const notifications = players.map(player => ({
       user_id: player._id,
       type: 'feedback_request',

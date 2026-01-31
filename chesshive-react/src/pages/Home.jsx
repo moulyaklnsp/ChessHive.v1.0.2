@@ -1,343 +1,482 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import ChessBackground from "../components/ChessBackground";
+import AnimatedSidebar from "../components/AnimatedSidebar";
+import { GlassCard, FloatingButton } from "../components/AnimatedCard";
 
-const styles = `
-    :root {
-        --sea-green: #2E8B57;
-        --cream: #FFFDD0;
-        --sky-blue: #87CEEB;
-        --text-dark: #333333;
+const TESTIMONIALS = [
+  {
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
+    name: "Alex Thompson",
+    rating: "★★★★★",
+    text: "The community here is incredible! I've improved my game significantly through the daily challenges and tournaments."
+  },
+  {
+    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330",
+    name: "Emma Chen",
+    rating: "★★★★★",
+    text: "ChessHive has transformed how I approach the game. The mentorship program is exceptional!"
+  },
+  {
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+    name: "David Kumar",
+    rating: "★★★★★",
+    text: "From beginner to tournament player, ChessHive has been there every step of the way. Amazing platform!"
+  }
+];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.3
     }
+  }
+};
 
-    body.react-root-host {
-        margin: 0;
-        padding: 0;
-        font-family: 'Playfair Display', serif;
-        background-color: var(--cream);
-    }
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" }
+  }
+};
 
-    .sidebar {
-        height: 100%;
-        width: 250px;
-        position: fixed;
-        top: 0;
-        left: 0;
-        background-color: var(--sea-green);
-        padding-top: 60px;
-        transition: 0.3s;
-        z-index: 1000;
-    }
+const chessPieceVariants = {
+  hidden: { opacity: 0, scale: 0.5, rotate: -180 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    rotate: 0,
+    transition: { duration: 0.8, ease: "easeOut" }
+  }
+};
 
-    .sidebar-link {
-        padding: 15px 25px;
-        text-decoration: none;
-        font-size: 18px;
-        color: var(--cream);
-        display: flex;
-        align-items: center;
-        transition: 0.3s;
-    }
+function FeatureCard({ icon, title, description, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+      whileHover={{ y: -10, scale: 1.02 }}
+      style={{
+        background: 'rgba(46, 139, 87, 0.15)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: '20px',
+        padding: '2rem',
+        border: '1px solid rgba(46, 139, 87, 0.3)',
+        textAlign: 'center'
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        whileInView={{ scale: 1 }}
+        viewport={{ once: true }}
+        transition={{ type: "spring", stiffness: 200 }}
+        style={{
+          fontSize: '3rem',
+          marginBottom: '1rem',
+          color: '#2E8B57'
+        }}
+      >
+        {icon}
+      </motion.div>
+      <h3 style={{ 
+        color: '#FFFDD0', 
+        fontFamily: "'Cinzel', serif",
+        marginBottom: '0.8rem',
+        fontSize: '1.3rem'
+      }}>
+        {title}
+      </h3>
+      <p style={{ 
+        color: 'rgba(255, 253, 208, 0.7)',
+        lineHeight: '1.6',
+        fontSize: '0.95rem'
+      }}>
+        {description}
+      </p>
+    </motion.div>
+  );
+}
 
-    .sidebar-link i {
-        margin-right: 10px;
-        width: 25px;
-    }
-
-    .sidebar-link:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        transform: translateX(10px);
-    }
-
-    .sidebar-header {
-        text-align: center;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid rgba(255, 253, 208, 0.2);
-    }
-
-    .sidebar-header img {
-        width: 50px;
-        height: 50px;
-        margin-bottom: 10px;
-    }
-
-    .sidebar-header h1 {
-        color: var(--cream);
-        font-family: 'Cinzel', serif;
-        font-size: 24px;
-        margin: 0;
-    }
-
-    .welcome-title {
-        font-family: 'Cinzel', serif;
-        font-size: 4.5rem;
-        color: var(--text-dark);
-        text-align: center;
-        margin: 30px 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        animation: fadeInUp 1.2s ease;
-    }
-
-    .main-content {
-        margin-left: 250px;
-        padding: 20px;
-        position: relative;
-    }
-
-    .hero-section {
-        background: linear-gradient(135deg, var(--sea-green), var(--sky-blue));
-        padding: 4rem 2rem;
-        text-align: center;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .left-part {
-        flex: 1;
-        text-align: center;
-    }
-
-    .chess-pieces {
-        display: flex;
-        justify-content: center;
-        gap: 8rem;
-        margin: 3rem 0;
-    }
-
-    .piece {
-        font-size: 5rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        color: var(--cream);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        margin-bottom: 10px;
-    }
-
-    .piece-container {
-        text-align: center;
-        position: relative;
-    }
-
-    .piece-text {
-        font-family: 'Cinzel', serif;
-        color: var(--cream);
-        font-size: 1.2rem;
-        margin-top: 10px;
-        opacity: 0;
-        transform: translateY(-10px);
-        transition: all 0.3s ease;
-    }
-
-    .piece::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 14px;
-        background-color: var(--cream);
-        color: var(--sea-green);
-        padding: 5px 10px;
-        border-radius: 5px;
-        opacity: 0;
-        transition: 0.3s;
-    }
-
-    .piece:hover::after { opacity: 1; bottom: -40px; }
-
-    .queen:hover { transform: scale(1.2) rotate(-10deg); color: var(--sky-blue); }
-    .king:hover { transform: scale(1.2) rotate(10deg); color: var(--sky-blue); }
-
-    .piece-container:hover .piece { transform: translateY(-10px); }
-    .piece-container:hover .piece-text { opacity: 1; transform: translateY(0); }
-
-    .content-box {
-        background: linear-gradient(135deg, var(--sea-green), var(--sky-blue));
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        color: var(--cream);
-    }
-
-    .testimonials .sub-box { background: var(--cream); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; transition: transform 0.3s; }
-    .testimonials .sub-box:hover { transform: translateY(-5px); }
-
-    .sub-feature-upper { display: flex; align-items: center; gap: 1rem; }
-    .sub-feature-upper img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid var(--sea-green); }
-
-    .stars { color: var(--sea-green); }
-    .secondary-header { color: var(--cream); font-size: 1.8rem; margin-top: 2rem; }
-
-    .feedback-profile { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 3px solid var(--text-dark); }
-    .feedback-info h3 { margin: 0; color: var(--text-dark); font-size: 1.2rem; }
-    .rating { color: var(--text-dark); font-size: 1.1rem; }
-    .feedback-text { color: var(--text-dark); line-height: 1.6; font-style: italic; }
-
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
-
-    .feedback-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 20px 0; }
-    .feedback-card { background: var(--cream); border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
-    .feedback-card:hover { transform: translateY(-5px); }
-    .feedback-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-
-    .transforming-piece {
-      text-align: center;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(46,139,87,0.3) 0%, transparent 70%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 20px rgba(46,139,87,0.5), 0 0 40px rgba(46,139,87,0.3);
-      z-index: 1;
-      position: relative;
-    }
-
-    .transforming-piece::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(135,206,235,0.2) 0%, transparent 70%);
-      box-shadow: 0 0 30px rgba(135,206,235,0.4);
-      z-index: -1;
-    }
-
-    .transforming-piece::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,253,208,0.4) 0%, transparent 70%);
-      box-shadow: 0 0 15px rgba(255,253,208,0.6);
-      z-index: -1;
-    }
-
-    .transforming-piece .piece {
-      font-size: 4rem;
-      color: var(--cream);
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-      transition: all 0.5s ease;
-    }
-`;
+function TestimonialCard({ image, name, rating, text, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 30 }}
+      transition={{ duration: 0.6 }}
+      whileHover={{ scale: 1.03 }}
+      style={{
+        background: 'rgba(255, 253, 208, 0.95)',
+        borderRadius: '20px',
+        padding: '1.5rem',
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '1rem' }}>
+        <motion.img
+          src={image}
+          alt={name}
+          whileHover={{ scale: 1.1 }}
+          style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '3px solid #2E8B57'
+          }}
+        />
+        <div>
+          <h4 style={{ margin: 0, color: '#333', fontFamily: "'Cinzel', serif" }}>{name}</h4>
+          <div style={{ color: '#FFD700', fontSize: '1.2rem' }}>{rating}</div>
+        </div>
+      </div>
+      <p style={{ 
+        color: '#555', 
+        fontStyle: 'italic', 
+        lineHeight: '1.6',
+        margin: 0
+      }}>
+        "{text}"
+      </p>
+    </motion.div>
+  );
+}
 
 export default function Home() {
-  React.useEffect(() => {
-    // Match original behavior
-    document.body.classList.add('react-root-host');
-    return () => document.body.classList.remove('react-root-host');
+  const navigate = useNavigate();
+
+  // Memoize to keep references stable for effects.
+  const testimonials = useMemo(() => TESTIMONIALS, []);
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  // Direction: 1 = forward (next), -1 = backward (prev)
+  const [direction, setDirection] = useState(1);
+
+  const variants = {
+    enter: (dir) => ({ x: dir > 0 ? 140 : -140, opacity: 0, scale: 0.99 }),
+    center: { x: 0, opacity: 1, scale: 1 },
+    exit: (dir) => ({ x: dir > 0 ? -140 : 140, opacity: 0, scale: 0.99 }),
+  };
+
+  // Auto-advance testimonials every 6 seconds (forward)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDirection(1);
+      setActiveIndex(i => (i + 1) % testimonials.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [testimonials.length]);
+
+  // Preload testimonial images once to prevent decode/network jank during transitions.
+  useEffect(() => {
+    testimonials.forEach((t) => {
+      const img = new Image();
+      img.src = t.image;
+    });
+  }, [testimonials]);
+
+  useEffect(() => {
+    document.body.style.overflow = 'auto';
+    document.body.style.background = '#071327';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.background = '';
+    };
   }, []);
-
-  const pieces = ['♟', '♞', '♝', '♕', '♔'];
-  const [currentPiece, setCurrentPiece] = React.useState(0);
-
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPiece((prev) => (prev + 1) % pieces.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const openLoginForm = () => { window.location.href = "/login"; };
-  const openSignupForm = () => { window.location.href = "/signup"; };
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: styles }} />
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <img src={process.env.PUBLIC_URL + "/images/chesshive.jpg"} alt="ChessHive Logo" />
-          <h1>ChessHive</h1>
-        </div>
-        <a href="/" className="sidebar-link"><i className="fas fa-home"></i>Home</a>
-        <a href="/about" className="sidebar-link"><i className="fas fa-info-circle"></i>About</a>
-        <a href="/login" className="sidebar-link"><i className="fas fa-users"></i>Join Community</a>
-        <a href="/contactus" className="sidebar-link"><i className="fas fa-envelope"></i>Contact Us</a>
+    <AnimatePresence>
+      <div style={{ minHeight: '100vh', position: 'relative' }}>
+        <ChessBackground wallpaperUrl="/images/abstract-chess-pieces-digital-art-style.jpg" />
+        <AnimatedSidebar />
+
+        <motion.main
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          style={{
+            padding: '40px',
+            minHeight: '100vh',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          <motion.div
+            variants={itemVariants}
+            style={{ textAlign: 'center', marginBottom: '3rem' }}
+          >
+            <motion.h1
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+                color: '#FFFDD0',
+                textShadow: '0 0 30px rgba(46, 139, 87, 0.5)',
+                marginBottom: '0.5rem',
+                letterSpacing: '3px'
+              }}
+            >
+              Welcome to ChessHive
+            </motion.h1>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+              style={{
+                height: '3px',
+                background: 'linear-gradient(90deg, transparent, #2E8B57, transparent)',
+                maxWidth: '400px',
+                margin: '0 auto'
+              }}
+            />
+          </motion.div>
+
+          <GlassCard delay={0.4} className="hero-glass">
+            <motion.div 
+              style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '4rem',
+                flexWrap: 'wrap',
+                marginBottom: '2rem'
+              }}
+            >
+              <motion.div
+                variants={chessPieceVariants}
+                whileHover={{ 
+                  scale: 1.2, 
+                  rotate: -10,
+                  color: '#87CEEB',
+                  textShadow: '0 0 30px rgba(135, 206, 235, 0.8)'
+                }}
+                onClick={() => navigate('/login')}
+                style={{
+                  textAlign: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{
+                  fontSize: '5rem',
+                  color: '#FFFDD0',
+                  textShadow: '0 0 20px rgba(46, 139, 87, 0.5)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  ♕
+                </div>
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    color: '#FFFDD0',
+                    fontSize: '1.1rem',
+                    letterSpacing: '2px'
+                  }}
+                >
+                  LOGIN
+                </motion.span>
+              </motion.div>
+
+              <motion.div
+                variants={chessPieceVariants}
+                whileHover={{ 
+                  scale: 1.2, 
+                  rotate: 10,
+                  color: '#87CEEB',
+                  textShadow: '0 0 30px rgba(135, 206, 235, 0.8)'
+                }}
+                onClick={() => navigate('/signup')}
+                style={{
+                  textAlign: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{
+                  fontSize: '5rem',
+                  color: '#FFFDD0',
+                  textShadow: '0 0 20px rgba(46, 139, 87, 0.5)',
+                  transition: 'all 0.3s ease'
+                }}>
+                  ♔
+                </div>
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.9 }}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    color: '#FFFDD0',
+                    fontSize: '1.1rem',
+                    letterSpacing: '2px'
+                  }}
+                >
+                  SIGN UP
+                </motion.span>
+              </motion.div>
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+              style={{
+                textAlign: 'center',
+                fontFamily: "'Cinzel', serif",
+                color: '#87CEEB',
+                fontSize: 'clamp(1.2rem, 3vw, 1.8rem)',
+                fontWeight: '400',
+                textShadow: '0 0 15px rgba(135, 206, 235, 0.3)'
+              }}
+            >
+              Bringing Chess Passionates from Campuses to the Board
+            </motion.h2>
+          </GlassCard>
+
+          <motion.div
+            variants={itemVariants}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1.5rem',
+              marginTop: '3rem'
+            }}
+          >
+            <FeatureCard
+              icon="🌍"
+              title="Play Anywhere"
+              description="Connect and play with chess enthusiasts from campuses worldwide, anytime."
+              delay={0.6}
+            />
+            <FeatureCard
+              icon="🏆"
+              title="Compete & Win"
+              description="Join tournaments, climb rankings, and prove your skills against top players."
+              delay={0.7}
+            />
+            <FeatureCard
+              icon="📚"
+              title="Learn & Grow"
+              description="Access coaching, lessons, and resources to improve your game strategy."
+              delay={0.8}
+            />
+            <FeatureCard
+              icon="🤝"
+              title="Community"
+              description="Be part of a vibrant chess community with players of all skill levels."
+              delay={0.9}
+            />
+          </motion.div>
+
+          <motion.section
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.2, duration: 0.6 }}
+            style={{ marginTop: '4rem' }}
+          >
+            <GlassCard>
+              <motion.h2
+                style={{
+                  textAlign: 'center',
+                  fontFamily: "'Cinzel', serif",
+                  color: '#FFFDD0',
+                  fontSize: '2rem',
+                  marginBottom: '2rem'
+                }}
+              >
+                What Our Community Says
+              </motion.h2>
+              
+              <div style={{ position: 'relative', minHeight: '240px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <AnimatePresence initial={false} custom={direction} mode="wait">
+                  {testimonials.map((t, idx) => idx === activeIndex && (
+                    <motion.div
+                      key={t.name}
+                      custom={direction}
+                      variants={variants}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', willChange: 'transform, opacity', transform: 'translateZ(0)' }}
+                    >
+                      <div style={{ width: '100%', maxWidth: '720px' }}>
+                        <TestimonialCard {...t} />
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '1rem' }}>
+                {testimonials.map((_, i) => (
+                  <div
+                    key={i}
+                    onClick={() => { setDirection(i > activeIndex ? 1 : -1); setActiveIndex(i); }}
+                    style={{
+                      width: i === activeIndex ? 14 : 10,
+                      height: i === activeIndex ? 14 : 10,
+                      borderRadius: '50%',
+                      background: i === activeIndex ? 'var(--gaming-yellow)' : 'rgba(255,255,255,0.2)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  />
+                ))}
+              </div>
+            </GlassCard>
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.6 }}
+            style={{
+              marginTop: '4rem',
+              textAlign: 'center',
+              paddingBottom: '4rem'
+            }}
+          >
+            <GlassCard>
+              <h2 style={{
+                fontFamily: "'Cinzel', serif",
+                color: '#FFFDD0',
+                fontSize: '2rem',
+                marginBottom: '1.5rem'
+              }}>
+                Ready to Make Your Move?
+              </h2>
+              <p style={{
+                color: 'rgba(255, 253, 208, 0.8)',
+                maxWidth: '600px',
+                margin: '0 auto 2rem',
+                lineHeight: '1.8'
+              }}>
+                Join thousands of chess enthusiasts from campuses around the world. 
+                Play, learn, compete, and shop – all in one place!
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <FloatingButton onClick={() => navigate('/signup')} delay={1.7}>
+                  Get Started
+                </FloatingButton>
+                <FloatingButton onClick={() => navigate('/about')} variant="secondary" delay={1.8}>
+                  Learn More
+                </FloatingButton>
+              </div>
+            </GlassCard>
+          </motion.section>
+        </motion.main>
       </div>
-
-      {/* Main Content */}
-      <div className="main-content">
-        <h1 className="welcome-title">Welcome to ChessHive</h1>
-        <div className="hero-section">
-          <div className="left-part">
-            <div className="chess-pieces">
-              <div className="piece queen" data-tooltip="Click to Login" onClick={openLoginForm}>♕</div>
-              <div className="piece-text">LOGIN</div>
-              <div className="piece king" data-tooltip="Click to Sign Up" onClick={openSignupForm}>♔</div>
-              <div className="piece-text">SIGN UP</div>
-            </div>
-            <div className="secondary-header">Bringing Chess Passionates from Campuses to the Board</div>
-          </div>
-          <div className="transforming-piece">
-            <div className="piece" data-tooltip="Evolving Chess Piece">{pieces[currentPiece]}</div>
-          </div>
-        </div>
-
-        <div className="content-box">
-          <div className="left-inner-box">
-            <p>Whether you're a grandmaster or just starting, our platform brings chess lovers together from around the world. Play, learn, compete, and shop – all in one place!</p>
-            <p>
-              <ul>♟️ Ready to Make Your Move?
-                <li> Play anytime, anywhere 🌍</li>
-                <li>Improve your skills with coaching & lessons</li>
-                <li>Compete with top players worldwide</li>
-                🖱️ Sign Up & Start Playing!
-              </ul>
-            </p>
-          </div>
-        </div>
-
-        <div className="content-box testimonials">
-          <h2 style={{ color: 'var(--text-dark)', textAlign: 'center', marginBottom: 30 }}>What Our Community Says</h2>
-          <div className="feedback-grid">
-            <div className="feedback-card">
-              <div className="feedback-header">
-                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e" alt="Profile" className="feedback-profile" />
-                <div className="feedback-info">
-                  <h3>Alex Thompson</h3>
-                  <div className="rating">★★★★★</div>
-                </div>
-              </div>
-              <p className="feedback-text">"The community here is incredible! I've improved my game significantly through the daily challenges and tournaments."</p>
-            </div>
-
-            <div className="feedback-card">
-              <div className="feedback-header">
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" alt="Profile" className="feedback-profile" />
-                <div className="feedback-info">
-                  <h3>Emma Chen</h3>
-                  <div className="rating">★★★★★</div>
-                </div>
-              </div>
-              <p className="feedback-text">"ChessHive has transformed how I approach the game. The mentorship program is exceptional!"</p>
-            </div>
-
-            <div className="feedback-card">
-              <div className="feedback-header">
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d" alt="Profile" className="feedback-profile" />
-                <div className="feedback-info">
-                  <h3>David Kumar</h3>
-                  <div className="rating">★★★★★</div>
-                </div>
-              </div>
-              <p className="feedback-text">"From beginner to tournament player, ChessHive has been there every step of the way. Amazing platform!"</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    </AnimatePresence>
   );
 }
