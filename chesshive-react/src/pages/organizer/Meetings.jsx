@@ -1,11 +1,28 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-// React conversion of views/organizer/meetings.html
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const INITIAL_VISIBLE = 5;
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
 function Meetings() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [form, setForm] = useState({ title: '', date: '', time: '', link: '' });
   const [fieldErrors, setFieldErrors] = useState({});
   const [message, setMessage] = useState(null); // { type: 'success'|'error', text }
@@ -99,40 +116,27 @@ function Meetings() {
     }
   };
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', color: '#2E8B57', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' },
-    label: { color: '#2E8B57', fontWeight: 'bold' },
-    input: (hasError) => ({ padding: '1rem', border: `2px solid ${hasError ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontSize: '1rem' }),
-    error: { color: '#c62828', fontSize: '0.9rem', marginTop: 4 },
-    btn: { backgroundColor: '#2E8B57', color: '#FFFDD0', border: 'none', padding: '1rem', borderRadius: 8, fontSize: '1.1rem', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
-    tableCard: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', border: '1px solid var(--card-border)' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' },
-    th: { background: '#2E8B57', color: '#FFFDD0', padding: '1.2rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46, 139, 87, 0.2)' },
-    join: { backgroundColor: '#87CEEB', color: '#2E8B57', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
-    moreWrap: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    backRow: { textAlign: 'right', marginTop: '2rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    msg: (type) => ({ marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 8, color: type === 'success' ? '#1b5e20' : '#c62828', background: type === 'success' ? 'rgba(76,175,80,0.15)' : 'rgba(198,40,40,0.15)' })
-  };
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
 
   const renderRows = (rows, visible) =>
     rows.slice(0, visible).map((m, idx) => {
       const dateStr = m.date ? new Date(m.date).toLocaleDateString() : '';
       return (
         <tr key={(m._id || m.title || idx) + ''}>
-          <td style={styles.td}>{m.title}</td>
-          <td style={styles.td}>{dateStr}</td>
-          <td style={styles.td}>{m.time}</td>
-          <td style={styles.td}>
+          <td className="td">{m.title}</td>
+          <td className="td">{dateStr}</td>
+          <td className="td">{m.time}</td>
+          <td className="td">
             {m.link ? (
-              <a href={m.link} target="_blank" rel="noreferrer" style={styles.join}>
-                <i className="fas fa-video" aria-hidden="true"></i> Join
+              <a href={m.link} target="_blank" rel="noreferrer" className="join-link">
+                <i className="fas fa-video" /> Join
               </a>
             ) : (
               '-'
@@ -143,111 +147,194 @@ function Meetings() {
     });
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="calendar">📅</span> Schedule a Meeting</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .form-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem; }
+        .form-label { color:var(--sea-green); font-weight:bold; }
+        .form-input { padding:1rem; border:2px solid var(--sea-green); border-radius:8px; font-size:1rem; background:var(--page-bg); color:var(--text-color); }
+        .form-input.error { border-color:#c62828; }
+        .form-error { color:#c62828; font-size:0.9rem; margin-top:4px; }
+        .form-btn { background-color:var(--sea-green); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; font-size:1.1rem; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; grid-column:1 / -1; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
+        .table { width:100%; border-collapse:collapse; margin-bottom:1rem; }
+        .th { background:var(--sea-green); color:var(--on-accent); padding:1.2rem; text-align:left; font-family:'Cinzel', serif; }
+        .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .join-link { background: linear-gradient(90deg, rgba(235,87,87,1), rgba(6,56,80,1)); color: var(--on-accent); padding:0.5rem 1rem; border-radius:20px; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; }
+        .more-btn { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+        .back-link { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; }
+        .message { margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; }
+        .message.success { color:#1b5e20; background:rgba(76,175,80,0.15); }
+        .message.error { color:#c62828; background:rgba(198,40,40,0.15); }
+        .empty { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; }
+      `}</style>
 
-        <div style={styles.card}>
-          {message && <div style={styles.msg(message.type)}><i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} aria-hidden="true" /> {message.text}</div>}
-          <form onSubmit={onSubmit} style={styles.formGrid}>
-            <div>
-              <label style={styles.label}><i className="fas fa-heading" aria-hidden="true"></i> Meeting Title</label>
-              <input style={styles.input(!!fieldErrors.title)} type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Enter meeting title" required />
-              {fieldErrors.title && <div style={styles.error}>{fieldErrors.title}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-calendar" aria-hidden="true"></i> Date</label>
-              <input style={styles.input(!!fieldErrors.date)} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
-              {fieldErrors.date && <div style={styles.error}>{fieldErrors.date}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-clock" aria-hidden="true"></i> Time</label>
-              <input style={styles.input(!!fieldErrors.time)} type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
-              {fieldErrors.time && <div style={styles.error}>{fieldErrors.time}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-link" aria-hidden="true"></i> Meeting Link</label>
-              <input style={styles.input(!!fieldErrors.link)} type="text" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="Zoom/Google Meet link" required />
-              {fieldErrors.link && <div style={styles.error}>{fieldErrors.link}</div>}
-            </div>
-            <button type="submit" style={styles.btn}>
-              <i className="fas fa-calendar-plus" aria-hidden="true"></i> Schedule Meeting
-            </button>
-          </form>
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-calendar" />
+        </motion.div>
+        
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
+
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <div style={styles.tableCard}>
-          <h3 style={{ ...styles.h2, fontSize: '1.8rem', textAlign: 'center' }}>Organized Meetings</h3>
-          {loading ? (
-            <div>Loading meetings…</div>
-          ) : organized.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' }}><i className="fas fa-info-circle" aria-hidden="true"></i> No meetings available.</div>
-          ) : (
-            <>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}><i className="fas fa-heading" aria-hidden="true"></i> Title</th>
-                    <th style={styles.th}><i className="fas fa-calendar" aria-hidden="true"></i> Date</th>
-                    <th style={styles.th}><i className="fas fa-clock" aria-hidden="true"></i> Time</th>
-                    <th style={styles.th}><i className="fas fa-link" aria-hidden="true"></i> Link</th>
-                  </tr>
-                </thead>
-                <tbody>{renderRows(organized, visibleOrg)}</tbody>
-              </table>
-              <div style={styles.moreWrap}>
-                {visibleOrg < organized.length && (
-                  <button style={styles.moreBtn} onClick={() => setVisibleOrg((v) => Math.min(v + INITIAL_VISIBLE, organized.length))}>
-                    <i className="fas fa-chevron-down" aria-hidden="true"></i> More
-                  </button>
-                )}
-                {visibleOrg > INITIAL_VISIBLE && (
-                  <button style={styles.moreBtn} onClick={() => setVisibleOrg(INITIAL_VISIBLE)}>
-                    <i className="fas fa-chevron-up" aria-hidden="true"></i> Hide
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-calendar" /> Schedule a Meeting
+          </motion.h1>
 
-          <h3 style={{ ...styles.h2, fontSize: '1.8rem', textAlign: 'center', marginTop: '1.5rem' }}>Upcoming Meetings</h3>
-          {loading ? (
-            <div>Loading meetings…</div>
-          ) : upcoming.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' }}><i className="fas fa-info-circle" aria-hidden="true"></i> No meetings available.</div>
-          ) : (
-            <>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}><i className="fas fa-heading" aria-hidden="true"></i> Title</th>
-                    <th style={styles.th}><i className="fas fa-calendar" aria-hidden="true"></i> Date</th>
-                    <th style={styles.th}><i className="fas fa-clock" aria-hidden="true"></i> Time</th>
-                    <th style={styles.th}><i className="fas fa-link" aria-hidden="true"></i> Link</th>
-                  </tr>
-                </thead>
-                <tbody>{renderRows(upcoming, visibleUpc)}</tbody>
-              </table>
-              <div style={styles.moreWrap}>
-                {visibleUpc < upcoming.length && (
-                  <button style={styles.moreBtn} onClick={() => setVisibleUpc((v) => Math.min(v + INITIAL_VISIBLE, upcoming.length))}>
-                    <i className="fas fa-chevron-down" aria-hidden="true"></i> More
-                  </button>
-                )}
-                {visibleUpc > INITIAL_VISIBLE && (
-                  <button style={styles.moreBtn} onClick={() => setVisibleUpc(INITIAL_VISIBLE)}>
-                    <i className="fas fa-chevron-up" aria-hidden="true"></i> Hide
-                  </button>
-                )}
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {message && <div className={`message ${message.type}`}><i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}</div>}
+            <form onSubmit={onSubmit} className="form-grid">
+              <div>
+                <label className="form-label"><i className="fas fa-heading" /> Meeting Title</label>
+                <input className={`form-input ${fieldErrors.title ? 'error' : ''}`} type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Enter meeting title" required />
+                {fieldErrors.title && <div className="form-error">{fieldErrors.title}</div>}
               </div>
-            </>
-          )}
+              <div>
+                <label className="form-label"><i className="fas fa-calendar" /> Date</label>
+                <input className={`form-input ${fieldErrors.date ? 'error' : ''}`} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                {fieldErrors.date && <div className="form-error">{fieldErrors.date}</div>}
+              </div>
+              <div>
+                <label className="form-label"><i className="fas fa-clock" /> Time</label>
+                <input className={`form-input ${fieldErrors.time ? 'error' : ''}`} type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} required />
+                {fieldErrors.time && <div className="form-error">{fieldErrors.time}</div>}
+              </div>
+              <div>
+                <label className="form-label"><i className="fas fa-link" /> Meeting Link</label>
+                <input className={`form-input ${fieldErrors.link ? 'error' : ''}`} type="text" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="Zoom/Google Meet link" required />
+                {fieldErrors.link && <div className="form-error">{fieldErrors.link}</div>}
+              </div>
+              <button type="submit" className="form-btn">
+                <i className="fas fa-calendar-plus" /> Schedule Meeting
+              </button>
+            </form>
+          </motion.div>
 
-          <div style={styles.backRow}>
-            <Link to="/organizer/organizer_dashboard" style={styles.backLink}>
-              <i className="fas fa-arrow-left" aria-hidden="true"></i> Back to Dashboard
-            </Link>
-          </div>
+          <motion.div
+            className="updates-section"
+            custom={1}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', fontSize: '1.8rem', textAlign: 'center', marginBottom: '1.5rem' }}>Organized Meetings</h3>
+            {loading ? (
+              <div>Loading meetings…</div>
+            ) : organized.length === 0 ? (
+              <div className="empty"><i className="fas fa-info-circle" /> No meetings available.</div>
+            ) : (
+              <>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th className="th"><i className="fas fa-heading" /> Title</th>
+                      <th className="th"><i className="fas fa-calendar" /> Date</th>
+                      <th className="th"><i className="fas fa-clock" /> Time</th>
+                      <th className="th"><i className="fas fa-link" /> Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>{renderRows(organized, visibleOrg)}</tbody>
+                </table>
+                <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                  {visibleOrg < organized.length && (
+                    <button className="more-btn" onClick={() => setVisibleOrg((v) => Math.min(v + INITIAL_VISIBLE, organized.length))}>
+                      <i className="fas fa-chevron-down" /> More
+                    </button>
+                  )}
+                  {visibleOrg > INITIAL_VISIBLE && (
+                    <button className="more-btn" onClick={() => setVisibleOrg(INITIAL_VISIBLE)}>
+                      <i className="fas fa-chevron-up" /> Hide
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', fontSize: '1.8rem', textAlign: 'center', marginTop: '1.5rem', marginBottom: '1.5rem' }}>Upcoming Meetings</h3>
+            {loading ? (
+              <div>Loading meetings…</div>
+            ) : upcoming.length === 0 ? (
+              <div className="empty"><i className="fas fa-info-circle" /> No meetings available.</div>
+            ) : (
+              <>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th className="th"><i className="fas fa-heading" /> Title</th>
+                      <th className="th"><i className="fas fa-calendar" /> Date</th>
+                      <th className="th"><i className="fas fa-clock" /> Time</th>
+                      <th className="th"><i className="fas fa-link" /> Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>{renderRows(upcoming, visibleUpc)}</tbody>
+                </table>
+                <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                  {visibleUpc < upcoming.length && (
+                    <button className="more-btn" onClick={() => setVisibleUpc((v) => Math.min(v + INITIAL_VISIBLE, upcoming.length))}>
+                      <i className="fas fa-chevron-down" /> More
+                    </button>
+                  )}
+                  {visibleUpc > INITIAL_VISIBLE && (
+                    <button className="more-btn" onClick={() => setVisibleUpc(INITIAL_VISIBLE)}>
+                      <i className="fas fa-chevron-up" /> Hide
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+              <Link to="/organizer/organizer_dashboard" className="back-link">
+                <i className="fas fa-arrow-left" /> Back to Dashboard
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
