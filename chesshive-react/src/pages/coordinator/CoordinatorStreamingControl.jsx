@@ -1,5 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 function safeTrim(v) {
   return (v == null ? '' : String(v)).trim();
@@ -27,6 +45,7 @@ function detectPlatformFromUrl(url) {
 }
 
 export default function CoordinatorStreamingControl() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -89,22 +108,15 @@ export default function CoordinatorStreamingControl() {
   const liveStreams = useMemo(() => (streams || []).filter(s => !!s.isLive), [streams]);
   const draftStreams = useMemo(() => (streams || []).filter(s => !s.isLive), [streams]);
 
-  const styles = useMemo(() => ({
-    page: { minHeight: '100vh', background: '#FFFDD0', fontFamily: 'Playfair Display, serif', padding: '2rem' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' },
-    title: { fontFamily: 'Cinzel, serif', color: '#2E8B57', margin: 0 },
-    btn: { background: '#2E8B57', color: '#fff', border: 'none', padding: '0.6rem 1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', textDecoration: 'none', display: 'inline-flex', gap: '0.5rem', alignItems: 'center' },
-    btnSecondary: { background: '#87CEEB', color: '#2E8B57' },
-    btnDanger: { background: '#ff4d4d', color: '#fff' },
-    card: { background: '#fff', borderRadius: 15, padding: '1.25rem', border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none', marginBottom: '1rem' },
-    grid: { display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' },
-    row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' },
-    input: { width: '100%', padding: '0.65rem', borderRadius: 10, border: '1px solid rgba(0,0,0,0.15)' },
-    label: { fontFamily: 'Cinzel, serif', color: '#2E8B57', fontSize: '0.9rem' },
-    error: { background: '#ffdddd', color: '#b00020', padding: '0.75rem', borderRadius: 10, border: '1px solid rgba(176,0,32,0.25)', marginBottom: '1rem' },
-    muted: { opacity: 0.8 },
-    pill: { padding: '0.25rem 0.6rem', borderRadius: 999, fontSize: '0.85rem', border: '1px solid rgba(0,0,0,0.12)' },
-  }), []);
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   const onCreate = async (e) => {
     e.preventDefault();
@@ -170,29 +182,35 @@ export default function CoordinatorStreamingControl() {
   };
 
   const StreamCard = ({ s }) => (
-    <div style={styles.card}>
-      <div style={styles.row}>
+    <motion.div
+      className="updates-section"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', fontSize: '1.05rem' }}>{s.title}</div>
-          <div style={styles.muted}>{s.matchLabel || s.description || ''}</div>
-          <div style={{ marginTop: '0.4rem', fontSize: '0.9rem', ...styles.muted }}>
+          <div style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', fontSize: '1.05rem' }}>{s.title}</div>
+          <div style={{ opacity: 0.8 }}>{s.matchLabel || s.description || ''}</div>
+          <div style={{ marginTop: '0.4rem', fontSize: '0.9rem', opacity: 0.8 }}>
             {platformLabel(s.platform)}{s.updatedAt ? ` • Updated ${new Date(s.updatedAt).toLocaleString()}` : ''}
           </div>
         </div>
-        <span style={styles.pill}>{s.isLive ? 'LIVE' : (s.endedAt ? 'COMPLETED' : 'DRAFT')}</span>
+        <span className="status-pill">{s.isLive ? 'LIVE' : (s.endedAt ? 'COMPLETED' : 'DRAFT')}</span>
       </div>
 
       <div style={{ marginTop: '0.75rem' }}>
-        <div style={styles.label}>Result (optional, visible to players)</div>
+        <div className="form-label">Result (optional, visible to players)</div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <input
-            style={{ ...styles.input, maxWidth: 520 }}
+            className="form-input"
+            style={{ maxWidth: 520 }}
             value={resultDrafts[s._id] ?? (s.result || '')}
             onChange={(e) => setResultDrafts((p) => ({ ...p, [s._id]: e.target.value }))}
             placeholder="Example: White wins • 1-0"
           />
           <button
-            style={{ ...styles.btn, ...styles.btnSecondary }}
+            className="action-btn"
             type="button"
             onClick={() => patchStream(s._id, { result: safeTrim(resultDrafts[s._id] ?? '') })}
           >
@@ -202,17 +220,17 @@ export default function CoordinatorStreamingControl() {
       </div>
 
       <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <a href={s.url} target="_blank" rel="noreferrer" style={{ ...styles.btn, ...styles.btnSecondary }}>
+        <a href={s.url} target="_blank" rel="noreferrer" className="action-btn">
           <i className="fas fa-external-link-alt" /> Open
         </a>
 
-        <button style={styles.btn} onClick={() => patchStream(s._id, { isLive: !s.isLive })}>
+        <button className="btn-primary" onClick={() => patchStream(s._id, { isLive: !s.isLive })}>
           <i className="fas fa-broadcast-tower" /> {s.isLive ? 'Stop' : 'Go Live'}
         </button>
 
         {!s.isLive ? null : (
           <button
-            style={{ ...styles.btn, ...styles.btnSecondary }}
+            className="action-btn"
             type="button"
             onClick={() => patchStream(s._id, { isLive: false, result: safeTrim(resultDrafts[s._id] ?? '') })}
           >
@@ -220,121 +238,200 @@ export default function CoordinatorStreamingControl() {
           </button>
         )}
 
-        <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={() => patchStream(s._id, { featured: !s.featured })}>
+        <button className="action-btn" onClick={() => patchStream(s._id, { featured: !s.featured })}>
           <i className="fas fa-star" /> {s.featured ? 'Unfeature' : 'Feature'}
         </button>
 
-        <button style={{ ...styles.btn, ...styles.btnDanger }} onClick={() => deleteStream(s._id)}>
+        <button className="btn-danger" onClick={() => deleteStream(s._id)}>
           <i className="fas fa-trash" /> Delete
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1 style={styles.title}><i className="fas fa-broadcast-tower" /> Streaming Control</h1>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button style={{ ...styles.btn, ...styles.btnSecondary }} onClick={load}><i className="fas fa-sync" /> Refresh</button>
-          <Link style={styles.btn} to="/coordinator/coordinator_dashboard"><i className="fas fa-arrow-left" /> Dashboard</Link>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .form-grid { display:grid; grid-template-columns:1fr; gap:1rem; }
+        .form-input { width:100%; padding:0.65rem; border-radius:10px; border:2px solid var(--sea-green); background:var(--card-bg); color:var(--text-color); }
+        .form-label { font-family:'Cinzel', serif; color:var(--sea-green); font-size:0.9rem; margin-bottom:0.5rem; display:block; }
+        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
+        .action-btn { background:var(--sky-blue); color:var(--sea-green); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
+        .btn-danger { background:#ff4d4d; color:var(--on-accent); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
+        .status-pill { padding:0.25rem 0.6rem; border-radius:999px; font-size:0.85rem; border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-color); }
+        .error-box { background:#ffdddd; color:#b00020; padding:0.75rem; border-radius:10px; border:1px solid rgba(176,0,32,0.25); margin-bottom:1rem; }
+        .header-row { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .section-title { font-family:'Cinzel', serif; color:var(--sea-green); margin:1rem 0 0.5rem 0; }
+      `}</style>
+
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-broadcast-tower" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
+
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
-      </div>
 
-      {error && <div style={styles.error}><strong>Error:</strong> {error}</div>}
-
-      <div style={styles.card}>
-        <div style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '0.75rem' }}>Create / Publish Stream</div>
-        <form onSubmit={onCreate}>
-          <div style={styles.grid}>
-            <div>
-              <div style={styles.label}>Title</div>
-              <input style={styles.input} value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Example: Finals Board 1" required />
-            </div>
-
-            <div>
-              <div style={styles.label}>Stream URL</div>
-              <input
-                style={styles.input}
-                value={form.url}
-                onChange={(e) => {
-                  const nextUrl = e.target.value;
-                  const detected = detectPlatformFromUrl(nextUrl);
-                  setForm((f) => ({ ...f, url: nextUrl, platform: detected || f.platform }));
-                }}
-                placeholder={form.platform === 'lichess'
-                  ? 'https://lichess.org/<gameId> or https://lichess.org/study/<studyId>/<chapterId>'
-                  : form.platform === 'chesscom'
-                    ? 'https://www.chess.com/game/live/<id> (or share URL)'
-                    : 'https://youtube.com/watch?v=...'}
-                required
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <div style={styles.label}>Platform</div>
-                <select style={styles.input} value={form.platform} onChange={(e) => setForm(f => ({ ...f, platform: e.target.value }))}>
-                  <option value="youtube">YouTube</option>
-                  <option value="twitch">Twitch</option>
-                  <option value="lichess">Lichess</option>
-                  <option value="chesscom">Chess.com</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <div style={styles.label}>Match Label (optional)</div>
-                <input style={styles.input} value={form.matchLabel} onChange={(e) => setForm(f => ({ ...f, matchLabel: e.target.value }))} placeholder="Tournament • Round • Board" />
-              </div>
-            </div>
-
-            <div>
-              <div style={styles.label}>Description (optional)</div>
-              <input style={styles.input} value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short note for players" />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input type="checkbox" checked={form.isLive} onChange={(e) => setForm(f => ({ ...f, isLive: e.target.checked }))} />
-                <span style={styles.label}>Live now</span>
-              </label>
-              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input type="checkbox" checked={form.featured} onChange={(e) => setForm(f => ({ ...f, featured: e.target.checked }))} />
-                <span style={styles.label}>Featured</span>
-              </label>
-            </div>
-
-            <div>
-              <button type="submit" style={styles.btn}><i className="fas fa-plus" /> Publish</button>
+        <div className="content">
+          <div className="header-row">
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <i className="fas fa-broadcast-tower" /> Streaming Control
+            </motion.h1>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button className="action-btn" onClick={load}><i className="fas fa-sync" /> Refresh</button>
+              <Link className="btn-primary" to="/coordinator/coordinator_dashboard"><i className="fas fa-arrow-left" /> Dashboard</Link>
             </div>
           </div>
-        </form>
-      </div>
 
-      {loading ? (
-        <div style={styles.card}>Loading…</div>
-      ) : (
-        <>
-          <div style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', margin: '1rem 0 0.5rem 0' }}>Live</div>
-          {liveStreams.length === 0 ? (
-            <div style={styles.card}><span style={styles.muted}>No live streams.</span></div>
+          {error && <div className="error-box"><strong>Error:</strong> {error}</div>}
+
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <div style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '0.75rem' }}>Create / Publish Stream</div>
+            <form onSubmit={onCreate}>
+              <div className="form-grid">
+                <div>
+                  <div className="form-label">Title</div>
+                  <input className="form-input" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Example: Finals Board 1" required />
+                </div>
+
+                <div>
+                  <div className="form-label">Stream URL</div>
+                  <input
+                    className="form-input"
+                    value={form.url}
+                    onChange={(e) => {
+                      const nextUrl = e.target.value;
+                      const detected = detectPlatformFromUrl(nextUrl);
+                      setForm((f) => ({ ...f, url: nextUrl, platform: detected || f.platform }));
+                    }}
+                    placeholder={form.platform === 'lichess'
+                      ? 'https://lichess.org/<gameId> or https://lichess.org/study/<studyId>/<chapterId>'
+                      : form.platform === 'chesscom'
+                        ? 'https://www.chess.com/game/live/<id> (or share URL)'
+                        : 'https://youtube.com/watch?v=...'}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <div className="form-label">Platform</div>
+                    <select className="form-input" value={form.platform} onChange={(e) => setForm(f => ({ ...f, platform: e.target.value }))}>
+                      <option value="youtube">YouTube</option>
+                      <option value="twitch">Twitch</option>
+                      <option value="lichess">Lichess</option>
+                      <option value="chesscom">Chess.com</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div className="form-label">Match Label (optional)</div>
+                    <input className="form-input" value={form.matchLabel} onChange={(e) => setForm(f => ({ ...f, matchLabel: e.target.value }))} placeholder="Tournament • Round • Board" />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="form-label">Description (optional)</div>
+                  <input className="form-input" value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Short note for players" />
+                </div>
+
+                <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input type="checkbox" checked={form.isLive} onChange={(e) => setForm(f => ({ ...f, isLive: e.target.checked }))} />
+                    <span className="form-label">Live now</span>
+                  </label>
+                  <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input type="checkbox" checked={form.featured} onChange={(e) => setForm(f => ({ ...f, featured: e.target.checked }))} />
+                    <span className="form-label">Featured</span>
+                  </label>
+                </div>
+
+                <div>
+                  <button type="submit" className="btn-primary"><i className="fas fa-plus" /> Publish</button>
+                </div>
+              </div>
+            </form>
+          </motion.div>
+
+          {loading ? (
+            <div className="updates-section">Loading…</div>
           ) : (
-            liveStreams.map(s => <StreamCard key={s._id} s={s} />)
+            <>
+              <div className="section-title">Live</div>
+              {liveStreams.length === 0 ? (
+                <div className="updates-section"><span style={{ opacity: 0.8 }}>No live streams.</span></div>
+              ) : (
+                liveStreams.map(s => <StreamCard key={s._id} s={s} />)
+              )}
+
+              <div className="section-title">Drafts</div>
+              {draftStreams.length === 0 ? (
+                <div className="updates-section"><span style={{ opacity: 0.8 }}>No drafts.</span></div>
+              ) : (
+                draftStreams.map(s => <StreamCard key={s._id} s={s} />)
+              )}
+            </>
           )}
 
-          <div style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', margin: '1rem 0 0.5rem 0' }}>Drafts</div>
-          {draftStreams.length === 0 ? (
-            <div style={styles.card}><span style={styles.muted}>No drafts.</span></div>
-          ) : (
-            draftStreams.map(s => <StreamCard key={s._id} s={s} />)
-          )}
-        </>
-      )}
-
-      <div style={styles.card}>
-        <div style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57' }}>Player View</div>
-        <div style={{ marginTop: '0.5rem', ...styles.muted }}>
-          Players will see any stream marked as <strong>Live</strong> on the Watch page.
+          <motion.div
+            className="updates-section"
+            custom={1}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <div style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)' }}>Player View</div>
+            <div style={{ marginTop: '0.5rem', opacity: 0.8 }}>
+              Players will see any stream marked as <strong>Live</strong> on the Watch page.
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
