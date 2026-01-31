@@ -161,8 +161,8 @@ const OrganizerTournament = () => {
         .th { background:var(--sea-green); color:var(--on-accent); padding:1rem; text-align:left; font-family:'Cinzel', serif; }
         .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
         .search-bar { display:flex; align-items:center; gap:10px; padding:10px; background:var(--card-bg); border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:500px; margin:20px auto; border:1px solid var(--card-border); }
-        .select { padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:14px; }
-        .input { flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:14px; }
+        .select { padding:10px 14px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:16px; }
+        .input { flex:1; padding:10px 14px; border-radius:8px; border:1px solid var(--card-border); background:var(--page-bg); color:var(--text-color); font-size:16px; min-width:300px; }
         .message { padding:1rem; border-radius:8px; margin-bottom:1.5rem; text-align:center; }
         .message.success { background-color:rgba(var(--sea-green-rgb, 27, 94, 63),0.1); color:var(--sea-green); }
         .message.error { background-color:#ffebee; color:#c62828; }
