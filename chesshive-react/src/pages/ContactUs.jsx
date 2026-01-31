@@ -86,26 +86,6 @@ export default function ContactUs() {
       setSubmitting(false);
       return;
     }
-    try {
-      const response = await fetch('/api/contactus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), message: message.trim() })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setSuccess(data.message);
-        setName("");
-        setEmail("");
-        setMessage("");
-        setWordCount(0);
-      } else {
-        setSuccess(data.message);
-      }    } catch (error) {
-      setSuccess("Failed to send message. Please try again later.");
-    } finally {
-      setSubmitting(false);
-    }
   }
 
   const inputStyle = {

@@ -1,20 +1,55 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import { useNavigate } from 'react-router-dom';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
-// React conversion of views/coordinator/coordinator_dashboard.html
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.12 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+  }
+};
 
 function CoordinatorDashboard() {
+  const navigate = useNavigate();
+  const [isDark, toggleTheme] = usePlayerTheme();
+  
   const [name, setName] = useState('Coordinator');
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [visibleCount, setVisibleCount] = useState(5);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
-
-  const isMobile = width <= 768;
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
   useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -109,55 +144,104 @@ function CoordinatorDashboard() {
             <span>Log Out</span>
           </button>
         </div>
-      </aside>
 
-      <main style={styles.content}>
-        <h1>
-          Welcome, <span>{name}</span>!
-        </h1>
+        {/* Content */}
+        <div className="content chess-dash-checkerboard">
+          <div style={styles.errorBox}>
+            <strong>Error loading data:</strong> <span>{error}</span>
+          </div>
 
-        <section style={styles.formContainer}>
-          <h2 style={{ fontFamily: 'Cinzel, serif', marginBottom: '1rem', color: '#2E8B57' }}>Upcoming Meetings (Next 3 Days)</h2>
+          <motion.div
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="chess-piece-icon-wrap"
+              >
+                <i className="fas fa-chess-queen chess-king-glow chess-piece-breathe" aria-hidden="true" />
+              </motion.span>
+              Welcome to ChessHive, {name}!
+            </h1>
+            <div />
+          </motion.div>
 
-          {loading ? (
-            <p>Loading…</p>
-          ) : error ? (
-            <p style={{ color: 'crimson' }}>{error}</p>
-          ) : meetings.length === 0 ? (
-            <p style={styles.emptyText}>No upcoming meetings.</p>
-          ) : (
-            <>
-              <ul style={styles.ul}>
-                {visibleMeetings.map((m, idx) => (
-                  <li key={`${m.title}-${m.date}-${idx}`} style={styles.li}>
-                    <span>
-                      <strong>{m.title}</strong> — {new Date(m.date).toLocaleDateString()} at {m.time}
-                    </span>
-                    <a href={m.link} target="_blank" rel="noreferrer" style={styles.joinLink}>
+          {/* Upcoming Meetings */}
+          <motion.div
+            className="updates-section chess-capture-hover chess-card-magic"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-calendar chess-piece-breathe" style={{ animationDelay: '0s' }} />
+              </motion.span>
+              Upcoming Meetings (Next 3 Days)
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
+              {loading ? (
+                <motion.li variants={itemVariants}><i className="fas fa-spinner fa-spin" /> Loading meetings...</motion.li>
+              ) : error ? (
+                <motion.li variants={itemVariants} style={{ color: 'crimson' }}><i className="fas fa-exclamation-triangle" /> {error}</motion.li>
+              ) : meetings.length === 0 ? (
+                <motion.li variants={itemVariants}><i className="fas fa-info-circle" /> No upcoming meetings.</motion.li>
+              ) : (
+                visibleMeetings.map((m, idx) => (
+                  <motion.li key={`${m.title}-${m.date}-${idx}`} custom={idx} variants={itemVariants}>
+                    <motion.span
+                      className="piece-icon"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ display: 'inline-flex' }}
+                    >
+                      <i className="fas fa-video" />
+                    </motion.span>
+                    <div className="meeting-info">
+                      <strong>{m.title}</strong><br />
+                      <div className="date-tag">
+                        <i className="fas fa-calendar-alt" /> {new Date(m.date).toLocaleDateString()} at {m.time}
+                      </div>
+                    </div>
+                    <a href={m.link} target="_blank" rel="noreferrer" className="join-link">
                       <i className="fas fa-video" /> Join
                     </a>
-                  </li>
-                ))}
-              </ul>
-
-              {meetings.length > 5 ? (
-                <div style={styles.moreRow}>
-                  {visibleCount < meetings.length ? (
-                    <button type="button" style={styles.moreBtn} onClick={() => setVisibleCount((c) => Math.min(c + 5, meetings.length))}>
-                      <i className="fas fa-chevron-down" /> More
-                    </button>
-                  ) : null}
-                  {visibleCount > 5 ? (
-                    <button type="button" style={styles.moreBtn} onClick={() => setVisibleCount((c) => Math.max(5, c - 5))}>
-                      <i className="fas fa-chevron-up" /> Hide
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </>
-          )}
-        </section>
-      </main>
+                  </motion.li>
+                ))
+              )}
+            </motion.ul>
+            
+            {meetings.length > 5 && (
+              <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                {visibleCount < meetings.length && (
+                  <button type="button" className="more-btn" onClick={() => setVisibleCount((c) => Math.min(c + 5, meetings.length))}>
+                    <i className="fas fa-chevron-down" /> More
+                  </button>
+                )}
+                {visibleCount > 5 && (
+                  <button type="button" className="more-btn" onClick={() => setVisibleCount((c) => Math.max(5, c - 5))}>
+                    <i className="fas fa-chevron-up" /> Hide
+                  </button>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -105,7 +105,8 @@ function PlayerStore() {
         setWalletBalance(data.walletBalance);
       }
       alert(data.message || 'Purchase successful!');
-      loadStore();
+      await loadStore();
+      dispatch(fetchProducts('player'));
     } catch (err) {
       console.error(err);
       alert('Purchase failed.');
@@ -125,8 +126,8 @@ function PlayerStore() {
     wallet: { backgroundColor: 'var(--sea-green)', color: 'var(--content-bg)', padding: 20, borderRadius: 10, textAlign: 'center', marginBottom: '1.5rem' },
     walletH3: { color: 'var(--content-bg)', marginTop: 0, marginBottom: '1rem' },
     walletForm: { display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 300, margin: '0 auto' },
-    walletInput: { width: '100%', padding: 12, border: '2px solid var(--sea-green)', borderRadius: 5, fontSize: 16, boxSizing: 'border-box', background: 'var(--content-bg)', color: 'var(--text-color)' },
-    walletButton: { backgroundColor: 'var(--sky-blue)', color: 'var(--sea-green)', border: 'none', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
+    walletInput: { width: '100%', padding: 12, border: '2px solid rgba(255,255,255,0.7)', borderRadius: 5, fontSize: 16, boxSizing: 'border-box', background: '#FFFFFF', color: '#1C1917' },
+    walletButton: { backgroundColor: '#B8860B', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', padding: '12px 24px', borderRadius: 5, cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease', fontFamily: 'Cinzel, serif', textAlign: 'center', width: '100%', boxSizing: 'border-box' },
     productsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' },
     card: { background: 'var(--content-bg)', padding: '1.5rem', borderRadius: 8, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     productIcon: { fontSize: '2rem', textAlign: 'center', marginBottom: '1rem' },
@@ -137,7 +138,7 @@ function PlayerStore() {
     discount: { color: 'var(--sea-green)' },
     finalPrice: { fontSize: '1.25rem', fontWeight: 'bold', marginTop: '0.5rem' },
     primaryBtn: { backgroundColor: 'var(--sea-green)', color: 'var(--content-bg)', border: 'none', padding: '0.5rem 1rem', borderRadius: 4, cursor: 'pointer', fontWeight: 500 },
-    secondaryLink: { display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--sea-green)', color: 'var(--content-bg)', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: 4, fontWeight: 500 },
+    secondaryLink: { display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--sea-green)', color: 'var(--content-bg)', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: 4, fontWeight: 500, border: 'none', cursor: 'pointer' },
     backRow: { textAlign: 'center', marginTop: '2rem' },
   };
 
@@ -250,7 +251,7 @@ function PlayerStore() {
         )}
 
         <div style={styles.backRow}>
-          <Link to="/player/player_dashboard" style={styles.secondaryLink}>← Back to Dashboard</Link>
+          <button type="button" style={styles.secondaryLink} onClick={() => navigate('/player/player_dashboard')}>← Back to Dashboard</button>
         </div>
       </div>
     </div>

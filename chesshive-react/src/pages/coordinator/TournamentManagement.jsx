@@ -1,15 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-
-// React conversion of views/coordinator/tournament_management.html
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const ROWS_PER_PAGE = 5;
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
 function TournamentManagement() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState(null); // { type: 'success'|'error', text: string }
+  const [message, setMessage] = useState(null);
   const [visibleRows, setVisibleRows] = useState(ROWS_PER_PAGE);
 
   // Form state
@@ -268,78 +285,153 @@ function TournamentManagement() {
   };
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="trophy">🏆</span> Tournament Management</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .form-group { margin-bottom: 1rem; }
+        .form-label { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:8px; display:block; }
+        .form-input { width:100%; padding:0.8rem; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
+        .form-input.error { border-color:#c62828; }
+        .error-text { color:#c62828; font-size:0.9rem; margin-top:4px; }
+        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:flex; align-items:center; gap:0.5rem; width:100%; }
+        .table-responsive { overflow-x: auto; }
+        .tournament-table { width:100%; border-collapse:collapse; }
+        .tournament-table th { background:var(--sea-green); color:var(--on-accent); padding:1rem; text-align:left; font-family:'Cinzel', serif; }
+        .tournament-table td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sky-blue); color:var(--sea-green); text-decoration:none; padding:0.5rem 1rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; margin:0.2rem; border:none; cursor:pointer; }
+        .remove-btn { background:#c62828; color:var(--on-accent); }
+        .message { margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; }
+        .message.success { color:#1b5e20; background:rgba(76,175,80,0.15); }
+        .message.error { color:#c62828; background:rgba(198,40,40,0.15); }
+      `}</style>
 
-        <div style={styles.card}>
-          {message && (
-            <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 8, color: message.type === 'success' ? '#1b5e20' : '#c62828', background: message.type === 'success' ? 'rgba(76,175,80,0.15)' : 'rgba(198,40,40,0.15)' }}>
-              <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} aria-hidden="true" /> {message.text}
-            </div>
-          )}
-          <h3 style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '1rem' }}>{editingId ? 'Edit Tournament' : 'Add New Tournament'}</h3>
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-chess-rook" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
+
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
+        </div>
+
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-trophy" /> Tournament Management
+          </motion.h1>
+
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {message && (
+              <div className={`message ${message.type}`}>
+                <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}
+              </div>
+            )}
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '1rem' }}>{editingId ? 'Edit Tournament' : 'Add New Tournament'}</h3>
           <form onSubmit={onSubmit}>
-            <div>
-              <label style={styles.label}>Tournament Name:</label>
+            <div className="form-group">
+              <label className="form-label">Tournament Name:</label>
               <input
-                style={styles.input(!!fieldErrors.tournamentName)}
+                className={`form-input ${fieldErrors.tournamentName ? 'error' : ''}`}
                 type="text"
                 value={form.tournamentName}
                 onChange={(e) => setForm({ ...form, tournamentName: e.target.value })}
                 required
               />
-              {fieldErrors.tournamentName && <div style={styles.error}>{fieldErrors.tournamentName}</div>}
+              {fieldErrors.tournamentName && <div className="error-text">{fieldErrors.tournamentName}</div>}
             </div>
-            <div>
-              <label style={styles.label}>Date:</label>
+            <div className="form-group">
+              <label className="form-label">Date:</label>
               <input
-                style={styles.input(!!fieldErrors.tournamentDate)}
+                className={`form-input ${fieldErrors.tournamentDate ? 'error' : ''}`}
                 type="date"
                 value={form.tournamentDate}
                 onChange={(e) => setForm({ ...form, tournamentDate: e.target.value })}
                 required
               />
-              {fieldErrors.tournamentDate && <div style={styles.error}>{fieldErrors.tournamentDate}</div>}
+              {fieldErrors.tournamentDate && <div className="error-text">{fieldErrors.tournamentDate}</div>}
             </div>
-            <div>
-              <label style={styles.label}>Time:</label>
+            <div className="form-group">
+              <label className="form-label">Time:</label>
               <input
-                style={styles.input(!!fieldErrors.tournamentTime)}
+                className={`form-input ${fieldErrors.tournamentTime ? 'error' : ''}`}
                 type="time"
                 value={form.tournamentTime}
                 onChange={(e) => setForm({ ...form, tournamentTime: e.target.value })}
                 required
               />
-              {fieldErrors.tournamentTime && <div style={styles.error}>{fieldErrors.tournamentTime}</div>}
+              {fieldErrors.tournamentTime && <div className="error-text">{fieldErrors.tournamentTime}</div>}
             </div>
-            <div>
-              <label style={styles.label}>Location:</label>
+            <div className="form-group">
+              <label className="form-label">Location:</label>
               <input
-                style={styles.input(!!fieldErrors.tournamentLocation)}
+                className={`form-input ${fieldErrors.tournamentLocation ? 'error' : ''}`}
                 type="text"
                 value={form.tournamentLocation}
                 onChange={(e) => setForm({ ...form, tournamentLocation: e.target.value })}
                 required
               />
-              {fieldErrors.tournamentLocation && <div style={styles.error}>{fieldErrors.tournamentLocation}</div>}
+              {fieldErrors.tournamentLocation && <div className="error-text">{fieldErrors.tournamentLocation}</div>}
             </div>
-            <div>
-              <label style={styles.label}>Entry Fee (₹):</label>
+            <div className="form-group">
+              <label className="form-label">Entry Fee (₹):</label>
               <input
-                style={styles.input(!!fieldErrors.entryFee)}
+                className={`form-input ${fieldErrors.entryFee ? 'error' : ''}`}
                 type="number"
                 step="0.01"
                 value={form.entryFee}
                 onChange={(e) => setForm({ ...form, entryFee: e.target.value })}
                 required
               />
-              {fieldErrors.entryFee && <div style={styles.error}>{fieldErrors.entryFee}</div>}
+              {fieldErrors.entryFee && <div className="error-text">{fieldErrors.entryFee}</div>}
             </div>
-            <div>
-              <label style={styles.label}>Type:</label>
+            <div className="form-group">
+              <label className="form-label">Type:</label>
               <select
-                style={styles.select(!!fieldErrors.type)}
+                className={`form-input ${fieldErrors.type ? 'error' : ''}`}
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
                 required
@@ -348,26 +440,32 @@ function TournamentManagement() {
                 <option value="Individual">Individual</option>
                 <option value="Team">Team</option>
               </select>
-              {fieldErrors.type && <div style={styles.error}>{fieldErrors.type}</div>}
+              {fieldErrors.type && <div className="error-text">{fieldErrors.type}</div>}
             </div>
-            <div>
-              <label style={styles.label}>No of Rounds:</label>
+            <div className="form-group">
+              <label className="form-label">No of Rounds:</label>
               <input
-                style={styles.input(!!fieldErrors.noOfRounds)}
+                className={`form-input ${fieldErrors.noOfRounds ? 'error' : ''}`}
                 type="number"
                 value={form.noOfRounds}
                 onChange={(e) => setForm({ ...form, noOfRounds: e.target.value })}
                 required
               />
-              {fieldErrors.noOfRounds && <div style={styles.error}>{fieldErrors.noOfRounds}</div>}
+              {fieldErrors.noOfRounds && <div className="error-text">{fieldErrors.noOfRounds}</div>}
             </div>
-            <button type="submit" style={styles.btn}>{editingId ? 'Update Tournament' : 'Add Tournament'}</button>
+            <button type="submit" className="btn-primary">{editingId ? 'Update Tournament' : 'Add Tournament'}</button>
           </form>
-        </div>
+          </motion.div>
 
-        <div style={styles.tableCard}>
-          <h3 style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '0.5rem' }}>Your Tournaments</h3>
-          <h4 style={{ color: '#666', marginBottom: '1rem' }}>Tournaments you've submitted will appear here with their approval status</h4>
+          <motion.div
+            className="updates-section"
+            custom={1}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '0.5rem' }}>Your Tournaments</h3>
+            <h4 style={{ color: 'var(--text-color)', opacity: 0.7, marginBottom: '1rem' }}>Tournaments you've submitted will appear here with their approval status</h4>
 
           {loading && <div>Loading tournaments…</div>}
           {!loading && !!error && (
@@ -463,26 +561,27 @@ function TournamentManagement() {
               </table>
               </div>
 
-              <div style={styles.moreWrap}>
-                {visibleRows < activeTournaments.length && (
-                  <button style={styles.moreBtn} onClick={() => setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, activeTournaments.length))}>
-                    <i className="fas fa-trophy" aria-hidden="true"></i> More
-                  </button>
-                )}
-                {visibleRows > ROWS_PER_PAGE && (
-                  <button style={styles.moreBtn} onClick={() => setVisibleRows(ROWS_PER_PAGE)}>
-                    <i className="fas fa-chevron-up" aria-hidden="true"></i> Hide
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+                <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                  {visibleRows < activeTournaments.length && (
+                    <button className="action-btn" onClick={() => setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, activeTournaments.length))}>
+                      <i className="fas fa-trophy" /> More
+                    </button>
+                  )}
+                  {visibleRows > ROWS_PER_PAGE && (
+                    <button className="action-btn" onClick={() => setVisibleRows(ROWS_PER_PAGE)}>
+                      <i className="fas fa-chevron-up" /> Hide
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
 
-          <div style={styles.backRow}>
-            <Link to="/coordinator/coordinator_dashboard" style={styles.backLink}>
-              <i className="fas fa-arrow-left" aria-hidden="true"></i> Back to Dashboard
-            </Link>
-          </div>
+            <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+              <Link to="/coordinator/coordinator_dashboard" className="action-btn">
+                <i className="fas fa-arrow-left" /> Back to Dashboard
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

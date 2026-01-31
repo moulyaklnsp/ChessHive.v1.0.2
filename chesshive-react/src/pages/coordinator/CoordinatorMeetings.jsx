@@ -1,9 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
-// React conversion of views/coordinator/coordinator_meetings.html
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 function CoordinatorMeetings() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [form, setForm] = useState({ title: '', date: '', time: '', link: '' });
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState(null); // {type: 'success'|'error', text}
@@ -107,33 +124,15 @@ function CoordinatorMeetings() {
     }
   };
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', color: '#2E8B57', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    h3: { fontFamily: 'Cinzel, serif', fontSize: '1.8rem', margin: '2rem 0', textAlign: 'center' },
-    card: { background: '#fff', padding: '2rem', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' },
-    inputGroup: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-    input: (err) => ({ padding: '1rem', border: `2px solid ${err ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontSize: '1rem' }),
-    errorText: { color: '#c62828', fontSize: '0.9rem', marginTop: '0.2rem' },
-    button: { backgroundColor: '#2E8B57', color: '#FFFDD0', border: 'none', padding: '1rem', borderRadius: 8, fontSize: '1.1rem', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
-    tableCard: { background: '#fff', padding: '2rem', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' },
-    th: { backgroundColor: '#2E8B57', color: '#FFFDD0', padding: '1.2rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
-    trHover: { backgroundColor: 'rgba(135,206,235,0.1)' },
-    joinLink: { backgroundColor: '#87CEEB', color: '#2E8B57', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
-    moreRow: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    emptyRow: { textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' },
-    backRow: { textAlign: 'right' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#FFFDD0', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    searchRow: { marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' },
-    searchInput: { padding: '0.6rem 1rem', maxWidth: 300, width: '100%', border: '2px solid #2E8B57', borderRadius: 8, fontFamily: 'Playfair Display, serif' },
-    searchSelect: { padding: '0.6rem 1rem', maxWidth: 300, width: '100%', border: '2px solid #2E8B57', borderRadius: 8, fontFamily: 'Cinzel, serif', backgroundColor: '#fff', color: '#2E8B57' },
-    alert: (type) => ({ padding: '1rem', borderRadius: 8, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: type === 'success' ? 'rgba(46,139,87,0.1)' : '#ffebee', color: type === 'success' ? '#2E8B57' : '#c62828' }),
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   const applySearchFilter = (arr, search) => {
     if (!search.q) return arr;
@@ -157,7 +156,7 @@ function CoordinatorMeetings() {
       return (
         <tbody>
           <tr>
-            <td colSpan={4} style={styles.emptyRow}><i className="fas fa-info-circle" /> No meetings found.</td>
+            <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--sea-green)', fontStyle: 'italic' }}><i className="fas fa-info-circle" /> No meetings found.</td>
           </tr>
         </tbody>
       );
@@ -167,10 +166,10 @@ function CoordinatorMeetings() {
       <tbody>
         {slice.map((m, idx) => (
           <tr key={`${m.title}-${m.date}-${idx}`}>
-            <td style={styles.td}>{m.title}</td>
-            <td style={styles.td}>{new Date(m.date).toLocaleDateString()}</td>
-            <td style={styles.td}>{m.time}</td>
-            <td style={styles.td}><a href={m.link} target="_blank" rel="noreferrer" style={styles.joinLink}><i className="fas fa-video" /> Join</a></td>
+            <td style={{ padding: '1rem', borderBottom: '1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2)' }}>{m.title}</td>
+            <td style={{ padding: '1rem', borderBottom: '1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2)' }}>{new Date(m.date).toLocaleDateString()}</td>
+            <td style={{ padding: '1rem', borderBottom: '1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2)' }}>{m.time}</td>
+            <td style={{ padding: '1rem', borderBottom: '1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2)' }}><a href={m.link} target="_blank" rel="noreferrer" style={{ background: 'var(--sky-blue)', color: 'var(--sea-green)', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}><i className="fas fa-video" /> Join</a></td>
           </tr>
         ))}
       </tbody>
@@ -178,106 +177,188 @@ function CoordinatorMeetings() {
   };
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="calendar">📅</span> Schedule a Meeting</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .form-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem; }
+        .input-group { display:flex; flex-direction:column; gap:0.5rem; }
+        .form-input { padding:1rem; border:2px solid var(--sea-green); border-radius:8px; font-size:1rem; background:var(--card-bg); color:var(--text-color); }
+        .form-input.error { border-color:#c62828; }
+        .error-text { color:#c62828; font-size:0.9rem; margin-top:0.2rem; }
+        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; font-size:1.1rem; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; grid-column:1 / -1; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
+        .meetings-table { width:100%; border-collapse:collapse; margin-bottom:2rem; }
+        .meetings-table th { background:var(--sea-green); color:var(--on-accent); padding:1.2rem; text-align:left; font-family:'Cinzel', serif; }
+        .search-row { margin-bottom:1rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
+        .search-input { padding:0.6rem 1rem; max-width:300px; width:100%; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
+        .search-select { padding:0.6rem 1rem; max-width:300px; width:100%; border:2px solid var(--sea-green); border-radius:8px; font-family:'Cinzel', serif; background:var(--card-bg); color:var(--text-color); }
+        .message { padding:1rem; border-radius:8px; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.5rem; }
+        .message.success { background:rgba(76,175,80,0.15); color:#1b5e20; }
+        .message.error { background:rgba(198,40,40,0.15); color:#c62828; }
+        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sky-blue); color:var(--sea-green); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+      `}</style>
 
-        <div style={styles.card}>
-          {message ? (
-            <div style={styles.alert(message.type)}>
-              <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}
-            </div>
-          ) : null}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-calendar" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-          <form onSubmit={onSubmit} style={styles.formGrid}>
-            <div style={styles.inputGroup}>
-              <label><i className="fas fa-heading" /> Meeting Title</label>
-              <input type="text" name="title" placeholder="Enter meeting title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} style={styles.input(errors.title)} />
-              {errors.title ? <div style={styles.errorText}>{errors.title}</div> : null}
-            </div>
-            <div style={styles.inputGroup}>
-              <label><i className="fas fa-calendar" /> Date</label>
-              <input type="date" name="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} style={styles.input(errors.date)} />
-              {errors.date ? <div style={styles.errorText}>{errors.date}</div> : null}
-            </div>
-            <div style={styles.inputGroup}>
-              <label><i className="fas fa-clock" /> Time</label>
-              <input type="time" name="time" value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} style={styles.input(errors.time)} />
-              {errors.time ? <div style={styles.errorText}>{errors.time}</div> : null}
-            </div>
-            <div style={styles.inputGroup}>
-              <label><i className="fas fa-link" /> Meeting Link</label>
-              <input type="text" name="link" placeholder="Zoom/Google Meet link" value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} style={styles.input(errors.link)} />
-              {errors.link ? <div style={styles.errorText}>{errors.link}</div> : null}
-            </div>
-            <button type="submit" style={styles.button}><i className="fas fa-calendar-plus" /> Schedule Meeting</button>
-          </form>
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <div style={styles.tableCard}>
-          <h3 style={styles.h3}>Organized Meetings</h3>
-          <div style={styles.searchRow}>
-            <select value={orgSearch.attr} onChange={(e) => setOrgSearch((s) => ({ ...s, attr: parseInt(e.target.value, 10) }))} style={styles.searchSelect}>
-              <option value={0}>Title</option>
-              <option value={1}>Date</option>
-              <option value={2}>Time</option>
-              <option value={3}>Link</option>
-            </select>
-            <input placeholder="Search..." value={orgSearch.q} onChange={(e) => setOrgSearch((s) => ({ ...s, q: e.target.value }))} style={styles.searchInput} />
-          </div>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}><i className="fas fa-heading" /> Title</th>
-                <th style={styles.th}><i className="fas fa-calendar" /> Date</th>
-                <th style={styles.th}><i className="fas fa-clock" /> Time</th>
-                <th style={styles.th}><i className="fas fa-link" /> Link</th>
-              </tr>
-            </thead>
-            {renderTable(orgFiltered, orgVisible, setOrgVisible)}
-          </table>
-          <div style={styles.moreRow}>
-            {orgVisible < orgFiltered.length ? (
-              <button type="button" style={styles.moreBtn} onClick={() => setOrgVisible((v) => Math.min(v + rowsPerPage, orgFiltered.length))}><i className="fas fa-chevron-down" /> More</button>
-            ) : null}
-            {orgVisible > rowsPerPage ? (
-              <button type="button" style={styles.moreBtn} onClick={() => setOrgVisible(rowsPerPage)}><i className="fas fa-chevron-up" /> Hide</button>
-            ) : null}
-          </div>
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-calendar" /> Schedule a Meeting
+          </motion.h1>
 
-          <h3 style={styles.h3}>Upcoming Meetings</h3>
-          <div style={styles.searchRow}>
-            <select value={upcSearch.attr} onChange={(e) => setUpcSearch((s) => ({ ...s, attr: parseInt(e.target.value, 10) }))} style={styles.searchSelect}>
-              <option value={0}>Title</option>
-              <option value={1}>Date</option>
-              <option value={2}>Time</option>
-              <option value={3}>Link</option>
-            </select>
-            <input placeholder="Search..." value={upcSearch.q} onChange={(e) => setUpcSearch((s) => ({ ...s, q: e.target.value }))} style={styles.searchInput} />
-          </div>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}><i className="fas fa-heading" /> Title</th>
-                <th style={styles.th}><i className="fas fa-calendar" /> Date</th>
-                <th style={styles.th}><i className="fas fa-clock" /> Time</th>
-                <th style={styles.th}><i className="fas fa-link" /> Link</th>
-              </tr>
-            </thead>
-            {renderTable(upcFiltered, upcVisible, setUpcVisible)}
-          </table>
-          <div style={styles.moreRow}>
-            {upcVisible < upcFiltered.length ? (
-              <button type="button" style={styles.moreBtn} onClick={() => setUpcVisible((v) => Math.min(v + rowsPerPage, upcFiltered.length))}><i className="fas fa-chevron-down" /> More</button>
-            ) : null}
-            {upcVisible > rowsPerPage ? (
-              <button type="button" style={styles.moreBtn} onClick={() => setUpcVisible(rowsPerPage)}><i className="fas fa-chevron-up" /> Hide</button>
-            ) : null}
-          </div>
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {message && (
+              <div className={`message ${message.type}`}>
+                <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}
+              </div>
+            )}
 
-          <div style={styles.backRow}>
-            <Link to="/coordinator/coordinator_dashboard" style={styles.backLink}><i className="fas fa-arrow-left" /> Back to Dashboard</Link>
-          </div>
+            <form onSubmit={onSubmit} className="form-grid">
+              <div className="input-group">
+                <label><i className="fas fa-heading" /> Meeting Title</label>
+                <input type="text" name="title" placeholder="Enter meeting title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className={`form-input ${errors.title ? 'error' : ''}`} />
+                {errors.title && <div className="error-text">{errors.title}</div>}
+              </div>
+              <div className="input-group">
+                <label><i className="fas fa-calendar" /> Date</label>
+                <input type="date" name="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className={`form-input ${errors.date ? 'error' : ''}`} />
+                {errors.date && <div className="error-text">{errors.date}</div>}
+              </div>
+              <div className="input-group">
+                <label><i className="fas fa-clock" /> Time</label>
+                <input type="time" name="time" value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} className={`form-input ${errors.time ? 'error' : ''}`} />
+                {errors.time && <div className="error-text">{errors.time}</div>}
+              </div>
+              <div className="input-group">
+                <label><i className="fas fa-link" /> Meeting Link</label>
+                <input type="text" name="link" placeholder="Zoom/Google Meet link" value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))} className={`form-input ${errors.link ? 'error' : ''}`} />
+                {errors.link && <div className="error-text">{errors.link}</div>}
+              </div>
+              <button type="submit" className="btn-primary"><i className="fas fa-calendar-plus" /> Schedule Meeting</button>
+            </form>
+          </motion.div>
+
+          <motion.div
+            className="updates-section"
+            custom={1}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.8rem', margin: '2rem 0', textAlign: 'center', color: 'var(--sea-green)' }}>Organized Meetings</h3>
+            <div className="search-row">
+              <select value={orgSearch.attr} onChange={(e) => setOrgSearch((s) => ({ ...s, attr: parseInt(e.target.value, 10) }))} className="search-select">
+                <option value={0}>Title</option>
+                <option value={1}>Date</option>
+                <option value={2}>Time</option>
+                <option value={3}>Link</option>
+              </select>
+              <input placeholder="Search..." value={orgSearch.q} onChange={(e) => setOrgSearch((s) => ({ ...s, q: e.target.value }))} className="search-input" />
+            </div>
+            <table className="meetings-table">
+              <thead>
+                <tr>
+                  <th><i className="fas fa-heading" /> Title</th>
+                  <th><i className="fas fa-calendar" /> Date</th>
+                  <th><i className="fas fa-clock" /> Time</th>
+                  <th><i className="fas fa-link" /> Link</th>
+                </tr>
+              </thead>
+              {renderTable(orgFiltered, orgVisible, setOrgVisible)}
+            </table>
+            <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {orgVisible < orgFiltered.length && (
+                <button type="button" className="action-btn" onClick={() => setOrgVisible((v) => Math.min(v + rowsPerPage, orgFiltered.length))}><i className="fas fa-chevron-down" /> More</button>
+              )}
+              {orgVisible > rowsPerPage && (
+                <button type="button" className="action-btn" onClick={() => setOrgVisible(rowsPerPage)}><i className="fas fa-chevron-up" /> Hide</button>
+              )}
+            </div>
+
+            <h3 style={{ fontFamily: 'Cinzel, serif', fontSize: '1.8rem', margin: '2rem 0', textAlign: 'center', color: 'var(--sea-green)' }}>Upcoming Meetings</h3>
+            <div className="search-row">
+              <select value={upcSearch.attr} onChange={(e) => setUpcSearch((s) => ({ ...s, attr: parseInt(e.target.value, 10) }))} className="search-select">
+                <option value={0}>Title</option>
+                <option value={1}>Date</option>
+                <option value={2}>Time</option>
+                <option value={3}>Link</option>
+              </select>
+              <input placeholder="Search..." value={upcSearch.q} onChange={(e) => setUpcSearch((s) => ({ ...s, q: e.target.value }))} className="search-input" />
+            </div>
+            <table className="meetings-table">
+              <thead>
+                <tr>
+                  <th><i className="fas fa-heading" /> Title</th>
+                  <th><i className="fas fa-calendar" /> Date</th>
+                  <th><i className="fas fa-clock" /> Time</th>
+                  <th><i className="fas fa-link" /> Link</th>
+                </tr>
+              </thead>
+              {renderTable(upcFiltered, upcVisible, setUpcVisible)}
+            </table>
+            <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {upcVisible < upcFiltered.length && (
+                <button type="button" className="action-btn" onClick={() => setUpcVisible((v) => Math.min(v + rowsPerPage, upcFiltered.length))}><i className="fas fa-chevron-down" /> More</button>
+              )}
+              {upcVisible > rowsPerPage && (
+                <button type="button" className="action-btn" onClick={() => setUpcVisible(rowsPerPage)}><i className="fas fa-chevron-up" /> Hide</button>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <Link to="/coordinator/coordinator_dashboard" className="action-btn"><i className="fas fa-arrow-left" /> Back to Dashboard</Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
