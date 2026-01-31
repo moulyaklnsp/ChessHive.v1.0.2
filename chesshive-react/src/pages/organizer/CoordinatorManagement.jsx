@@ -121,7 +121,7 @@ function CoordinatorManagement() {
         .th { background:var(--sea-green); color:var(--on-accent); padding:1.2rem; text-align:left; font-family:'Cinzel', serif; font-size:1.1rem; }
         .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
         .search-row { display:flex; align-items:center; gap:10px; padding:10px; background:var(--card-bg); border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:500px; margin:0 auto 20px; border:1px solid var(--card-border); }
-        .input { flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); font-size:14px; background:var(--page-bg); color:var(--text-color); }
+        .input { flex:1; padding:10px 14px; border-radius:8px; border:1px solid var(--card-border); font-size:16px; background:var(--page-bg); color:var(--text-color); min-width:300px; }
         .select { padding:8px 12px; border-radius:8px; border:1px solid var(--card-border); font-size:14px; background:var(--page-bg); color:var(--text-color); }
         .more-btn { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
         .row-counter { text-align:center; margin-bottom:1rem; font-family:'Cinzel', serif; font-size:1.2rem; color:var(--sea-green); background-color:rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); padding:0.5rem 1rem; border-radius:8px; display:inline-block; }

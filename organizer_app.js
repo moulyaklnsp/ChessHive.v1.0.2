@@ -3,8 +3,11 @@ const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const moment = require('moment');
 const utils = require('./utils');
+const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
 const path = require('path');
+let multer;
+try { multer = require('multer'); } catch (e) { multer = null; }
 
 router.use(express.json());
 
@@ -57,11 +60,69 @@ router.get('/api/profile', async (req, res) => {
     res.json({
       name: organizer.name,
       email: organizer.email,
-      college: organizer.college || 'N/A'
+      college: organizer.college || 'N/A',
+      profile_photo_url: organizer.profile_photo_url || null
     });
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Upload profile photo
+router.post('/api/upload-photo', async (req, res) => {
+  try {
+    // Handle multipart form data
+    if (multer && (req.headers['content-type'] || '').includes('multipart/form-data')) {
+      const uploader = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 5 * 1024 * 1024 },
+        fileFilter: (r, file, cb) => {
+          const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+          if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+          cb(null, true);
+        }
+      }).single('photo');
+
+      await new Promise((resolve, reject) => {
+        uploader(req, res, (err) => (err ? reject(err) : resolve()));
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log('Uploading photo for organizer:', req.session.userEmail);
+
+    // Upload to Cloudinary
+    const result = await uploadImageBuffer(req.file.buffer, {
+      folder: 'chesshive/organizer-photos',
+      public_id: `organizer_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      overwrite: false
+    });
+
+    if (!result || !result.secure_url) {
+      return res.status(500).json({ error: 'Failed to upload image to cloud' });
+    }
+
+    console.log('Image uploaded successfully:', result.secure_url);
+
+    // Save URL to database
+    const db = await connectDB();
+    const updateResult = await db.collection('users').updateOne(
+      { email: req.session.userEmail, role: 'organizer' },
+      { $set: { profile_photo_url: result.secure_url, profile_photo_public_id: result.public_id } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(404).json({ error: 'Organizer not found' });
+    }
+
+    res.json({ success: true, profile_photo_url: result.secure_url });
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    res.status(500).json({ error: 'Failed to upload photo' });
   }
 });
 

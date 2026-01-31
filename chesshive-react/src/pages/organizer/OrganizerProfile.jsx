@@ -22,11 +22,15 @@ const sectionVariants = {
 const OrganizerProfile = () => {
   const navigate = useNavigate();
   const [isDark, toggleTheme] = usePlayerTheme();
-  const [profile, setProfile] = useState({ name: '', email: '', college: '' });
+  const [profile, setProfile] = useState({ name: '', email: '', college: '', profile_photo_url: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const timeoutRef = useRef(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState({ type: '', text: '' });
 
   const clearMessageLater = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -35,6 +39,51 @@ const OrganizerProfile = () => {
       timeoutRef.current = null;
     }, 3000);
   }, []);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const preview = URL.createObjectURL(file);
+      setPhotoPreviewUrl(preview);
+      setPhotoStatus({ type: '', text: '' });
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoFile) {
+      setPhotoStatus({ type: 'error', text: 'No file selected' });
+      return;
+    }
+
+    setPhotoUploading(true);
+    const formData = new FormData();
+    formData.append('photo', photoFile);
+
+    try {
+      const res = await fetch('/organizer/api/upload-photo', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data?.profile_photo_url) {
+        setPhotoPreviewUrl(data.profile_photo_url);
+        setPhotoFile(null);
+        setPhotoStatus({ type: 'success', text: 'Photo uploaded successfully!' });
+        setProfile((prev) => ({ ...prev, profile_photo_url: data.profile_photo_url }));
+        setTimeout(() => setPhotoStatus({ type: '', text: '' }), 3000);
+      } else {
+        setPhotoStatus({ type: 'error', text: data?.error || 'Upload failed' });
+      }
+    } catch (e) {
+      console.error('Photo upload error:', e);
+      setPhotoStatus({ type: 'error', text: 'Failed to upload photo' });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +99,11 @@ const OrganizerProfile = () => {
             name: data?.name || 'N/A',
             email: data?.email || 'N/A',
             college: data?.college || 'N/A',
+            profile_photo_url: data?.profile_photo_url || null
           });
+          if (data?.profile_photo_url) {
+            setPhotoPreviewUrl(data.profile_photo_url);
+          }
         }
       } catch (e) {
         if (!cancelled) setError('Failed to fetch profile.');
@@ -170,7 +223,99 @@ const OrganizerProfile = () => {
           >
             <i className="fas fa-user" /> Organizer Profile
           </motion.h1>
-
+          {/* Profile Photo Section */}
+          <motion.div
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              borderRadius: 15,
+              padding: '2rem',
+              marginBottom: '2rem',
+              textAlign: 'center',
+            }}
+          >
+            <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '1rem' }}>
+              <i className="fas fa-image" /> Profile Photo
+            </h3>
+            {photoPreviewUrl && (
+              <img
+                src={photoPreviewUrl}
+                alt="Profile"
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '3px solid var(--sea-green)',
+                  marginBottom: '1rem',
+                }}
+              />
+            )}
+            {photoStatus.text && (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  marginBottom: '1rem',
+                  borderRadius: 8,
+                  color: photoStatus.type === 'success' ? '#1b5e20' : '#c62828',
+                  background: photoStatus.type === 'success' ? 'rgba(76,175,80,0.15)' : 'rgba(198,40,40,0.15)',
+                }}
+              >
+                {photoStatus.text}
+              </div>
+            )}
+            <input
+              id="profile-photo-upload"
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+            />
+            <motion.button
+              type="button"
+              onClick={() => document.getElementById('profile-photo-upload').click()}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: 'var(--sea-green)',
+                color: 'var(--on-accent)',
+                border: 'none',
+                padding: '0.8rem 1.5rem',
+                borderRadius: 8,
+                fontFamily: 'Cinzel, serif',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginRight: '0.5rem',
+              }}
+            >
+              <i className="fas fa-upload" /> Select Photo
+            </motion.button>
+            {photoFile && (
+              <motion.button
+                type="button"
+                onClick={handlePhotoUpload}
+                disabled={photoUploading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  background: photoUploading ? '#ccc' : '#87CEEB',
+                  color: 'var(--sea-green)',
+                  border: 'none',
+                  padding: '0.8rem 1.5rem',
+                  borderRadius: 8,
+                  fontFamily: 'Cinzel, serif',
+                  fontWeight: 'bold',
+                  cursor: photoUploading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <i className="fas fa-check" /> {photoUploading ? 'Uploading...' : 'Confirm Upload'}
+              </motion.button>
+            )}
+          </motion.div>
           <motion.div
             className="updates-section"
             custom={0}
