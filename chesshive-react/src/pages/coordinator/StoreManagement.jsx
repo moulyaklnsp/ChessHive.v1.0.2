@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, addProduct } from '../../features/products/productsSlice';
-import SearchFilter from '../../components/SearchFilter';
+// Using inline search UI here so we can increase input visibility specifically for coordinator
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -346,7 +346,35 @@ function StoreManagement() {
             <i className="fas fa-shopping-bag" /> Products List
           </motion.h1>
 
-          <SearchFilter search={filter.search} category={filter.category} categories={[...new Set(productsList.map(p => p.category).filter(Boolean))]} onChange={setFilter} />
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, maxWidth: 720 }}>
+            <input
+              type="search"
+              placeholder="Search items..."
+              aria-label="Search items"
+              value={filter.search}
+              onChange={(e) => setFilter({ search: e.target.value, category: filter.category })}
+              style={{
+                flex: 1,
+                fontSize: 16,
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: '1px solid var(--card-border)',
+                background: 'var(--page-bg)',
+                color: 'var(--text-color)',
+                minWidth: 280,
+              }}
+            />
+            <select
+              value={filter.category || ''}
+              onChange={(e) => setFilter({ search: filter.search, category: e.target.value })}
+              style={{ fontSize: 16, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--page-bg)', color: 'var(--text-color)' }}
+            >
+              <option value="">All Categories</option>
+              {[...new Set(productsList.map(p => p.category).filter(Boolean))].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
 
           {productState.loading && <div className="loading">Loading products…</div>}
           {!productState.loading && productState.error && (
