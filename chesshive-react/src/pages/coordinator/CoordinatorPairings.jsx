@@ -1,8 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
-// React conversion of views/coordinator/pairings.html
-// Loads D3 from CDN dynamically to avoid adding a new npm dependency.
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 const D3_CDN = 'https://d3js.org/d3.v7.min.js';
 
@@ -12,6 +27,7 @@ function useQuery() {
 }
 
 function CoordinatorPairings() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const query = useQuery();
   const tournamentId = query.get('tournament_id');
   const roundsParam = query.get('rounds') || '5';
@@ -193,63 +209,136 @@ function CoordinatorPairings() {
   };
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h1 style={styles.h1}>Pairings & Results</h1>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .pairings-table { width:100%; border-collapse:collapse; margin-bottom:2rem; }
+        .pairings-table th { background:var(--sea-green); color:var(--on-accent); padding:1rem; text-align:left; font-family:'Cinzel', serif; }
+        .pairings-table td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .score-text { color:var(--sea-green); font-weight:bold; }
+        .bye-text { color:var(--text-color); opacity:0.7; font-style:italic; }
+        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; }
+      `}</style>
 
-        {loading && <p>Loading pairings...</p>}
-        {!!error && !loading && <p>{error}</p>}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-chess-board" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        {!loading && !error && allRounds.length === 0 && (
-          <p>No pairings available.</p>
-        )}
-
-        {!loading && !error && allRounds.map((round) => (
-          <div key={round.round} style={styles.pairingsContainer}>
-            <h2 style={styles.h2}><span role="img" aria-label="crossed-swords">⚔️</span> Round {round.round}</h2>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Player 1</th>
-                  <th style={styles.th}>Player 2</th>
-                  <th style={styles.th}>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(round.pairings || []).map((pair, idx) => (
-                  <tr key={idx}>
-                    <td style={styles.td}>
-                      {pair.player1?.username}{' '}
-                      <span style={styles.score}>(Score: {pair.player1?.score})</span>
-                    </td>
-                    <td style={styles.td}>
-                      {pair.player2?.username}{' '}
-                      <span style={styles.score}>(Score: {pair.player2?.score})</span>
-                    </td>
-                    <td style={styles.td}>{pair.result}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {round.byePlayer && (
-              <p style={styles.bye}>
-                <strong>BYE:</strong> {round.byePlayer?.username}{' '}
-                <span style={styles.score}>(Score: {round.byePlayer?.score})</span>
-              </p>
-            )}
-          </div>
-        ))}
-
-        <div style={styles.treeContainer}>
-          <h2 style={styles.h2}><span role="img" aria-label="trophy">🏆</span> Tournament Progression</h2>
-          {/* D3 will render into this SVG */}
-          <svg ref={svgRef} />
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <div style={styles.navWrap}>
-          <Link to="/coordinator/tournament_management" style={styles.navLink}>
-            <i className="fas fa-users" aria-hidden="true"></i> <span>Back to Tournaments</span>
-          </Link>
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-chess-board" /> Pairings & Results
+          </motion.h1>
+
+          {loading && <p>Loading pairings...</p>}
+          {!!error && !loading && <p>{error}</p>}
+
+          {!loading && !error && allRounds.length === 0 && (
+            <p>No pairings available.</p>
+          )}
+
+          {!loading && !error && allRounds.map((round, idx) => (
+            <motion.div
+              key={round.round}
+              className="updates-section"
+              custom={idx}
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: '2rem', color: 'var(--sea-green)', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}><i className="fas fa-swords" /> Round {round.round}</h2>
+              <table className="pairings-table">
+                <thead>
+                  <tr>
+                    <th>Player 1</th>
+                    <th>Player 2</th>
+                    <th>Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(round.pairings || []).map((pair, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        {pair.player1?.username}{' '}
+                        <span className="score-text">(Score: {pair.player1?.score})</span>
+                      </td>
+                      <td>
+                        {pair.player2?.username}{' '}
+                        <span className="score-text">(Score: {pair.player2?.score})</span>
+                      </td>
+                      <td>{pair.result}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {round.byePlayer && (
+                <p className="bye-text">
+                  <strong>BYE:</strong> {round.byePlayer?.username}{' '}
+                  <span className="score-text">(Score: {round.byePlayer?.score})</span>
+                </p>
+              )}
+            </motion.div>
+          ))}
+
+          <motion.div
+            className="updates-section"
+            custom={allRounds.length}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: '2rem', color: 'var(--sea-green)', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}><i className="fas fa-trophy" /> Tournament Progression</h2>
+            <svg ref={svgRef} />
+          </motion.div>
+
+          <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+            <Link to="/coordinator/tournament_management" className="action-btn">
+              <i className="fas fa-users" /> <span>Back to Tournaments</span>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
