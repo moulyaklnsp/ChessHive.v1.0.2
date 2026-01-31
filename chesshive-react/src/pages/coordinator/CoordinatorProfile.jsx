@@ -25,6 +25,10 @@ function CoordinatorProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [profile, setProfile] = useState({ name: '', email: '', college: '' });
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoStatus, setPhotoStatus] = useState(null); // { type: 'success' | 'error', text: string }
 
   const loadProfile = async () => {
     setLoading(true);
@@ -34,6 +38,10 @@ function CoordinatorProfile() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load profile');
       setProfile({ name: data.name || 'N/A', email: data.email || 'N/A', college: data.college || 'N/A' });
+      // Load the saved profile photo from database
+      if (data.profile_photo_url) {
+        setPhotoPreviewUrl(data.profile_photo_url);
+      }
     } catch (e) {
       console.error(e);
       setError('Error loading profile');
@@ -60,6 +68,60 @@ function CoordinatorProfile() {
       console.error(e);
       alert('Error deleting account. Please try again.');
     }
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      setPhotoPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoFile) {
+      setPhotoStatus({ type: 'error', text: 'Please select a photo first' });
+      return;
+    }
+
+    setPhotoUploading(true);
+    setPhotoStatus(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('photo', photoFile);
+
+      const res = await fetch('/coordinator/api/upload-photo', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      const data = await res.json();
+      console.log('Upload response:', { status: res.status, data });
+
+      if (res.ok && data.success) {
+        setPhotoStatus({ type: 'success', text: 'Photo uploaded successfully!' });
+        // Use the uploaded photo URL from the server
+        if (data.profile_photo_url) {
+          setPhotoPreviewUrl(data.profile_photo_url);
+        }
+        setPhotoFile(null);
+        setTimeout(() => setPhotoStatus(null), 3000);
+      } else {
+        setPhotoStatus({ type: 'error', text: data.error || data.message || 'Failed to upload photo' });
+      }
+    } catch (e) {
+      console.error('Upload error:', e);
+      setPhotoStatus({ type: 'error', text: 'Error uploading photo: ' + e.message });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    // Implement logout functionality
+    navigate('/login');
   };
 
   const coordinatorLinks = [
@@ -139,6 +201,84 @@ function CoordinatorProfile() {
             <i className="fas fa-user" /> Coordinator Profile
           </motion.h1>
 
+          <div className="profile-photo-section" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+            {photoPreviewUrl ? (
+              <motion.img
+                src={photoPreviewUrl}
+                alt="Profile Preview"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ width: 140, height: 140, borderRadius: '50%', objectFit: 'cover', marginBottom: '1rem', border: '4px solid var(--sea-green)' }}
+              />
+            ) : (
+              <div style={{ width: 140, height: 140, borderRadius: '50%', marginBottom: '1rem', background: 'rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px dashed var(--sea-green)', margin: '0 auto 1rem' }}>
+                <i className="fas fa-user-circle" style={{ fontSize: '3rem', color: 'var(--sea-green)' }} />
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: 'none' }}
+              id="profile-photo-upload"
+            />
+            <motion.button
+              type="button"
+              onClick={() => document.getElementById('profile-photo-upload').click()}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: 'var(--sea-green)',
+                color: 'var(--on-accent)',
+                border: 'none',
+                padding: '0.8rem 1.5rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontFamily: 'Cinzel, serif',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                textDecoration: 'none'
+              }}
+            >
+              <i className="fas fa-upload" /> Select Photo
+            </motion.button>
+            {photoFile && (
+              <motion.button
+                type="button"
+                onClick={handlePhotoUpload}
+                disabled={photoUploading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  background: 'var(--sea-green)',
+                  color: 'var(--on-accent)',
+                  border: 'none',
+                  padding: '0.8rem 1.5rem',
+                  borderRadius: '8px',
+                  cursor: photoUploading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Cinzel, serif',
+                  fontWeight: 'bold',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginLeft: '1rem',
+                  opacity: photoUploading ? 0.6 : 1
+                }}
+              >
+                <i className="fas fa-check" /> {photoUploading ? 'Uploading...' : 'Confirm Upload'}
+              </motion.button>
+            )}
+            {photoStatus && (
+              <p style={{ marginTop: '0.5rem', color: photoStatus.type === 'success' ? '#2e7d32' : '#b71c1c' }}>
+                <i className={`fas fa-${photoStatus.type === 'success' ? 'check-circle' : 'exclamation-circle'}`} style={{ marginRight: '0.5rem' }} />
+                {photoStatus.text}
+              </p>
+            )}
+          </div>
+
           <motion.div
             className="updates-section"
             custom={0}
@@ -173,6 +313,10 @@ function CoordinatorProfile() {
               </>
             )}
           </motion.div>
+
+          <div className="actions-row" style={{ marginTop: '2rem' }}>
+            <button type="button" className="btn-primary" onClick={handleLogout}><i className="fas fa-sign-out-alt" /> Logout</button>
+          </div>
         </div>
       </div>
     </div>
