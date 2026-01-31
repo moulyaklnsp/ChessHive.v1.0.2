@@ -57,23 +57,15 @@ function CoordinatorRankings() {
     load();
   }, [tournamentId]);
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 900, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' },
-    th: { backgroundColor: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
-    rank: { fontWeight: 'bold', color: '#2E8B57', fontFamily: 'Cinzel, serif' },
-    score: { fontWeight: 'bold', color: '#2E8B57' },
-    nav: { textAlign: 'right' },
-    navLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    top1: { backgroundColor: 'rgba(255, 215, 0, 0.1)' },
-    top2: { backgroundColor: 'rgba(192, 192, 192, 0.1)' },
-    top3: { backgroundColor: 'rgba(205, 127, 50, 0.1)' },
-    err: { color: 'red', textAlign: 'center', marginBottom: '1rem' },
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   return (
     <div style={{ minHeight: '100vh' }}>

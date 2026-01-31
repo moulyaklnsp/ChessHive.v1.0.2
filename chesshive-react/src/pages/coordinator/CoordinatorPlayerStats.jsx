@@ -60,24 +60,15 @@ function CoordinatorPlayerStats() {
     return { totalPlayers, totalGames, avgRating };
   }, [players]);
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' },
-    card: { background: 'var(--card-bg)', padding: '1.5rem', borderRadius: 10, textAlign: 'center', boxShadow: 'none', border: '1px solid var(--card-border)' },
-    statVal: { fontSize: '2rem', fontWeight: 'bold', color: '#2E8B57', marginBottom: '0.5rem' },
-    statLbl: { color: '#666', fontFamily: 'Cinzel, serif' },
-    tableWrap: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', overflowX: 'auto', border: '1px solid var(--card-border)' },
-    searchWrap: { marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' },
-    searchInput: { padding: '0.6rem 1rem', width: '100%', maxWidth: 300, border: '2px solid #2E8B57', borderRadius: 8, fontSize: '1rem', fontFamily: 'Playfair Display, serif' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem' },
-    th: { backgroundColor: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
-    ratingCell: { fontWeight: 'bold', color: '#2E8B57' },
-    backRow: { textAlign: 'right', marginTop: '2rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   return (
     <div style={{ minHeight: '100vh' }}>
