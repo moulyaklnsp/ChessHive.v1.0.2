@@ -1,12 +1,29 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { createSocket } from '../../utils/socket';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
-// React version of views/coordinator/coordinator_chat.ejs
-// Loads Socket.IO client from backend at /socket.io/socket.io.js (works in dev via CRA proxy).
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 const SOCKET_IO_PATH = '/socket.io/socket.io.js';
 
 function CoordinatorChat() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [role, setRole] = useState('Coordinator');
   const [username, setUsername] = useState('');
   const [joined, setJoined] = useState(false);
@@ -201,100 +218,175 @@ function CoordinatorChat() {
     setTimeout(loadContacts, 250);
   };
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 800, margin: '0 auto' },
-    card: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2rem', color: '#2E8B57', marginBottom: '1.5rem', textAlign: 'center' },
-    label: { display: 'block', marginBottom: '0.5rem', color: '#2E8B57', fontWeight: 'bold' },
-    input: { width: '100%', padding: '0.8rem', marginBottom: '1rem', border: '2px solid #2E8B57', borderRadius: 8, fontFamily: 'Playfair Display, serif' },
-    select: { width: '100%', padding: '0.8rem', marginBottom: '1rem', border: '2px solid #2E8B57', borderRadius: 8, fontFamily: 'Playfair Display, serif' },
-    chatBox: { height: 400, border: '2px solid #2E8B57', borderRadius: 8, padding: '1rem', margin: '1rem 0', overflowY: 'auto', background: '#FFFDD0' },
-    msg: { marginBottom: '1rem', padding: '0.8rem', borderRadius: 8, maxWidth: '80%' },
-    sent: { background: '#2E8B57', color: '#fff', marginLeft: 'auto' },
-    received: { background: '#87CEEB', color: '#2E8B57' },
-    chatInputRow: { display: 'flex', gap: '1rem', marginTop: '1rem' },
-    button: { background: '#2E8B57', color: '#fff', border: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
-    backRow: { textAlign: 'right' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   return (
-    <div style={{ ...styles.root, padding: 0 }}>
-      <div style={{ maxWidth: 1100, margin: '1rem auto 0 auto', padding: '0 1rem' }}>
-        <Link to="/coordinator/coordinator_dashboard" style={styles.backLink}>
-          <span style={{ fontSize: '1.1rem' }}>⬅</span>
-          <span>Back to Dashboard</span>
-        </Link>
-      </div>
-      <div style={{ display: 'flex', maxWidth: 1100, margin: '2rem auto', gap: '1rem' }}>
-        <div style={{ flex: '0 0 320px', background: '#fff', borderRadius: 12, padding: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <select style={{ flex: 1, ...styles.select }} value={role} onChange={(e) => setRole(e.target.value)} disabled={joined}>
-              <option>Coordinator</option>
-              <option>Player</option>
-            </select>
-            <input placeholder="username (optional)" value={usernameSearch} onChange={(e) => setUsernameSearch(e.target.value)} style={{ width: 160, padding: '0.6rem', borderRadius: 8, border: '1px solid #ddd' }} />
-            <button style={{ ...styles.button, padding: '0.5rem 0.8rem' }} onClick={searchRegisteredUsers}>Search</button>
-            <button style={{ ...styles.button, padding: '0.5rem 0.8rem' }} onClick={() => openChatWith(usernameSearch)}>Start Chat</button>
-          </div>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .chat-container { display:flex; max-width:1100px; margin:0 auto; gap:1rem; }
+        .chat-sidebar { flex:0 0 320px; background:var(--card-bg); border-radius:12px; padding:1rem; border:1px solid var(--card-border); }
+        .chat-main { flex:1; background:var(--card-bg); border-radius:12px; padding:1rem; border:1px solid var(--card-border); }
+        .form-input { width:100%; padding:0.8rem; margin-bottom:1rem; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
+        .form-select { width:100%; padding:0.8rem; margin-bottom:1rem; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
+        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:0.8rem 1.5rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; }
+        .action-btn { background:var(--sky-blue); color:var(--sea-green); border:none; padding:0.8rem 1.5rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; text-decoration:none; }
+        .chat-box { height:480px; border:2px solid var(--sea-green); border-radius:8px; padding:1rem; margin:1rem 0; overflow-y:auto; background:var(--page-bg); }
+        .chat-msg { margin-bottom:1rem; padding:0.8rem; border-radius:8px; max-width:80%; }
+        .chat-sent { background:var(--sea-green); color:var(--on-accent); margin-left:auto; }
+        .chat-received { background:var(--sky-blue); color:var(--sea-green); }
+        .contact-item { display:flex; justify-content:space-between; align-items:center; padding:0.6rem; border-bottom:1px solid var(--card-border); cursor:pointer; }
+        .contact-item:hover { background:rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); }
+        .search-result { display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px dashed var(--card-border); }
+      `}</style>
 
-          <div style={{ marginBottom: '0.5rem' }}>
-            <input style={{ ...styles.input, padding: '0.6rem' }} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your name..." disabled={joined || prefilledFromSession} />
-            <button style={{ ...styles.button, width: '100%', marginTop: '0.5rem' }} onClick={joinChat} disabled={joined}>{joined ? 'Joined' : 'Join'}</button>
-          </div>
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-comments" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-          {/* Manual open chat removed to avoid duplicate search bars */}
-
-          <div style={{ marginTop: '1rem' }}>
-            <h4 style={{ margin: 0, marginBottom: '0.5rem', color: '#2E8B57' }}>Contacts</h4>
-            <div style={{ maxHeight: 420, overflowY: 'auto', marginTop: '0.5rem' }}>
-              {contacts.length === 0 && <div style={{ color: '#666' }}>No contacts yet. Search users or send a message.</div>}
-              {contacts.map(c => (
-                <div key={c.contact} onClick={() => { if (!joined) joinChat(); setReceiver(c.contact); }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem', borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}>
-                  <div>
-                    <div style={{ fontWeight: 'bold', color: '#2E8B57' }}>{c.contact}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>{c.lastMessage}</div>
-                  </div>
-                  <div style={{ fontSize: 11, color: '#999' }}>{c.timestamp ? new Date(c.timestamp).toLocaleTimeString() : ''}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginTop: '0.75rem' }}>
-            <h4 style={{ margin: '0 0 0.5rem 0', color: '#2E8B57' }}>Search results</h4>
-            <div style={{ maxHeight: 180, overflowY: 'auto', borderTop: '1px solid #f0f0f0', paddingTop: '0.5rem' }}>
-              {registeredUsers.length === 0 && <div style={{ color: '#666' }}>No users found for selected role/username.</div>}
-              {registeredUsers.map(u => (
-                <div key={u.username} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px dashed #eee' }}>
-                  <div style={{ color: '#2E8B57' }}>{u.username} <small style={{ color: '#666' }}>({u.role})</small></div>
-                  <div>
-                    <button type="button" style={{ ...styles.button, padding: '0.4rem 0.8rem', fontSize: 12 }} onClick={() => openChatWith(u.username)}>Chat</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <div style={{ flex: 1, background: '#fff', borderRadius: 12, padding: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <h2 style={{ margin: 0, fontFamily: 'Cinzel, serif', color: '#2E8B57' }}>{receiver === 'All' ? 'Global Chat' : receiver}</h2>
-            <div style={{ color: '#666', fontSize: 14 }}>{joined ? 'Connected' : 'Not joined'}</div>
-          </div>
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-comments" /> Live Chat
+          </motion.h1>
 
-          <div id="chatBox" style={{ ...styles.chatBox, height: 480 }} ref={chatBoxRef}>
-            {messages.map((m, idx) => (
-              <div key={idx} style={{ ...styles.msg, ...(m.type === 'sent' ? styles.sent : styles.received) }}>
-                <p style={{ margin: 0 }}><strong>{m.type === 'sent' ? 'You' : m.sender}:</strong> {m.text}</p>
+          <div className="chat-container">
+            <motion.div
+              className="chat-sidebar"
+              custom={0}
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <select className="form-select" style={{ flex: 1 }} value={role} onChange={(e) => setRole(e.target.value)}>
+                  <option>Coordinator</option>
+                  <option>Player</option>
+                </select>
+                <input placeholder="username (optional)" value={usernameSearch} onChange={(e) => setUsernameSearch(e.target.value)} style={{ width: 160, padding: '0.6rem', borderRadius: 8, border: '2px solid var(--sea-green)', background: 'var(--card-bg)', color: 'var(--text-color)' }} />
+                <button className="btn-primary" style={{ padding: '0.5rem 0.8rem' }} onClick={searchRegisteredUsers}>Search</button>
+                <button className="btn-primary" style={{ padding: '0.5rem 0.8rem' }} onClick={() => openChatWith(usernameSearch)}>Start Chat</button>
               </div>
-            ))}
+
+              <div style={{ marginBottom: '0.5rem' }}>
+                <input className="form-input" style={{ padding: '0.6rem' }} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your name..." disabled={joined || prefilledFromSession} />
+                <button className="btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={joinChat} disabled={joined}>{joined ? 'Joined' : 'Join'}</button>
+              </div>
+
+              <div style={{ marginTop: '1rem' }}>
+                <h4 style={{ margin: 0, marginBottom: '0.5rem', color: 'var(--sea-green)' }}>Contacts</h4>
+                <div style={{ maxHeight: 420, overflowY: 'auto', marginTop: '0.5rem' }}>
+                  {contacts.length === 0 && <div style={{ color: 'var(--text-color)', opacity: 0.7 }}>No contacts yet. Search users or send a message.</div>}
+                  {contacts.map(c => (
+                    <div key={c.contact} onClick={() => { if (!joined) joinChat(); setReceiver(c.contact); }} className="contact-item">
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: 'var(--sea-green)' }}>{c.contact}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-color)', opacity: 0.7 }}>{c.lastMessage}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-color)', opacity: 0.5 }}>{c.timestamp ? new Date(c.timestamp).toLocaleTimeString() : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: '0.75rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--sea-green)' }}>Search results</h4>
+                <div style={{ maxHeight: 180, overflowY: 'auto', borderTop: '1px solid var(--card-border)', paddingTop: '0.5rem' }}>
+                  {registeredUsers.length === 0 && <div style={{ color: 'var(--text-color)', opacity: 0.7 }}>No users found for selected role/username.</div>}
+                  {registeredUsers.map(u => (
+                    <div key={u.username} className="search-result">
+                      <div style={{ color: 'var(--sea-green)' }}>{u.username} <small style={{ color: 'var(--text-color)', opacity: 0.7 }}>({u.role})</small></div>
+                      <div>
+                        <button type="button" className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: 12 }} onClick={() => openChatWith(u.username)}>Chat</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="chat-main"
+              custom={1}
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <h2 style={{ margin: 0, fontFamily: 'Cinzel, serif', color: 'var(--sea-green)' }}>{receiver === 'All' ? 'Global Chat' : receiver}</h2>
+                <div style={{ color: 'var(--text-color)', opacity: 0.7, fontSize: 14 }}>{joined ? 'Connected' : 'Not joined'}</div>
+              </div>
+
+              <div id="chatBox" className="chat-box" ref={chatBoxRef}>
+                {messages.map((m, idx) => (
+                  <div key={idx} className={`chat-msg ${m.type === 'sent' ? 'chat-sent' : 'chat-received'}`}>
+                    <p style={{ margin: 0 }}><strong>{m.type === 'sent' ? 'You' : m.sender}:</strong> {m.text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                <input id="chatMessage" className="form-input" style={{ marginBottom: 0 }} type="text" placeholder="Type a message" value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }} />
+                <button type="button" className="btn-primary" onClick={sendMessage}><i className="fas fa-paper-plane" /> <span>Send</span></button>
+              </div>
+            </motion.div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-            <input id="chatMessage" style={{ ...styles.input, marginBottom: 0 }} type="text" placeholder="Type a message" value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }} />
-            <button type="button" style={styles.button} onClick={sendMessage}><i className="fas fa-paper-plane" aria-hidden="true"></i> <span>Send</span></button>
+          <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+            <Link to="/coordinator/coordinator_dashboard" className="action-btn">
+              <i className="fas fa-arrow-left" /> Back to Dashboard
+            </Link>
           </div>
         </div>
       </div>
