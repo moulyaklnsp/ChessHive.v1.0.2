@@ -18,6 +18,7 @@ const playerRouter = require('./player_app');
 const utils = require('./utils');
 const { ObjectId } = require('mongodb');
 
+
 const app = express();
 const cors = require('cors');
 // Allow CORS from common React dev ports (proxy or direct)
@@ -46,7 +47,8 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // mount optional auth router
-try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
+try { console.log('Mounting auth router')
+  const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
 
 // Role middleware
 const isAdmin = (req, res, next) => { if (req.session.userRole === 'admin') next(); else res.status(403).send('Unauthorized'); };
