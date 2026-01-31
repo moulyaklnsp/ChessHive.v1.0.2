@@ -1,12 +1,46 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
-// React conversion of views/organizer/organizer_dashboard.html
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const PAGE_SIZE = 5;
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.12 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+  }
+};
+
 function OrganizerDashboard() {
   const navigate = useNavigate();
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
 
@@ -54,109 +88,181 @@ function OrganizerDashboard() {
 
   const handleLogout = () => navigate('/login');
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', display: 'flex' },
-    sidebar: (open) => ({
-      width: 280,
-      backgroundColor: '#2E8B57',
-      color: '#fff',
-      height: '100vh',
-      position: 'fixed',
-      left: isMobile ? (open ? 0 : -280) : 0,
-      top: 0,
-      paddingTop: '1rem',
-      zIndex: 1000,
-      boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
-      transition: 'left 0.3s ease'
-    }),
-    sidebarHeader: { textAlign: 'center', padding: '1rem', borderBottom: '2px solid rgba(255,255,255,0.1)', marginBottom: '1rem' },
-    navTitle: { color: '#FFFDD0', fontSize: '0.9rem', textTransform: 'uppercase', padding: '0.5rem 1rem', opacity: 0.7 },
-    navLink: { display: 'flex', alignItems: 'center', gap: '0.8rem', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', transition: 'all 0.3s ease', borderRadius: 5, margin: '0.2rem 0' },
-    navLinkHover: { background: 'rgba(135,206,235,0.2)', color: '#FFFDD0', transform: 'translateX(5px)' },
-    content: { flexGrow: 1, marginLeft: isMobile ? 0 : 280, padding: '2rem', width: '100%' },
-    h1: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '2rem', fontSize: '2.5rem', display: 'flex', alignItems: 'center', gap: '1rem' },
-    logoutBox: { position: 'absolute', bottom: '2rem', width: '100%', padding: '0 2rem' },
-    logoutBtn: { width: '100%', background: '#87CEEB', color: '#2E8B57', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' },
-    menuBtn: { display: isMobile ? 'block' : 'none', position: 'fixed', left: 16, top: 16, background: '#2E8B57', color: '#fff', border: 'none', padding: '0.8rem', borderRadius: 8, cursor: 'pointer', zIndex: 1100 },
-    card: { background: 'var(--card-bg)', padding: '2rem', borderRadius: 15, boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
-    list: { listStyle: 'none', padding: 0, margin: 0 },
-    listItem: { padding: '0.6rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' },
-    join: { backgroundColor: '#87CEEB', color: '#2E8B57', padding: '0.5rem 1rem', borderRadius: 20, textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
-    moreWrap: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    msg: { color: '#c62828' }
-  };
+  // Organizer-specific nav links used by AnimatedSidebar
+  const organizerLinks = [
+    { path: '/organizer/organizer_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/organizer/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-users-cog' },
+    { path: '/organizer/organizer_tournament', label: 'Tournament Oversight', icon: 'fas fa-trophy' },
+    { path: '/organizer/college_stats', label: 'College Performance Stats', icon: 'fas fa-chart-bar' },
+    { path: '/organizer/store_monitoring', label: 'Store Monitoring', icon: 'fas fa-store' },
+    { path: '/organizer/meetings', label: 'Schedule Meetings', icon: 'fas fa-calendar-alt' }
+  ];
 
   return (
-    <div style={styles.root}>
-      <button style={styles.menuBtn} onClick={() => setSidebarOpen((o) => !o)} aria-label="Toggle menu">
-        <i className="fas fa-bars" aria-hidden="true"></i>
-      </button>
+    <div style={{ minHeight: '100vh' }}>
+      {/* Head styles (scoped) */}
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .updates-section h3 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.8rem; font-size:1.5rem; }
+        .updates-section ul { list-style:none; }
+        .updates-section li { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transition:all 0.3s ease; display:flex; align-items:center; gap:1rem; }
+        .updates-section li:last-child { border-bottom:none; }
+        .updates-section li:hover { background: rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transform: translateX(5px); border-radius:8px; }
+        .meeting-info { flex-grow:1; }
+        .join-link { background: linear-gradient(90deg, rgba(235,87,87,1), rgba(6,56,80,1)); color: var(--on-accent); padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:600; box-shadow: inset 0 -4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; }
+        .date-tag { color:var(--sea-green); font-style: italic; }
+        .more-btn{ padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); }
+      `}</style>
 
-      <aside style={styles.sidebar(isMobile ? sidebarOpen : true)}>
-        <div style={styles.sidebarHeader}>
-          <h2 style={{ margin: 0 }}><i className="fas fa-chess" aria-hidden="true"></i> ChessHive</h2>
-        </div>
-        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
-          <div style={styles.navTitle}>Main Menu</div>
-          <Link to="/organizer/organizer_profile" style={styles.navLink}><i className="fas fa-user" aria-hidden="true"></i> Profile Page</Link>
-          <Link to="/organizer/coordinator_management" style={styles.navLink}><i className="fas fa-users-cog" aria-hidden="true"></i> Manage Coordinators</Link>
-          <Link to="/organizer/organizer_tournament" style={styles.navLink}><i className="fas fa-trophy" aria-hidden="true"></i> Tournament Oversight</Link>
-          <Link to="/organizer/college_stats" style={styles.navLink}><i className="fas fa-chart-bar" aria-hidden="true"></i> College Performance Stats</Link>
-          <Link to="/organizer/store_monitoring" style={styles.navLink}><i className="fas fa-store" aria-hidden="true"></i> Store Monitoring</Link>
-          <Link to="/organizer/meetings" style={styles.navLink}><i className="fas fa-calendar-alt" aria-hidden="true"></i> Schedule Meetings</Link>
-        </div>
-        <div style={styles.logoutBox}>
-          <button style={styles.logoutBtn} onClick={handleLogout}>
-            <i className="fas fa-sign-out-alt" aria-hidden="true"></i>
-            <span>Log Out</span>
-          </button>
-        </div>
-      </aside>
+      <div className="page player-neo">
+        {/* Decorative floating chess piece */}
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-chess-king" />
+        </motion.div>
+        
+        {/* Site dropdown sidebar (AnimatedSidebar) */}
+        <AnimatedSidebar links={organizerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-      <main style={styles.content}>
-        <h1 style={styles.h1}>Welcome, <span>{organizerName}</span>!</h1>
+        {/* Organizer quick header: theme toggle, welcome */}
+        <div className="organizer-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} aria-hidden="true" />
+          </motion.button>
+          <div style={{ color: 'var(--sea-green)', fontWeight: '600' }}>Welcome, {organizerName}</div>
+        </div>
 
-        <div style={styles.card}>
-          <h2 style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', marginTop: 0 }}>Upcoming Meetings (Next 3 Days)</h2>
-          {loading && <div>Loading…</div>}
-          {!loading && !!error && <div style={styles.msg}>{error}</div>}
-          {!loading && !error && (
-            <>
-              {showMeetings.length === 0 ? (
-                <p>No upcoming meetings.</p>
+        {/* Content */}
+        <div className="content chess-dash-checkerboard">
+          {error && (
+            <div style={{ background: '#ffdddd', color: '#cc0000', padding: '1rem', borderRadius: 8, marginBottom: '1rem' }}>
+              <strong>Error loading data:</strong> <span>{error}</span>
+            </div>
+          )}
+
+          <motion.div
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="chess-piece-icon-wrap"
+              >
+                <i className="fas fa-chess-king chess-king-glow chess-piece-breathe" aria-hidden="true" />
+              </motion.span>
+              Welcome to ChessHive, {organizerName}!
+            </h1>
+            <div />
+          </motion.div>
+
+          {/* Upcoming Meetings */}
+          <motion.div
+            className="updates-section chess-capture-hover chess-card-magic"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-calendar chess-piece-breathe" style={{ animationDelay: '0s' }} />
+              </motion.span>
+              Upcoming Meetings (Next 3 Days)
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
+              {loading ? (
+                <motion.li variants={itemVariants}><i className="fas fa-spinner fa-spin" /> Loading meetings...</motion.li>
+              ) : error ? (
+                <motion.li variants={itemVariants} style={{ color: 'crimson' }}><i className="fas fa-exclamation-triangle" /> {error}</motion.li>
+              ) : meetings.length === 0 ? (
+                <motion.li variants={itemVariants}><i className="fas fa-info-circle" /> No upcoming meetings.</motion.li>
               ) : (
-                <ul style={styles.list}>
-                  {showMeetings.map((m, idx) => (
-                    <li key={(m._id || m.title || idx) + ''} style={styles.listItem}>
-                      <div>
-                        <strong>{m.title}</strong> — {m.date ? new Date(m.date).toLocaleDateString() : ''} at {m.time}
+                showMeetings.map((m, idx) => (
+                  <motion.li key={`${m.title}-${m.date}-${idx}`} custom={idx} variants={itemVariants}>
+                    <motion.span
+                      className="piece-icon"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ display: 'inline-flex' }}
+                    >
+                      <i className="fas fa-video" />
+                    </motion.span>
+                    <div className="meeting-info">
+                      <strong>{m.title}</strong><br />
+                      <div className="date-tag">
+                        <i className="fas fa-calendar-alt" /> {new Date(m.date).toLocaleDateString()} at {m.time}
                       </div>
-                      {m.link && (
-                        <a href={m.link} target="_blank" rel="noreferrer" style={styles.join}>
-                          <i className="fas fa-video" aria-hidden="true"></i> Join
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                    </div>
+                    <a href={m.link} target="_blank" rel="noreferrer" className="join-link">
+                      <i className="fas fa-video" /> Join
+                    </a>
+                  </motion.li>
+                ))
               )}
-              <div style={styles.moreWrap}>
+            </motion.ul>
+            
+            {meetings.length > 5 && (
+              <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
                 {visible < meetings.length && (
-                  <button style={styles.moreBtn} onClick={() => setVisible((v) => Math.min(v + PAGE_SIZE, meetings.length))}>
-                    <i className="fas fa-chevron-down" aria-hidden="true"></i> More
+                  <button type="button" className="more-btn" onClick={() => setVisible((v) => Math.min(v + PAGE_SIZE, meetings.length))}>
+                    <i className="fas fa-chevron-down" /> More
                   </button>
                 )}
                 {visible > PAGE_SIZE && (
-                  <button style={styles.moreBtn} onClick={() => setVisible(PAGE_SIZE)}>
-                    <i className="fas fa-chevron-up" aria-hidden="true"></i> Hide
+                  <button type="button" className="more-btn" onClick={() => setVisible(PAGE_SIZE)}>
+                    <i className="fas fa-chevron-up" /> Hide
                   </button>
                 )}
               </div>
-            </>
-          )}
+            )}
+          </motion.div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
