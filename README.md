@@ -1,121 +1,150 @@
 # Chess Hive — Project README
 
-This repository contains two main parts:
+Chess Hive is a full-stack chess platform that supports multiple roles (Player, Organizer, Coordinator, Admin), real-time play and chat, tournament management, and a store with wallet balance tracking. The project includes a modern React SPA for the UI and an Express + Socket.IO backend that serves JSON APIs and real-time events.
 
-- `chesshive-react/` — React Single Page Application (frontend)
-- `ChessHivev1.0.2/` — Legacy Express server + Socket.IO (backend)
-
-This README documents how to run the website locally, what each route does, where data is loaded from, database collections, and developer notes for extending the project.
+This README explains the full website flow, major pages, backend APIs, and how to run the system locally.
 
 ---
 
 ## Quick start (prerequisites)
 - Node.js (v14+ recommended)
 - npm (or yarn)
-- MongoDB (local `mongod` or cloud MongoDB Atlas)
-- Windows PowerShell (commands below assume PowerShell on Windows)
+- MongoDB (local `mongod` or MongoDB Atlas)
+- Windows PowerShell (commands below assume PowerShell)
+
+---
 
 ## Run backend (Express + Socket.IO)
-1. Open PowerShell, go to the server folder:
+This repo contains two backend copies:
+
+1) **Primary backend (root)** — recommended
+```powershell
+cd .\
+npm install
+node app.js
+```
+
+2) **Legacy backend** in `ChessHivev1.0.2/` (kept for reference)
 ```powershell
 cd .\ChessHivev1.0.2\
 npm install
 node app.js
 ```
-2. The server uses `PORT` environment variable or defaults to `3000`. The server console prints the active port.
 
-Notes: `app.js` sets up `express-session` and `socket.io`. Many endpoints rely on `req.session` for authentication.
+The server uses `PORT` from environment variables or defaults to `3001` (root) / `3000` (legacy). The console prints the active port.
+
+---
 
 ## Run frontend (React SPA)
-1. Open a new PowerShell and start the React dev server:
 ```powershell
 cd .\chesshive-react\
 npm install
 npm start
 ```
-2. By default CRA runs on port `3000`. If your backend is already using `3000`, choose another port for React:
+
+CRA defaults to port `3000`. If the backend already uses `3000`, start React on another port:
 ```powershell
-#$env:PORT=3001; npm start
+# $env:PORT=3002; npm start
 ```
 
-Deployment: You can build the frontend with `npm run build` in `chesshive-react` and serve `build/` via the Express server.
+Deployment: run `npm run build` in `chesshive-react` and serve `build/` via Express.
 
 ---
 
 ## Project structure overview
 
-- `chesshive-react/` — frontend
-  - `src/index.js` — React entry point
-  - `src/App.js` — client-side routes (maps URL paths to page components)
-  - `src/pages/` — page components (Home, Login, ContactUs, player/*, organizer/*, coordinator/*, admin/*)
-  - `src/index.css` — global styles and theme variables
+- `chesshive-react/` — frontend (React SPA)
+  - `src/App.js` — client-side routes (URL → component)
+  - `src/pages/` — feature pages (Home, Login, ContactUs, player/*, organizer/*, coordinator/*, admin/*)
+  - `src/components/` — reusable UI components
+  - `src/styles/` — theme styles and visual system
 
-- `ChessHivev1.0.2/` — backend
-  - `app.js` — Express app, session setup, Socket.IO server, and mounting of routers
-  - `player_app.js` — player router (mounted at `/player`) with JSON APIs under `/player/api/*`
-  - `routes/auth.js` — signup/login, server-rendered pages, and `POST /contactus` (form flow)
-  - `routes/databasecongi.js` — DB connect helper (exports `connectDB()`)
-  - `views/` and `public/` — server templates and static assets
+- Root backend
+  - `app.js` — Express app, sessions, Socket.IO server, and router mounting
+  - `player_app.js` — player APIs (mounted at `/player`)
+  - `organizer_app.js`, `coordinator_app.js`, `admin_app.js` — role-specific APIs
+  - `routes/auth.js` — login/signup + OTP flow
+  - `routes/databasecongi.js` — DB connect helper (`connectDB()`)
 
 ---
 
-## Key frontend routes (client-side pages)
-These are defined in `src/App.js` and map to React components. Examples:
+## Website roles and what they do
+
+### Player
+- Register, login, and manage profile
+- Join tournaments (individual/team)
+- Use wallet for entry fees and store purchases
+- Live matches with timers (Socket.IO)
+- Chat with other players (Socket.IO)
+
+### Organizer
+- Create and manage tournaments
+- Manage coordinator accounts and schedules
+- View tournament enrollments and stats
+
+### Coordinator
+- Run and manage tournaments
+- Approve/track enrollments and pairings
+- Manage store items and player stats
+
+### Admin
+- Oversee users, organizers, coordinators, and payments
+- Manage overall system health and content
+
+---
+
+## Key frontend routes (React pages)
+Defined in `src/App.js`:
 
 - `/` → `Home`
 - `/login` → `Login`
 - `/signup` → `Signup`
-- `/contactus` → `ContactUs` (client form posts JSON to `/api/contactus`)
-- `/player/player_tournament` → `PlayerTournament` (fetches `/player/api/tournaments`)
-- `/player/player_chat` → `PlayerChat` (uses Socket.IO and fetches `/api/chat/history`, `/api/chat/contacts`)
+- `/contactus` → `ContactUs`
+- `/player/player_dashboard` → `PlayerDashboard`
+- `/player/player_tournament` → `PlayerTournament`
+- `/player/player_chat` → `PlayerChat`
+- `/player/live_match` → `PlayerLiveMatch`
 
-There are many other role-specific routes — see `src/App.js` for the full list.
+Organizer/Coordinator/Admin routes follow the same pattern (see `src/App.js` for the full list).
 
 ---
 
-## Key backend routes and APIs
-The Express server exposes both server-rendered pages and JSON APIs. Important endpoints:
+## Key backend APIs
 
-- Authentication & session:
-  - `POST /api/login` — login (creates session)
-  - `POST /api/login/mfa-verify` — MFA verification
-  - `GET /api/session` — returns session info as JSON
+### Session and auth
+- `POST /api/login` — login and create session
+- `POST /api/login/mfa-verify` — MFA verification
+- `GET /api/session` — current session info
 
-- Chat & realtime (Socket.IO):
-  - `io.on('connection')` handles `join`, `chatMessage`, `chessJoin`, `chessMove` and persists to `chat_messages`.
-  - `GET /api/chat/history` — returns last messages for a room
-  - `GET /api/chat/contacts` — returns user's contacts summary
+### Player APIs (mounted at `/player`)
+- `GET /player/api/dashboard` — dashboard data (player name, team requests, latest tournaments, latest items)
+- `GET /player/api/profile` — player profile, wallet, and stats
+- `GET /player/api/tournaments` — tournament list and enrollments
+- `POST /player/api/join-individual` — enroll individual player
+- `POST /player/api/join-team` — enroll team
+- `GET /player/api/store` — store items and wallet
+- `POST /player/api/buy` — purchase item
 
-- Player APIs (in `player_app.js`, mounted at `/player`):
-  - `GET /player/api/profile` — player profile, wallet, stats
-  - `GET /player/api/tournaments` — list of approved tournaments + enrollment data
-  - `POST /player/api/join-individual` — enroll individual player
-  - `POST /player/api/join-team` — enroll team
-  - `GET /player/api/pairings` — compute/return pairings (uses `swissPairing()`)
-  - `GET /player/api/rankings` — tournament rankings
-  - `GET /player/api/store` — shop items and wallet
-  - `POST /player/api/buy` — purchase item
-  - `POST /player/api/add-funds` — add wallet balance (form flow in auth router also exists)
-
-- Contact form:
-  - `POST /contactus` (in `routes/auth.js`) — server-rendered form handler that inserts into `contact` collection and redirects to a page.
-  - NOTE: Frontend `ContactUs.jsx` posts JSON to `/api/contactus` and expects a JSON response. The server currently does not expose `/api/contactus`. See "Mismatch" below.
+### Chat + realtime (Socket.IO)
+- `join` — join a chat or live room
+- `chatMessage` — send chat messages
+- `chessJoin` and `chessMove` — live match coordination
 
 ---
 
 ## Data flow examples
 
-1) Player tournaments page (`/player/player_tournament`)
-  - Frontend mounts `PlayerTournament` and fetches `/player/api/tournaments`.
-  - `player_app.js` queries MongoDB (`tournaments`, `user_balances`, `tournament_players`, `enrolledtournaments_team`, `subscriptionstable`) and returns JSON with tournaments, enrolled lists, wallet balance and subscription info.
-  - Frontend renders the list and shows Join buttons.
+1) Player dashboard
+- Frontend calls `GET /player/api/dashboard`
+- Backend returns player name, team requests, and latest tournament/store items
 
-2) Join individual tournament
-  - Frontend POSTs to `/player/api/join-individual` with `{ tournamentId }`.
-  - Backend checks `req.session`, validates user, checks wallet balance and subscription, deducts entry fee in `user_balances`, inserts into `tournament_players` and returns JSON success.
+2) Tournament join flow
+- Frontend sends `POST /player/api/join-individual` or `/join-team`
+- Backend validates session, checks wallet and subscription, then enrolls
 
-3) Chat (realtime)
-  - Clients connect via Socket.IO to the same server; after `join` events, messages are emitted and persisted to `chat_messages`.
+3) Live match
+- Players connect with Socket.IO
+- Server pairs players and sends moves + timers in real time
 
 ---
 
@@ -123,45 +152,28 @@ The Express server exposes both server-rendered pages and JSON APIs. Important e
 
 - `users` — users and roles (`player`, `coordinator`, `organizer`, `admin`)
 - `user_balances` — wallet balance per user
-- `tournaments` — tournament metadata (name, date, entry_fee, status, type)
+- `tournaments` — tournament metadata
 - `tournament_players` — individual enrollments
 - `enrolledtournaments_team` — team enrollments
 - `tournament_pairings` — stored pairings and results
 - `player_stats` — player stats and ratings
 - `chat_messages` — chat history
 - `products`, `sales` — store inventory and purchases
-- `contact` — messages from Contact Us
+- `contact` — Contact Us messages
 - `subscriptionstable` — subscription records
 
 ---
 
-## Known issues / mismatches and recommended fixes
+## Developer notes
 
-- Contact Us mismatch:
-  - Frontend `ContactUs.jsx` sends JSON to `/api/contactus` and expects JSON response.
-  - Server currently implements `POST /contactus` (form submit + redirect) in `routes/auth.js`.
-  - Fix options:
-    1. Add `POST /api/contactus` that accepts JSON, inserts into `contact`, and returns JSON `{ success: true }`.
-    2. Or change frontend to submit a classic form POST to `/contactus` and handle redirect.
+- Recommended `.env` variables:
+  - `PORT`
+  - `MONGO_URI`
+  - `SESSION_SECRET`
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (if email notifications are enabled)
 
-- Dev port conflict: Both backend and frontend default to port `3000`. Use `PORT` env or run React on another port.
-
-- Session and cookies: The backend uses `express-session`. When using CRA dev server, ensure API calls are proxied or cookies are shared properly.
+- ContactUs mismatch note:
+  - Frontend posts JSON to `/api/contactus`, but the server currently exposes only `/contactus` (form POST). If needed, add a JSON endpoint in `routes/auth.js`.
 
 ---
-
-## Developer notes & tips
-
-- Environment variables you should set in production or local `.env` (recommended):
-  - `PORT` — server port
-  - `MONGO_URI` — MongoDB connection string
-  - `SESSION_SECRET` — express-session secret
-  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` — if using nodemailer to send email notifications
-
-- To add admin notifications for contact messages:
-  - Option A (email): use `nodemailer` in `routes/auth.js` when inserting into `contact`.
-  - Option B (socket): emit `io` event to an admin room; admin UI listens for `new-contact` events.
-  - Option C (UI): build an admin page that queries `contact` and shows unread messages.
-
-- 
 

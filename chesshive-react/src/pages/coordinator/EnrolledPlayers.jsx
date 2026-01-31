@@ -58,15 +58,20 @@ function EnrolledPlayers() {
     load();
   }, [tournamentId]);
 
-  const coordinatorLinks = [
-    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
-    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
-    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
-    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
-    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
-    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
-    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
-  ];
+  const styles = {
+    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
+    container: { maxWidth: 1000, margin: '0 auto' },
+    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
+    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
+    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' },
+    th: { backgroundColor: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
+    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
+    statusApproved: { color: '#2E8B57', fontWeight: 700 },
+    statusPending: { color: '#c62828', fontWeight: 700 },
+    backRow: { textAlign: 'right' },
+    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
+    err: { textAlign: 'center', color: '#c62828', marginTop: '1rem' },
+  };
 
   return (
     <div style={{ minHeight: '100vh' }}>

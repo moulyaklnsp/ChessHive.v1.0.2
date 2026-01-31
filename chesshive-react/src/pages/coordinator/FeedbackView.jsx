@@ -52,15 +52,19 @@ function FeedbackView() {
     load();
   }, [tournamentId]);
 
-  const coordinatorLinks = [
-    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
-    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
-    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
-    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
-    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
-    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
-    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
-  ];
+  const styles = {
+    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
+    h1: { fontFamily: 'Cinzel, serif', color: '#2E8B57', textAlign: 'center', marginBottom: '2rem' },
+    container: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' },
+    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '1.5rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
+    name: { color: '#2E8B57', marginBottom: '0.5rem' },
+    rating: { color: '#FFD700', fontSize: '1.2rem' },
+    comments: { marginTop: '1rem', fontStyle: 'italic' },
+    date: { fontSize: '0.8rem', color: '#666', textAlign: 'right' },
+    err: { textAlign: 'center', color: '#c62828', marginBottom: '1rem' },
+    backRow: { textAlign: 'right', marginTop: '1.5rem' },
+    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.6rem 1.2rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
+  };
 
   const renderStars = (rating) => {
     const r = Math.max(0, Math.min(5, Number(rating) || 0));

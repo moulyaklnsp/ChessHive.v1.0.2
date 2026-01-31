@@ -1,10 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createSocket } from '../../utils/socket';
-import '../../styles/playerNeoNoir.css';
-import { motion } from 'framer-motion';
-import usePlayerTheme from '../../hooks/usePlayerTheme';
-import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 28, scale: 0.97 },
@@ -79,7 +75,8 @@ function CoordinatorChat() {
       return () => clearTimeout(t);
     }
     if (socketRef.current) return; // already connected
-    const sock = window.io();
+    const sock = createSocket();
+    if (!sock) return;
     socketRef.current = sock;
 
     sock.on('message', (payload) => {
@@ -229,30 +226,24 @@ function CoordinatorChat() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <style>{`
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body, #root { min-height: 100vh; }
-        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
-        .content { flex-grow:1; margin-left:0; padding:2rem; }
-        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
-        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
-        .updates-section:hover { transform: translateY(-5px); }
-        .chat-container { display:flex; max-width:1100px; margin:0 auto; gap:1rem; }
-        .chat-sidebar { flex:0 0 320px; background:var(--card-bg); border-radius:12px; padding:1rem; border:1px solid var(--card-border); }
-        .chat-main { flex:1; background:var(--card-bg); border-radius:12px; padding:1rem; border:1px solid var(--card-border); }
-        .form-input { width:100%; padding:0.8rem; margin-bottom:1rem; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
-        .form-select { width:100%; padding:0.8rem; margin-bottom:1rem; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
-        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:0.8rem 1.5rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; }
-        .action-btn { background:var(--sky-blue); color:var(--sea-green); border:none; padding:0.8rem 1.5rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:inline-flex; align-items:center; gap:0.5rem; text-decoration:none; }
-        .chat-box { height:480px; border:2px solid var(--sea-green); border-radius:8px; padding:1rem; margin:1rem 0; overflow-y:auto; background:var(--page-bg); }
-        .chat-msg { margin-bottom:1rem; padding:0.8rem; border-radius:8px; max-width:80%; }
-        .chat-sent { background:var(--sea-green); color:var(--on-accent); margin-left:auto; }
-        .chat-received { background:var(--sky-blue); color:var(--sea-green); }
-        .contact-item { display:flex; justify-content:space-between; align-items:center; padding:0.6rem; border-bottom:1px solid var(--card-border); cursor:pointer; }
-        .contact-item:hover { background:rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); }
-        .search-result { display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px dashed var(--card-border); }
-      `}</style>
+    <div style={{ ...styles.root, padding: 0 }}>
+      <div style={{ maxWidth: 1100, margin: '1rem auto 0 auto', padding: '0 1rem' }}>
+        <Link to="/coordinator/coordinator_dashboard" style={styles.backLink}>
+          <span style={{ fontSize: '1.1rem' }}>⬅</span>
+          <span>Back to Dashboard</span>
+        </Link>
+      </div>
+      <div style={{ display: 'flex', maxWidth: 1100, margin: '2rem auto', gap: '1rem' }}>
+        <div style={{ flex: '0 0 320px', background: '#fff', borderRadius: 12, padding: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <select style={{ flex: 1, ...styles.select }} value={role} onChange={(e) => setRole(e.target.value)}>
+              <option>Coordinator</option>
+              <option>Player</option>
+            </select>
+            <input placeholder="username (optional)" value={usernameSearch} onChange={(e) => setUsernameSearch(e.target.value)} style={{ width: 160, padding: '0.6rem', borderRadius: 8, border: '1px solid #ddd' }} />
+            <button style={{ ...styles.button, padding: '0.5rem 0.8rem' }} onClick={searchRegisteredUsers}>Search</button>
+            <button style={{ ...styles.button, padding: '0.5rem 0.8rem' }} onClick={() => openChatWith(usernameSearch)}>Start Chat</button>
+          </div>
 
       <div className="page player-neo">
         <motion.div

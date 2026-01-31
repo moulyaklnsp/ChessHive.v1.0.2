@@ -54,7 +54,7 @@ const AdminTournamentManagement = () => {
     h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
     h4: { color: '#2E8B57', fontSize: '1.2rem', marginBottom: '1.5rem', fontFamily: 'Cinzel, serif' },
     message: (type) => ({ padding: '1rem', borderRadius: 8, marginBottom: '1.5rem', textAlign: 'center', fontWeight: 'bold', backgroundColor: type === 'error' ? 'rgba(220,53,69,0.1)' : 'rgba(46,139,87,0.1)', color: type === 'error' ? '#dc3545' : '#2E8B57' }),
-    tableDiv: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', overflowX: 'auto' },
+    tableDiv: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', overflowX: 'auto', border: '1px solid var(--card-border)' },
     table: { width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' },
     th: { backgroundColor: '#2E8B57', color: '#FFFDD0', padding: '1.2rem', textAlign: 'left', fontFamily: 'Cinzel, serif', fontSize: '1.1rem' },
     td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },

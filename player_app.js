@@ -3,7 +3,10 @@ const path = require('path');
 const router = express.Router();
 const { connectDB } = require('./routes/databasecongi');
 const utils = require('./utils');
+const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
+let multer;
+try { multer = require('multer'); } catch (e) { multer = null; }
 router.use(express.json()); // Parses JSON
 
 class Player {
@@ -154,18 +157,23 @@ router.get('/api/tournaments', async (req, res) => {
     const walletBalance = balance?.wallet_balance || 0;
     console.log('Wallet balance:', walletBalance); // Debug log
 
-    const tournaments = await db.collection('tournaments').find({ status: 'Approved' }).toArray();
+    const tournamentsRaw = await db.collection('tournaments').find({ status: 'Approved' }).toArray();
+    const tournaments = (tournamentsRaw || []).map(t => ({ ...t, _id: t._id.toString() }));
     console.log('Fetched tournaments:', tournaments); // Debug log
 
-    const enrolledIndividualTournaments = await db.collection('tournament_players').aggregate([
+    const enrolledIndividualTournamentsRaw = await db.collection('tournament_players').aggregate([
       { $match: { username } },
       { $lookup: { from: 'tournaments', localField: 'tournament_id', foreignField: '_id', as: 'tournament' } },
       { $unwind: '$tournament' },
       { $project: { tournament: 1 } }
     ]).toArray();
+    const enrolledIndividualTournaments = (enrolledIndividualTournamentsRaw || []).map(e => ({
+      ...e,
+      tournament: e.tournament ? { ...e.tournament, _id: e.tournament._id.toString() } : null
+    }));
     console.log('Enrolled individual tournaments:', enrolledIndividualTournaments); // Debug log
 
-    const enrolledTeamTournaments = await db.collection('enrolledtournaments_team').aggregate([
+    const enrolledTeamTournamentsRaw = await db.collection('enrolledtournaments_team').aggregate([
       {
         $match: {
           $or: [{ captain_id: user._id }, { player1_name: username }, { player2_name: username }, { player3_name: username }]
@@ -177,6 +185,7 @@ router.get('/api/tournaments', async (req, res) => {
       { $unwind: '$captain' },
       {
         $project: {
+          _id: 1,
           tournament_id: '$tournament_id',
           tournament: '$tournament',
           captainName: '$captain.name',
@@ -191,6 +200,11 @@ router.get('/api/tournaments', async (req, res) => {
         }
       }
     ]).toArray();
+    const enrolledTeamTournaments = (enrolledTeamTournamentsRaw || []).map(e => ({
+      ...e,
+      _id: e._id ? e._id.toString() : undefined,
+      tournament: e.tournament ? { ...e.tournament, _id: e.tournament._id.toString() } : null
+    }));
     console.log('Enrolled team tournaments:', enrolledTeamTournaments); // Debug log
 
     const subscription = await db.collection('subscriptionstable').findOne({ username: req.session.userEmail });
@@ -217,66 +231,55 @@ router.post('/api/join-individual', async (req, res) => {
   if (!req.session.username || !req.session.userEmail) {
     return res.status(401).json({ error: 'Please log in' });
   }
-
-  const { tournamentId } = req.body;
-  if (!tournamentId) {
-    return res.status(400).json({ error: 'Tournament ID is required' });
-  }
+  const { tournamentId } = req.body || {};
+  if (!tournamentId) return res.status(400).json({ error: 'Tournament ID is required' });
+  if (!ObjectId.isValid(tournamentId)) return res.status(400).json({ error: 'Invalid tournament ID' });
 
   try {
     const db = await connectDB();
     const username = req.session.username;
     const user = await db.collection('users').findOne({ name: username, role: 'player', isDeleted: 0 });
-    if (!user) {
-      return res.status(404).json({ error: 'Player not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'Player not found' });
 
+    // Ensure tournament exists and is approved
     const tournament = await db.collection('tournaments').findOne({ _id: new ObjectId(tournamentId), status: 'Approved' });
-    if (!tournament) {
-      return res.status(404).json({ error: 'Tournament not found or not approved' });
+    if (!tournament) return res.status(404).json({ error: 'Tournament not found or not approved' });
+    if ((tournament.type || '').toLowerCase() !== 'individual') {
+      return res.status(400).json({ error: 'This is not an individual tournament' });
     }
 
-    // Check if already enrolled
-    const existingEnrollment = await db.collection('tournament_players').findOne({
-      tournament_id: new ObjectId(tournamentId),
-      username
-    });
-    if (existingEnrollment) {
-      return res.status(400).json({ error: 'Already enrolled in this tournament' });
-    }
-
-    // Check wallet balance
-    const balance = await db.collection('user_balances').findOne({ user_id: user._id });
-    const walletBalance = balance?.wallet_balance || 0;
-    if (walletBalance < tournament.entry_fee) {
-      return res.status(400).json({ error: 'Insufficient wallet balance' });
-    }
-
-    // Check subscription
+    // Subscription must be active
     const subscription = await db.collection('subscriptionstable').findOne({ username: req.session.userEmail });
-    const subscribed = subscription && new Date(subscription.end_date) > new Date();
-    if (!subscribed) {
-      return res.status(403).json({ error: 'Active subscription required to join tournaments' });
+    if (!subscription || (subscription.end_date && new Date(subscription.end_date) <= new Date())) {
+      return res.status(400).json({ error: 'Subscription required' });
     }
 
-    // Deduct entry fee
+    // Already enrolled?
+    const already = await db.collection('tournament_players').findOne({ tournament_id: new ObjectId(tournamentId), username });
+    if (already) return res.status(400).json({ error: 'Already enrolled' });
+
+    // Wallet check
+    const balDoc = await db.collection('user_balances').findOne({ user_id: user._id });
+    const walletBalance = balDoc?.wallet_balance || 0;
+    const fee = parseFloat(tournament.entry_fee) || 0;
+    if (walletBalance < fee) return res.status(400).json({ error: 'Insufficient wallet balance' });
+
+    // Deduct and enroll
     await db.collection('user_balances').updateOne(
       { user_id: user._id },
-      { $inc: { wallet_balance: -tournament.entry_fee } },
+      { $inc: { wallet_balance: -fee } },
       { upsert: true }
     );
 
-    // Enroll player
     await db.collection('tournament_players').insertOne({
       tournament_id: new ObjectId(tournamentId),
       username,
-      college: user.college,
-      gender: user.gender || 'Unknown',
-      enrollment_date: new Date()
+      college: user.college || '',
+      gender: user.gender || ''
     });
 
-    const newBalance = (await db.collection('user_balances').findOne({ user_id: user._id })).wallet_balance || 0;
-    res.json({ success: true, message: 'Successfully joined the tournament', walletBalance: newBalance });
+    const newBal = await db.collection('user_balances').findOne({ user_id: user._id });
+    res.json({ success: true, message: 'Joined successfully', walletBalance: newBal?.wallet_balance || (walletBalance - fee) });
   } catch (err) {
     console.error('Error in /api/join-individual:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -333,13 +336,6 @@ router.post('/api/join-team', async (req, res) => {
       return res.status(400).json({ error: 'Insufficient wallet balance' });
     }
 
-    // Check subscription
-    const subscription = await db.collection('subscriptionstable').findOne({ username: req.session.userEmail });
-    const subscribed = subscription && new Date(subscription.end_date) > new Date();
-    if (!subscribed) {
-      return res.status(403).json({ error: 'Active subscription required to join tournaments' });
-    }
-
     // Deduct entry fee from captain
     await db.collection('user_balances').updateOne(
       { user_id: user._id },
@@ -357,7 +353,7 @@ router.post('/api/join-team', async (req, res) => {
       player1_approved: username === player1 ? 1 : 0,
       player2_approved: username === player2 ? 1 : 0,
       player3_approved: username === player3 ? 1 : 0,
-      approved: username === player1 && username === player2 && username === player3 ? 1 : 0,
+      approved: (username === player1 && username === player2 && username === player3) ? 1 : 0,
       enrollment_date: new Date()
     });
 
@@ -408,34 +404,55 @@ router.get('/api/store', async (req, res) => {
 });
 
 router.get('/api/subscription', async (req, res) => {
+  console.log('GET /player/api/subscription - Session:', { 
+    userEmail: req.session.userEmail, 
+    userRole: req.session.userRole, 
+    username: req.session.username 
+  });
+  
   if (!req.session.userEmail) {
+    console.log('GET /player/api/subscription - No userEmail in session');
     return res.status(401).json({ error: 'Please log in' });
   }
+  
   try {
     const db = await connectDB();
+    console.log('GET /player/api/subscription - Looking up user with email:', req.session.userEmail);
+    
     const row = await db.collection('users').aggregate([
       { $match: { email: req.session.userEmail, role: 'player', isDeleted: 0 } },
       { $lookup: { from: 'user_balances', localField: '_id', foreignField: 'user_id', as: 'balance' } },
       { $unwind: { path: '$balance', preserveNullAndEmptyArrays: true } },
       { $project: { _id: 1, wallet_balance: '$balance.wallet_balance' } }
     ]).next();
+    
     if (!row) {
+      console.log('GET /player/api/subscription - User not found');
       return res.status(404).json({ error: 'User not found' });
     }
+    
+    console.log('GET /player/api/subscription - User found, wallet:', row.wallet_balance);
+    
     let subscription = await db.collection('subscriptionstable').findOne({ username: req.session.userEmail });
+    console.log('GET /player/api/subscription - Subscription:', subscription);
+    
     if (subscription) {
       const now = new Date();
       if (now > new Date(subscription.end_date)) {
         await db.collection('subscriptionstable').deleteOne({ username: req.session.userEmail });
+        console.log('GET /player/api/subscription - Expired subscription deleted');
         subscription = null;
       }
     }
-    res.json({
+    
+    const response = {
       walletBalance: row.wallet_balance || 0,
       currentSubscription: subscription || null
-    });
+    };
+    console.log('GET /player/api/subscription - Sending response:', response);
+    res.json(response);
   } catch (err) {
-    console.error('Server error:', err);
+    console.error('GET /player/api/subscription - Server error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -514,7 +531,7 @@ router.get('/api/profile', async (req, res) => {
   const walletBalance = balance?.wallet_balance || 0;
 
   const sales = await db.collection('sales').aggregate([
-    { $match: { buyer: row.name } },
+    { $match: { $or: [ { buyer_id: playerId }, { buyer: row.name } ] } },
     { $lookup: { from: 'products', localField: 'product_id', foreignField: '_id', as: 'product' } },
     { $unwind: '$product' },
     { $project: { name: '$product.name' } }
@@ -537,6 +554,277 @@ router.get('/api/profile', async (req, res) => {
     },
     subscribed
   });
+});
+
+// Upload/Update player profile photo
+// Expects multipart/form-data with field name: "photo"
+router.post('/api/profile/photo', async (req, res, next) => {
+  if (!multer) {
+    return res.status(500).json({ error: 'Upload support is not available (multer not installed).' });
+  }
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  const uploader = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (r, file, cb) => {
+      const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+      if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+      cb(null, true);
+    }
+  }).single('photo');
+
+  uploader(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    return next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No photo uploaded. Use field name "photo".' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const existingPublicId = (user.profile_photo_public_id || '').toString();
+    const desiredPublicId = existingPublicId || `chesshive/profile-photos/player_${user._id}`;
+
+    const result = await uploadImageBuffer(req.file.buffer, {
+      folder: 'chesshive/profile-photos',
+      public_id: desiredPublicId.split('/').pop(),
+      overwrite: true,
+      invalidate: true
+    });
+
+    const newUrl = result?.secure_url;
+    const newPublicId = result?.public_id;
+    if (!newUrl || !newPublicId) {
+      return res.status(500).json({ error: 'Failed to upload profile photo' });
+    }
+
+    // Best-effort cleanup of previous Cloudinary asset (if public_id changed)
+    if (existingPublicId && existingPublicId !== newPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { profile_photo_url: newUrl, profile_photo_public_id: newPublicId, updated_date: new Date() } }
+    );
+
+    return res.json({ success: true, profile_photo_url: newUrl });
+  } catch (err) {
+    console.error('Error updating profile photo:', err);
+    return res.status(500).json({ error: 'Failed to update profile photo' });
+  }
+});
+
+// Get current player wallpaper
+router.get('/api/profile/wallpaper', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+    return res.json({ success: true, wallpaper_url: user.wallpaper_url || '' });
+  } catch (err) {
+    console.error('Error fetching wallpaper:', err);
+    return res.status(500).json({ error: 'Failed to fetch wallpaper' });
+  }
+});
+
+// Upload/Update player wallpaper
+// Expects multipart/form-data with field name: "wallpaper"
+router.post('/api/profile/wallpaper', async (req, res, next) => {
+  if (!multer) {
+    return res.status(500).json({ error: 'Upload support is not available (multer not installed).' });
+  }
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  const uploader = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 },
+    fileFilter: (r, file, cb) => {
+      const ok = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes((file.mimetype || '').toLowerCase());
+      if (!ok) return cb(new Error('Only image files (jpg, png, webp, gif) are allowed.'));
+      cb(null, true);
+    }
+  }).single('wallpaper');
+
+  uploader(req, res, (err) => {
+    if (err) {
+      const code = (err && err.code) ? String(err.code) : '';
+      if (code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Wallpaper too large. Max size is 15MB.' });
+      }
+      return res.status(400).json({ error: err.message || 'Upload failed' });
+    }
+    return next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No wallpaper uploaded. Use field name "wallpaper".' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const existingPublicId = (user.wallpaper_public_id || '').toString();
+    const desiredPublicId = existingPublicId || `chesshive/wallpapers/player_${user._id}`;
+
+    const result = await uploadImageBuffer(req.file.buffer, {
+      folder: 'chesshive/wallpapers',
+      public_id: desiredPublicId.split('/').pop(),
+      overwrite: true,
+      invalidate: true
+    });
+
+    const newUrl = result?.secure_url;
+    const newPublicId = result?.public_id;
+    if (!newUrl || !newPublicId) {
+      return res.status(500).json({ error: 'Failed to upload wallpaper' });
+    }
+
+    if (existingPublicId && existingPublicId !== newPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { wallpaper_url: newUrl, wallpaper_public_id: newPublicId, updated_date: new Date() } }
+    );
+
+    return res.json({ success: true, wallpaper_url: newUrl });
+  } catch (err) {
+    console.error('Error updating wallpaper:', err);
+    const isProd = (process.env.NODE_ENV || 'development') === 'production';
+    const msg = (err && err.message) ? String(err.message) : '';
+    const code = (err && (err.code !== undefined)) ? err.code : undefined;
+
+    // Mongo schema validation failure often shows up as code 121
+    if (code === 121 || msg.toLowerCase().includes('document failed validation')) {
+      return res.status(400).json({
+        error: 'Wallpaper update rejected by database schema. Restart backend so validators update, then try again.',
+        ...(isProd ? {} : { detail: msg })
+      });
+    }
+
+    // Cloudinary errors often include http_code/message
+    const httpCode = (err && err.http_code) ? parseInt(err.http_code, 10) : null;
+    const status = (httpCode && httpCode >= 400 && httpCode < 600) ? 502 : 500;
+    return res.status(status).json({
+      error: 'Failed to update wallpaper',
+      ...(isProd ? {} : { detail: msg })
+    });
+  }
+});
+
+// Remove wallpaper
+router.delete('/api/profile/wallpaper', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const existingPublicId = (user.wallpaper_public_id || '').toString();
+    if (existingPublicId) {
+      await destroyImage(existingPublicId);
+    }
+
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $unset: { wallpaper_url: '', wallpaper_public_id: '' }, $set: { updated_date: new Date() } }
+    );
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Error removing wallpaper:', err);
+    return res.status(500).json({ error: 'Failed to remove wallpaper' });
+  }
+});
+
+// Update player profile fields (JSON)
+router.put('/api/profile', async (req, res) => {
+  if (!req.session.userEmail) {
+    return res.status(401).json({ error: 'Please log in' });
+  }
+
+  try {
+    const { name, dob, phone, AICF_ID, FIDE_ID } = req.body || {};
+
+    const set = {};
+    const unset = {};
+
+    if (name !== undefined) {
+      const v = (name ?? '').toString().trim();
+      if (!v) return res.status(400).json({ error: 'Name is required' });
+      set.name = v;
+    }
+
+    if (phone !== undefined) {
+      const v = (phone ?? '').toString().trim();
+      if (!v) unset.phone = '';
+      else set.phone = v;
+    }
+
+    if (AICF_ID !== undefined) {
+      const v = (AICF_ID ?? '').toString().trim();
+      if (!v) unset.AICF_ID = '';
+      else set.AICF_ID = v;
+    }
+
+    if (FIDE_ID !== undefined) {
+      const v = (FIDE_ID ?? '').toString().trim();
+      if (!v) unset.FIDE_ID = '';
+      else set.FIDE_ID = v;
+    }
+
+    if (dob !== undefined) {
+      const v = (dob ?? '').toString().trim();
+      if (!v) {
+        unset.dob = '';
+      } else {
+        const d = new Date(v);
+        if (Number.isNaN(d.getTime())) {
+          return res.status(400).json({ error: 'Invalid dob. Use YYYY-MM-DD.' });
+        }
+        set.dob = d;
+      }
+    }
+
+    if (Object.keys(set).length === 0 && Object.keys(unset).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ email: req.session.userEmail, role: 'player' });
+    if (!user) return res.status(404).json({ error: 'Player not found' });
+
+    const updateDoc = {};
+    if (Object.keys(set).length) updateDoc.$set = { ...set, updated_date: new Date() };
+    if (Object.keys(unset).length) updateDoc.$unset = unset;
+    await db.collection('users').updateOne({ _id: user._id }, updateDoc);
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating player profile:', err);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 router.delete('/api/deleteAccount', async (req, res) => {
@@ -934,7 +1222,8 @@ router.post('/api/buy', async (req, res) => {
     console.log('Deducting balance and updating product availability');
     await db.collection('user_balances').updateOne(
       { user_id: user._id },
-      { $inc: { wallet_balance: -numericPrice } }
+      { $inc: { wallet_balance: -numericPrice } },
+      { upsert: true }
     );
     console.log('Updating product availability');
     await db.collection('products').updateOne(
@@ -947,11 +1236,14 @@ router.post('/api/buy', async (req, res) => {
       product_id: new ObjectId(productId),
       price: Number(numericPrice),
       buyer: String(buyer),
+      buyer_id: user._id,
       college: String(college),
       purchase_date: new Date()
     });
 
-    const updatedBalance = walletBalance - numericPrice;
+    // Return actual updated balance from DB
+    const newBalanceDoc = await db.collection('user_balances').findOne({ user_id: user._id });
+    const updatedBalance = newBalanceDoc?.wallet_balance ?? (walletBalance - numericPrice);
     res.json({ success: true, message: 'Purchase successful!', walletBalance: updatedBalance });
 
   } catch (err) {
@@ -960,75 +1252,7 @@ router.post('/api/buy', async (req, res) => {
   }
 });
 
-//Teja
-router.post('/api/buy', async (req, res) => {
-  if (!req.session.userEmail) {
-    return res.status(401).json({ success: false, message: 'Please log in' });
-  }
-
-  try {
-    const db = await connectDB();
-    const { price, buyer, college, productId } = req.body;
-
-    if (!price || !productId) {
-      return res.status(400).json({ success: false, message: 'Invalid request' });
-    }
-
-    const user = await db.collection('users').findOne({
-      email: req.session.userEmail,
-      role: 'player',
-      isDeleted: 0
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    const balanceDoc = await db.collection('user_balances').findOne({ user_id: user._id });
-    const walletBalance = balanceDoc?.wallet_balance || 0;
-    const numericPrice = parseFloat(price);
-
-    if (walletBalance < numericPrice) {
-      return res.json({ success: false, message: 'Insufficient wallet balance' });
-    }
-
-    // Check product availability
-    console.log('Checking product availability');
-    const product = await db.collection('products').findOne({ _id: new ObjectId(productId) });
-    if (!product || product.availability <= 0) {
-      return res.json({ success: false, message: 'Product unavailable' });
-    }
-
-    // Deduct wallet balance and reduce availability
-    console.log('Deducting balance and updating product availability');
-    await db.collection('user_balances').updateOne(
-      { user_id: user._id },
-      { $inc: { wallet_balance: -numericPrice } }
-    );
-console.log('Updating product availability');
-    await db.collection('products').updateOne(
-      { _id: new ObjectId(productId) },
-      { $inc: { availability: -1 } }
-    );
-
-    // Record the sale
-    await db.collection('sales').insertOne({
-  product_id: new ObjectId(productId),
-  price: Number(numericPrice),
-  buyer: String(buyer),
-  college: String(college),
-  purchase_date: new Date()
-});
-
-
-    const updatedBalance = walletBalance - numericPrice;
-    res.json({ success: true, message: 'Purchase successful!', walletBalance: updatedBalance });
-
-  } catch (err) {
-    console.error('Error in /api/buy:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
+// Removed duplicate /api/buy route (Teja) to avoid conflicts
 router.post('/api/subscribe', async (req, res) => {
   if (!req.session.userEmail) {
     return res.status(401).json({ success: false, message: 'Please log in' });
@@ -1071,18 +1295,20 @@ router.post('/api/subscribe', async (req, res) => {
     const endDate = new Date();
     endDate.setMonth(startDate.getMonth() + 1);
 
+    const subscriptionDoc = {
+      username: req.session.userEmail,
+      plan,
+      price: numericPrice,
+      start_date: startDate,
+      end_date: endDate
+    };
+    
+    console.log('Attempting to save subscription:', JSON.stringify(subscriptionDoc, null, 2));
+
     // Save subscription
     await db.collection('subscriptionstable').updateOne(
       { username: req.session.userEmail },
-      {
-        $set: {
-          username: req.session.userEmail,
-          plan,
-          price: numericPrice,
-          start_date: startDate,
-          end_date: endDate
-        }
-      },
+      { $set: subscriptionDoc },
       { upsert: true }
     );
 
@@ -1094,7 +1320,10 @@ router.post('/api/subscribe', async (req, res) => {
     });
   } catch (err) {
     console.error('Error in /api/subscribe:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    if (err.code === 121) {
+      console.error('Validation error details:', JSON.stringify(err.errInfo, null, 2));
+    }
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 router.get('/api/growth_analytics', async (req, res) => {

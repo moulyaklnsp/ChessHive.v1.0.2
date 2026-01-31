@@ -1,8 +1,42 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import '../../styles/playerNeoNoir.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchNotifications, markNotificationRead } from '../../features/notifications/notificationsSlice';
+import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
+const listVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.12 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+  }
+};
 
 function PlayerDashboard() {
   const navigate = useNavigate();
@@ -19,6 +53,7 @@ function PlayerDashboard() {
   const [latestItems, setLatestItems] = useState([]);
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // Error state
   const [errorMsg, setErrorMsg] = useState('');
@@ -71,12 +106,12 @@ function PlayerDashboard() {
   const loadDashboard = useCallback(async () => {
     setErrorMsg('');
     try {
-      const data = await fetchWithRetry('/player/api/dashboard');
-      if (!data) return;
-      setPlayerName(data.playerName || 'Player');
-      setTeamRequests(Array.isArray(data.teamRequests) ? data.teamRequests : []);
-      setLatestTournaments(Array.isArray(data.latestTournaments) ? data.latestTournaments : []);
-      setLatestItems(Array.isArray(data.latestItems) ? data.latestItems : []);
+      const dash = await fetchWithRetry('/player/api/dashboard');
+      if (!dash) return;
+      setPlayerName(dash.playerName || 'Player');
+      setTeamRequests(Array.isArray(dash.teamRequests) ? dash.teamRequests : []);
+      setLatestTournaments(Array.isArray(dash.latestTournaments) ? dash.latestTournaments : []);
+      setLatestItems(Array.isArray(dash.latestItems) ? dash.latestItems : []);
     } catch (err) {
       setErrorMsg(err.message || 'Unknown error. Check console for details.');
       // Fallback mock for local testing
@@ -197,9 +232,26 @@ function PlayerDashboard() {
   }, []);
 
   useEffect(() => {
+    const saved = localStorage.getItem('player_notifications_enabled');
+    setNotificationsEnabled(saved === null ? true : saved === 'true');
+  }, []);
+
+  useEffect(() => {
     loadDashboard();
     updateUnreadCount();
   }, [loadDashboard, updateUnreadCount]);
+
+  // Player-specific nav links used by AnimatedSidebar
+  const playerLinks = [
+    { path: '/player/player_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/player/growth', label: 'Growth Tracking', icon: 'fas fa-chart-line' },
+    { path: '/player/player_tournament', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/player/watch', label: 'Watch', icon: 'fas fa-video' },
+    { path: '/player/subscription', label: 'Manage Subscription', icon: 'fas fa-star' },
+    { path: '/player/store', label: 'E-Commerce Store', icon: 'fas fa-store' },
+    { path: '/player/player_chat', label: 'Live Chat', icon: 'fas fa-comments' },
+    { path: '/player/settings', label: 'Settings', icon: 'fas fa-cog' }
+  ];
 
   // Derived
   const pendingTeamRequests = useMemo(() => {
@@ -215,38 +267,34 @@ function PlayerDashboard() {
     <div style={{ minHeight: '100vh' }}>
       {/* Head styles (scoped) */}
       <style>{`
-        :root {
-          --sea-green: #2E8B57;
-          --cream: #FFFDD0;
-          --sky-blue: #87CEEB;
-        }
+        /* Theme variables provided by .player-neo when on /player pages */
         * { margin:0; padding:0; box-sizing:border-box; }
         body, #root { min-height: 100vh; }
-        .page { font-family: 'Playfair Display', serif; background-color: var(--cream); min-height: 100vh; display:flex; }
-        .sidebar { width:280px; background:var(--sea-green); color:#fff; height:100vh; position:fixed; left:0; top:0; padding-top:1rem; z-index:1000; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
-        .sidebar-header { text-align:center; padding:1rem; border-bottom:2px solid rgba(255,255,255,0.1); margin-bottom:1rem; }
-        .sidebar-header h2 { font-family:'Cinzel', serif; color:var(--cream); font-size:1.5rem; margin-bottom:0.5rem; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        /* Sidebar replaced with site dropdown (AnimatedSidebar) */
+        .sidebar { display: none; }
+        .sidebar-header { display: none; }
         .nav-section { margin-bottom:1rem; padding:0 1rem; }
-        .nav-section-title { color:var(--cream); font-size:0.9rem; text-transform:uppercase; padding:0.5rem 1rem; opacity:0.7; }
-        .sidebar a { display:flex; align-items:center; gap:0.8rem; color:#fff; text-decoration:none; padding:0.8rem 1.5rem; transition:all 0.3s ease; font-family:'Playfair Display', serif; border-radius:5px; margin:0.2rem 0; }
-        .sidebar a:hover { background:rgba(135,206,235,0.2); color:var(--cream); transform: translateX(5px); }
+        .nav-section-title { color:var(--text-color); font-size:0.9rem; text-transform:uppercase; padding:0.5rem 1rem; opacity:0.7; }
+        .sidebar a { display:flex; align-items:center; gap:0.8rem; color:var(--sidebar-text); text-decoration:none; padding:0.8rem 1.5rem; transition:all 0.3s ease; font-family:'Playfair Display', serif; border-radius:5px; margin:0.2rem 0; }
+        .sidebar a:hover { background:rgba(var(--sea-green-rgb),0.12); color:var(--text-color); transform: translateX(5px); }
         .sidebar a i { width:20px; text-align:center; }
-        .content { flex-grow:1; margin-left:280px; padding:2rem; }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
         h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
-        .updates-section { background:#fff; border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
         .updates-section:hover { transform: translateY(-5px); }
         .updates-section h3 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:1.5rem; display:flex; align-items:center; gap:0.8rem; font-size:1.5rem; }
         .updates-section ul { list-style:none; }
-        .updates-section li { padding:1rem; border-bottom:1px solid rgba(46,139,87,0.1); transition:all 0.3s ease; display:flex; align-items:center; gap:1rem; }
+        .updates-section li { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transition:all 0.3s ease; display:flex; align-items:center; gap:1rem; }
         .updates-section li:last-child { border-bottom:none; }
-        .updates-section li:hover { background:rgba(135,206,235,0.1); transform: translateX(5px); border-radius:8px; }
+        .updates-section li:hover { background: rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); transform: translateX(5px); border-radius:8px; }
         .tournament-info, .item-info { flex-grow:1; }
-        .price-tag { background:var(--sea-green); color:#fff; padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; }
+        .price-tag { background: linear-gradient(90deg, rgba(235,87,87,1), rgba(6,56,80,1)); color: var(--on-accent); padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:600; box-shadow: inset 0 -4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
         .date-tag { color:var(--sea-green); font-style: italic; }
         .logout-box { position:absolute; bottom:2rem; width:100%; padding:0 2rem; }
-        .logout-box button { width:100%; background:var(--sky-blue); color:var(--sea-green); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
-        .logout-box button:hover { transform: translateY(-2px); box-shadow:0 4px 8px rgba(0,0,0,0.1); background:#6CB4D4; }
-        .approve-btn{ padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--cream); }
+        .logout-box button { width:100%; background: linear-gradient(90deg, var(--sky-blue), var(--sea-green)); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.25s ease; display:flex; align-items:center; justify-content:center; gap:0.5rem; }
+        .logout-box button:hover { transform: translateY(-2px); box-shadow:0 8px 24px rgba(6,56,80,0.08); }
+        .approve-btn{ padding:0.6rem 1rem; border:none; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; transition:all 0.3s ease; display:flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); }
         .approve-btn.reject{ background:#ff4d4d; }
         .approve-btn.reject:hover{ background:#cc0000; }
         @media (max-width: 768px){
@@ -254,73 +302,70 @@ function PlayerDashboard() {
           .content{ margin-left:0; padding:1rem; }
           .updates-section{ padding:1rem; }
           h1{ font-size:1.8rem; flex-direction:column; text-align:center; gap:0.5rem; }
-          .menu-btn{ display:block; position:fixed; left:1rem; top:1rem; background:var(--sea-green); color:#fff; border:none; padding:0.8rem; border-radius:8px; cursor:pointer; z-index:1001; transition:all 0.3s ease; }
+          .menu-btn{ display:block; position:fixed; left:1rem; top:1rem; background:var(--sea-green); color:var(--on-accent); border:none; padding:0.8rem; border-radius:8px; cursor:pointer; z-index:1001; transition:all 0.3s ease; }
           .menu-btn:hover{ background:#236B43; transform: scale(1.05); }
         }
         .inbox-icon { position:relative; cursor:pointer; margin-left:auto; }
-        .inbox-icon .unread-count { position:absolute; top:-5px; right:-5px; background:red; color:#fff; border-radius:50%; padding:2px 6px; font-size:0.8rem; }
+        .inbox-icon .unread-count { position:absolute; top:-5px; right:-5px; background: var(--sea-green); color:var(--on-accent); border-radius:50%; padding:2px 6px; font-size:0.8rem; }
         #notifications-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:${notificationsOpen ? 'flex' : 'none'}; justify-content:center; align-items:center; z-index:1002; }
-        .notifications-content { background:#fff; padding:2rem; border-radius:15px; max-width:500px; width:90%; }
-        .notifications-list li { margin-bottom:1rem; padding:1rem; background:rgba(135,206,235,0.1); border-radius:8px; }
+        .notifications-content { background:var(--card-bg); padding:2rem; border-radius:15px; max-width:500px; width:90%; border:1px solid var(--card-border); box-shadow:none; }
+        .notifications-list li { margin-bottom:1rem; padding:1rem; background: rgba(var(--sea-green-rgb, 27, 94, 63), 0.08); border-radius:8px; }
         #feedback-form { display:${feedbackOpen ? 'block' : 'none'}; margin-top:1rem; }
         #feedback-form select, #feedback-form textarea{ width:100%; margin-bottom:1rem; }
-        #feedback-form button{ background:var(--sea-green); color:#fff; padding:0.5rem 1rem; border:none; border-radius:8px; cursor:pointer; }
+        #feedback-form button{ background:var(--sea-green); color:var(--on-accent); padding:0.5rem 1rem; border:none; border-radius:8px; cursor:pointer; }
       `}</style>
 
-      <div className="page">
-        {/* Mobile menu button */}
-        {isMobile && (
-          <button className="menu-btn" onClick={() => setSidebarOpen(s => !s)}>
-            <i className="fas fa-bars" />
-          </button>
-        )}
+      <div className="page player-neo">
+        {/* Decorative floating knight – materialize entrance */}
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-chess-knight" />
+        </motion.div>
+        {/* Site dropdown sidebar (AnimatedSidebar) */}
+        <AnimatedSidebar links={playerLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        {/* Sidebar */}
-        <div className="sidebar">
-          <div className="sidebar-header">
-            <h2><i className="fas fa-chess" /> ChessHive</h2>
-            <p>Welcome, {playerName}!</p>
+        {/* Player quick header: theme toggle, notifications, welcome */}
+        <div className="player-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} aria-hidden="true" />
+          </motion.button>
+          {notificationsEnabled && (
             <button className="inbox-icon" onClick={loadNotifications} aria-label={`Open notifications (${unreadCount} unread)`}>
               <i className="fas fa-inbox" aria-hidden="true" />
               <span className="unread-count" aria-hidden="true">{unreadCount}</span>
             </button>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-title">Main Menu</div>
-            <Link to="/player/player_profile" className="nav-item">
-              <i className="fas fa-user" aria-hidden="true" /><span>Profile</span>
-            </Link>
-            <Link to="/player/growth" className="nav-item">
-              <i className="fas fa-chart-line" aria-hidden="true" /><span>Growth Tracking</span>
-            </Link>
-            <Link to="/player/player_tournament" className="nav-item">
-              <i className="fas fa-trophy" aria-hidden="true" /><span>Tournaments</span>
-            </Link>
-          </div>
-
-          <div className="nav-section">
-            <div className="nav-section-title">Services</div>
-            <Link to="/player/subscription" className="nav-item">
-              <i className="fas fa-star" aria-hidden="true" /><span>Manage Subscription</span>
-            </Link>
-            <Link to="/player/store" className="nav-item">
-              <i className="fas fa-store" aria-hidden="true" /><span>E-Commerce Store</span>
-            </Link>
-            <Link to="/player/player_chat" className="nav-item">
-              <i className="fas fa-comments" aria-hidden="true" /><span>Live Chat</span>
-            </Link>
-          </div>
-
-          <div className="logout-box">
-            <button onClick={() => navigate('/login')}>
-              <i className="fas fa-sign-out-alt" /><span>Log Out</span>
-            </button>
-          </div>
+          )}
+          <div style={{ color: 'var(--sea-green)', fontWeight: '600' }}>Welcome, {playerName}</div>
         </div>
 
-        {/* Content */}
-        <div className="content">
+        {/* Content – subtle chess checkerboard drift */}
+        <div className="content chess-dash-checkerboard">
           <div style={styles.errorBox}>
             <strong>Error loading data:</strong> <span>{errorMsg}</span>
             {errorMsg && (
@@ -328,82 +373,173 @@ function PlayerDashboard() {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-            <h1 style={{ margin: 0 }}>
-              <i className="fas fa-chess-king" />
+          <motion.div
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="chess-piece-icon-wrap"
+              >
+                <i className="fas fa-chess-king chess-king-glow chess-piece-breathe" aria-hidden="true" />
+              </motion.span>
               Welcome to ChessHive, {playerName}!
             </h1>
-            <div>
-              <button onClick={toggleTheme} className="theme-toggle-btn" style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
-            </div>
-          </div>
+            <div />
+          </motion.div>
 
           {/* Team Requests */}
-          <div className="updates-section team-requests">
-            <h3>Pending Team Tournament Requests</h3>
-            <ul>
+          <motion.div
+            className="updates-section team-requests chess-capture-hover chess-card-magic"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-users chess-piece-breathe" style={{ animationDelay: '0s' }} />
+              </motion.span>
+              Pending Team Tournament Requests
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
               {pendingTeamRequests.length === 0 ? (
-                <li><i className="fas fa-info-circle" /> No pending team requests.</li>
+                <motion.li variants={itemVariants}><i className="fas fa-info-circle" /> No pending team requests.</motion.li>
               ) : (
-                pendingTeamRequests.map(req => (
-                  <li key={req.id}>
-                    <i className="fas fa-users" />
+                pendingTeamRequests.map((req, idx) => (
+                  <motion.li key={req.id} custom={idx} variants={itemVariants}>
+                    <motion.span
+                      className="piece-icon"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ display: 'inline-flex' }}
+                    >
+                      <i className="fas fa-users" />
+                    </motion.span>
                     <div className="tournament-info">
                       <strong>{req.tournamentName}</strong><br />
                       Captain: {req.captainName} | Team: {req.player1_name}, {req.player2_name}, {req.player3_name}
                     </div>
                     <button className="approve-btn" onClick={() => approveTeamRequest(req.id)}>Approve</button>
-                  </li>
+                  </motion.li>
                 ))
               )}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
 
           {/* Latest Tournaments */}
-          <div className="updates-section">
-            <h3><i className="fas fa-trophy" /> Latest Tournaments</h3>
-            <ul>
+          <motion.div
+            className="updates-section chess-capture-hover chess-card-magic"
+            custom={1}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.32, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-trophy chess-piece-breathe" style={{ animationDelay: '0.2s' }} />
+              </motion.span>
+              Latest Tournaments
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
               {(!latestTournaments || latestTournaments.length === 0) ? (
-                <li><i className="fas fa-info-circle" /> No tournaments available at the moment.</li>
+                <motion.li variants={itemVariants}><i className="fas fa-info-circle" /> No tournaments available at the moment.</motion.li>
               ) : (
                 latestTournaments.map((t, idx) => {
                   const formattedDate = new Date(t.date).toLocaleString('en-IN', {
                     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
                   });
                   return (
-                    <li key={idx}>
-                      <i className="fas fa-chess-knight" />
+                    <motion.li key={idx} variants={itemVariants}>
+                      <motion.span
+                        className="piece-icon"
+                        initial={{ opacity: 0, scale: 0.88 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ display: 'inline-flex' }}
+                      >
+                        <i className={`fas fa-chess-knight ${idx === 0 ? 'chess-pawn-march' : 'chess-piece-breathe'}`} />
+                      </motion.span>
                       <div className="tournament-info">
                         <strong>{t.name}</strong>
                         <div className="date-tag">
                           <i className="fas fa-calendar-alt" /> {formattedDate}
                         </div>
                       </div>
-                    </li>
+                    </motion.li>
                   );
                 })
               )}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
 
           {/* Latest Store Items */}
-          <div className="updates-section">
-            <h3><i className="fas fa-shopping-bag" /> Latest Store Items</h3>
-            <ul>
+          <motion.div
+            className="updates-section chess-capture-hover chess-card-magic"
+            custom={2}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+            style={{ willChange: 'transform' }}
+          >
+            <h3>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.44, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'inline-flex', marginRight: '0.5rem' }}
+              >
+                <i className="fas fa-shopping-bag chess-piece-breathe" style={{ animationDelay: '0.4s' }} />
+              </motion.span>
+              Latest Store Items
+            </h3>
+            <motion.ul variants={listVariants} initial="hidden" animate="visible">
               {(!latestItems || latestItems.length === 0) ? (
-                <li><i className="fas fa-info-circle" /> No items available at the moment.</li>
+                <motion.li custom={0} variants={itemVariants}><i className="fas fa-info-circle" /> No items available at the moment.</motion.li>
               ) : (
-                latestItems.map((i, idx) => (
-                  <li key={idx}>
-                    <i className="fas fa-chess-pawn" />
-                    <div className="item-info"><strong>{i.name}</strong></div>
-                    <span className="price-tag"><i className="fas fa-tag" /> ₹{i.price}</span>
-                  </li>
+                latestItems.map((item, idx) => (
+                  <motion.li key={idx} variants={itemVariants}>
+                    <motion.span
+                      className="piece-icon"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ display: 'inline-flex' }}
+                    >
+                      <i className={idx === 0 ? 'fas fa-chess-pawn chess-pawn-march' : 'fas fa-chess-pawn chess-piece-breathe'} />
+                    </motion.span>
+                    <div className="item-info"><strong>{item.name}</strong></div>
+                    <span className="price-tag"><i className="fas fa-tag" /> ₹{item.price}</span>
+                  </motion.li>
                 ))
               )}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
         </div>
+
+
+
       </div>
 
       {/* Notifications Modal */}
