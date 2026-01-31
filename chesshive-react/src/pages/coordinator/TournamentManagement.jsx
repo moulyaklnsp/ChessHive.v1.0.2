@@ -260,29 +260,15 @@ function TournamentManagement() {
     }
   };
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', marginBottom: '2rem', border: '1px solid var(--card-border)' },
-    label: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: 8, display: 'block' },
-    input: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontFamily: 'Playfair Display, serif' }),
-    select: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : 'var(--sea-green)'}`, borderRadius: 8, fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', background: 'var(--card-bg)' }),
-    error: { color: '#c62828', fontSize: '0.9rem', marginTop: 4 },
-    btn: { background: '#2E8B57', color: '#fff', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%' },
-    tableCard: { background: 'var(--card-bg)', borderRadius: 15, padding: '2rem', boxShadow: 'none', border: '1px solid var(--card-border)' },
-    table: { width: '100%', borderCollapse: 'collapse' },
-    th: { background: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46, 139, 87, 0.2)' },
-    rowHover: { backgroundColor: 'rgba(135, 206, 235, 0.1)' },
-    status: (klass) => ({ fontWeight: 'bold', color: klass === 'completed' ? '#2E8B57' : klass === 'ongoing' ? '#87CEEB' : klass === 'yet-to-start' ? '#666' : '#c62828' }),
-    actionBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', margin: '0.2rem', border: 'none', cursor: 'pointer' },
-    removeBtn: { background: '#c62828', color: '#FFFDD0', border: 'none', padding: '0.5rem 1rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', margin: '0.2rem', cursor: 'pointer' },
-    moreWrap: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    backRow: { textAlign: 'right', marginTop: '2rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' }
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -467,99 +453,98 @@ function TournamentManagement() {
             <h3 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '0.5rem' }}>Your Tournaments</h3>
             <h4 style={{ color: 'var(--text-color)', opacity: 0.7, marginBottom: '1rem' }}>Tournaments you've submitted will appear here with their approval status</h4>
 
-          {loading && <div>Loading tournaments…</div>}
-          {!loading && !!error && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' }}>
-              <i className="fas fa-info-circle" aria-hidden="true"></i> {error}
-            </div>
-          )}
-          {!loading && !error && activeTournaments.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' }}>
-              <i className="fas fa-info-circle" aria-hidden="true"></i> No tournaments available.
-            </div>
-          )}
+            {loading && <div>Loading tournaments…</div>}
+            {!loading && !!error && (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--sea-green)', fontStyle: 'italic' }}>
+                <i className="fas fa-info-circle" /> {error}
+              </div>
+            )}
+            {!loading && !error && activeTournaments.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--sea-green)', fontStyle: 'italic' }}>
+                <i className="fas fa-info-circle" /> No tournaments available.
+              </div>
+            )}
 
-          {!loading && !error && activeTournaments.length > 0 && (
-            <>
-              <div className="table-responsive">
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}><i className="fas fa-trophy" aria-hidden="true"></i> Name</th>
-                    <th style={styles.th}><i className="fas fa-calendar" aria-hidden="true"></i> Date</th>
-                    <th style={styles.th}>Time</th>
-                    <th style={styles.th}><i className="fas fa-map-marker-alt" aria-hidden="true"></i> Location</th>
-                    <th style={styles.th}><i className="fas fa-rupee-sign" aria-hidden="true"></i> Entry Fee</th>
-                    <th style={styles.th}>Type</th>
-                    <th style={styles.th}>No Of Rounds</th>
-                    <th style={styles.th}><i className="fas fa-info-circle" aria-hidden="true"></i> Status</th>
-                    <th style={styles.th}><i className="fas fa-cogs" aria-hidden="true"></i> Actions</th>
-                    <th style={styles.th}><i className="fas fa-cogs" aria-hidden="true"></i> Remove</th>
-                  </tr>
-                </thead>
+            {!loading && !error && activeTournaments.length > 0 && (
+              <>
+                <div className="table-responsive">
+                <table className="tournament-table">
+                  <thead>
+                    <tr>
+                      <th><i className="fas fa-trophy" /> Name</th>
+                      <th><i className="fas fa-calendar" /> Date</th>
+                      <th>Time</th>
+                      <th><i className="fas fa-map-marker-alt" /> Location</th>
+                      <th><i className="fas fa-rupee-sign" /> Entry Fee</th>
+                      <th>Type</th>
+                      <th>No Of Rounds</th>
+                      <th><i className="fas fa-info-circle" /> Status</th>
+                      <th><i className="fas fa-cogs" /> Actions</th>
+                      <th><i className="fas fa-cogs" /> Remove</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {activeTournaments.map((t, idx) => {
                     const { status, statusClass, dateObj } = computeStatus(t);
                     const hidden = idx >= visibleRows;
                     return (
-                      <tr key={t._id || idx} style={hidden ? { display: 'none' } : undefined}>
-                        <td style={styles.td}>{t.name}</td>
-                        <td style={styles.td}>{isNaN(dateObj) ? '' : dateObj.toLocaleDateString()}</td>
-                        <td style={styles.td}>{t.time}</td>
-                        <td style={styles.td}>{t.location}</td>
-                        <td style={styles.td}>₹{typeof t.entry_fee !== 'undefined' ? t.entry_fee : t.entryFee}</td>
-                        <td style={styles.td}>{t.type}</td>
-                        <td style={styles.td}>{typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}</td>
-                        <td style={{ ...styles.td, ...styles.status(statusClass) }}><i className="fas fa-circle" aria-hidden="true"></i> {status}</td>
-                        <td style={styles.td}>
+                        <tr key={t._id || idx} style={hidden ? { display: 'none' } : undefined}>
+                          <td>{t.name}</td>
+                          <td>{isNaN(dateObj) ? '' : dateObj.toLocaleDateString()}</td>
+                          <td>{t.time}</td>
+                          <td>{t.location}</td>
+                          <td>₹{typeof t.entry_fee !== 'undefined' ? t.entry_fee : t.entryFee}</td>
+                          <td>{t.type}</td>
+                          <td>{typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}</td>
+                          <td style={{ fontWeight: 'bold', color: statusClass === 'completed' ? 'var(--sea-green)' : statusClass === 'ongoing' ? 'var(--sky-blue)' : statusClass === 'yet-to-start' ? '#666' : '#c62828' }}><i className="fas fa-circle" /> {status}</td>
+                          <td>
                           {t.status === 'Approved' && (
                             <>
-                              <Link to={`/coordinator/enrolled_players?tournament_id=${t._id}`} style={styles.actionBtn}>
-                                <i className="fas fa-users" aria-hidden="true"></i> Players
-                              </Link>
-                              {t.type === 'Individual' && (
-                                <>
-                                  <Link to={`/coordinator/pairings?tournament_id=${t._id}&rounds=${typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}`} style={styles.actionBtn}>
-                                    <i className="fas fa-chess-board" aria-hidden="true"></i> Pairings
-                                  </Link>
-                                  <Link to={`/coordinator/rankings?tournament_id=${t._id}`} style={styles.actionBtn}>
-                                    <i className="fas fa-medal" aria-hidden="true"></i> Rankings
-                                  </Link>
-                                </>
-                              )}
-                            </>
-                          )}
-                          {/* Helpful: Edit button */}
-                          <button style={styles.actionBtn} onClick={() => onEdit(t._id)}>
-                            <i className="fas fa-edit" aria-hidden="true"></i> Edit
-                          </button>
-                        </td>
-                        <td style={styles.td}>
-                          <button style={styles.removeBtn} onClick={() => onRemove(t._id)}>
-                            <i className="fas fa-trash" aria-hidden="true"></i> Remove
-                          </button>
-                          {(['Ongoing', 'Completed'].includes(status)) ? (
-                            t.feedback_requested ? (
-                              <a href={`/coordinator/feedback_view?tournament_id=${t._id}`} target="_blank" rel="noreferrer" style={styles.actionBtn}>
-                                <i className="fas fa-eye" aria-hidden="true"></i> View Feedback
-                              </a>
-                            ) : (
-                              <button style={styles.actionBtn} onClick={() => requestFeedback(t._id)}>
-                                <i className="fas fa-paper-plane" aria-hidden="true"></i> Send Feedback Form
-                              </button>
-                            )
-                          ) : (
-                            <button style={{ ...styles.actionBtn, opacity: 0.6, cursor: 'not-allowed' }} title="Available when tournament starts" disabled>
-                              <i className="fas fa-paper-plane" aria-hidden="true"></i> Send Feedback Form
+                                <Link to={`/coordinator/enrolled_players?tournament_id=${t._id}`} className="action-btn">
+                                  <i className="fas fa-users" /> Players
+                                </Link>
+                                {t.type === 'Individual' && (
+                                  <>
+                                    <Link to={`/coordinator/pairings?tournament_id=${t._id}&rounds=${typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}`} className="action-btn">
+                                      <i className="fas fa-chess-board" /> Pairings
+                                    </Link>
+                                    <Link to={`/coordinator/rankings?tournament_id=${t._id}`} className="action-btn">
+                                      <i className="fas fa-medal" /> Rankings
+                                    </Link>
+                                  </>
+                                )}
+                              </>
+                            )}
+                            <button className="action-btn" onClick={() => onEdit(t._id)}>
+                              <i className="fas fa-edit" /> Edit
                             </button>
-                          )}
-                        </td>
-                      </tr>
+                          </td>
+                          <td>
+                            <button className="action-btn remove-btn" onClick={() => onRemove(t._id)}>
+                              <i className="fas fa-trash" /> Remove
+                            </button>
+                            {(['Ongoing', 'Completed'].includes(status)) ? (
+                              t.feedback_requested ? (
+                                <a href={`/coordinator/feedback_view?tournament_id=${t._id}`} target="_blank" rel="noreferrer" className="action-btn">
+                                  <i className="fas fa-eye" /> View Feedback
+                                </a>
+                              ) : (
+                                <button className="action-btn" onClick={() => requestFeedback(t._id)}>
+                                  <i className="fas fa-paper-plane" /> Send Feedback Form
+                                </button>
+                              )
+                            ) : (
+                              <button className="action-btn" style={{ opacity: 0.6, cursor: 'not-allowed' }} title="Available when tournament starts" disabled>
+                                <i className="fas fa-paper-plane" /> Send Feedback Form
+                              </button>
+                            )}
+                          </td>
+                        </tr>
                     );
                   })}
                 </tbody>
               </table>
-              </div>
+                </div>
 
                 <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
                   {visibleRows < activeTournaments.length && (
