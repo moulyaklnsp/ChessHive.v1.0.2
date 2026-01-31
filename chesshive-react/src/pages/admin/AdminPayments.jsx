@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const AdminPayments = () => {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [players, setPlayers] = useState([]);
@@ -40,204 +45,298 @@ const AdminPayments = () => {
     return { totalSales: sales.length, totalRevenue, tourEnrollments, tourRevenue };
   }, [sales, tournamentSales]);
 
-  const styles = {
-    page: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', color: '#2E8B57', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.2rem', color: '#2E8B57', marginBottom: '1.2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    stats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: '1.5rem', marginBottom: '1.5rem' },
-    statCard: { background: 'var(--card-bg)', padding: '1.5rem', borderRadius: 10, textAlign: 'center', boxShadow: 'none', border: '1px solid var(--card-border)' },
-    statValue: { fontSize: '1.6rem', fontWeight: 'bold', color: '#2E8B57', marginBottom: '.5rem' },
-    statLabel: { color: '#666', fontSize: '.9rem' },
-    tableWrap: { background: 'var(--card-bg)', borderRadius: 15, padding: '1.5rem', boxShadow: 'none', overflowX: 'auto', marginBottom: '2rem', border: '1px solid var(--card-border)' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '1rem' },
-    th: { backgroundColor: '#2E8B57', color: '#FFFDD0', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
-    badge: { padding: '.4rem .9rem', borderRadius: 20, backgroundColor: '#87CEEB', color: '#2E8B57', fontWeight: 'bold' },
-    moreWrap: { textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer' },
-    rowCounter: { textAlign: 'center', marginBottom: '1rem', fontFamily: 'Cinzel, serif', fontSize: '1.1rem', color: '#2E8B57', backgroundColor: 'rgba(46,139,87,0.1)', padding: '.4rem .8rem', borderRadius: 8, display: 'inline-block' },
-    backRight: { marginTop: '2rem', textAlign: 'right' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '.5rem', backgroundColor: '#2E8B57', color: '#FFFDD0', textDecoration: 'none', padding: '.8rem 1.5rem', borderRadius: 8, transition: 'all .3s ease', fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    empty: { textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic' },
-    banner: (variant) => ({ padding: '1rem', borderRadius: 8, marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold', background: variant === 'error' ? 'rgba(220,53,69,0.1)' : 'rgba(46,139,87,0.1)', color: variant === 'error' ? '#dc3545' : '#2E8B57' }),
-  };
+  const adminLinks = [
+    { path: '/admin/organizer_management', label: 'Manage Organizers', icon: 'fas fa-users-cog' },
+    { path: '/admin/coordinator_management', label: 'Manage Coordinators', icon: 'fas fa-user-tie' },
+    { path: '/admin/player_management', label: 'Manage Players', icon: 'fas fa-user-tie' },
+    { path: '/admin/admin_tournament_management', label: 'Tournament Approvals', icon: 'fas fa-trophy' },
+    { path: '/admin/payments', label: 'Payments & Subscriptions', icon: 'fas fa-money-bill-wave' }
+  ];
 
+  // Remove the old styles object since we're using CSS classes now
   // slices for display
   const subsShown = players.slice(0, visSubs);
   const salesShown = sales.slice(0, visSales);
   const tourShown = tournamentSales.slice(0, visTour);
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="money">💰</span> Payments & Subscriptions</h2>
+    <div style={{ minHeight: '100vh' }}>
+      {/* Head styles (scoped) */}
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1, h2 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        h2 { font-size:2.2rem; justify-content:center; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; overflow-x:auto; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .table { width:100%; border-collapse:collapse; margin-bottom:2rem; }
+        .th { background:var(--sea-green); color:var(--on-accent); padding:1.2rem; text-align:left; font-family:'Cinzel', serif; font-size:1.1rem; }
+        .td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .status-badge { padding:0.5rem 1rem; border-radius:20px; font-size:0.9rem; font-weight:bold; display:inline-block; text-align:center; background-color:var(--sky-blue); color:var(--sea-green); }
+        .more-btn { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+        .row-counter { text-align:center; margin-bottom:1rem; font-family:'Cinzel', serif; font-size:1.2rem; color:var(--sea-green); background-color:rgba(var(--sea-green-rgb, 27, 94, 63), 0.1); padding:0.5rem 1rem; border-radius:8px; display:inline-block; }
+        .empty { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; }
+        .banner { padding:1rem; border-radius:8px; margin-bottom:1rem; text-align:center; font-weight:bold; }
+        .banner.error { background:rgba(220,53,69,0.1); color:#dc3545; }
+        .back-link { display:inline-flex; align-items:center; gap:0.5rem; background-color:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; transition:all 0.3s ease; font-family:'Cinzel', serif; font-weight:bold; }
+        .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:1.5rem; margin-bottom:1.5rem; }
+        .stat-card { background:var(--card-bg); padding:1.5rem; border-radius:10px; text-align:center; box-shadow:none; border:1px solid var(--card-border); }
+        .stat-value { font-size:1.6rem; font-weight:bold; color:var(--sea-green); margin-bottom:.5rem; }
+        .stat-label { color:var(--text-color); opacity:0.7; font-size:.9rem; }
+      `}</style>
 
-        {error && <div style={styles.banner('error')}>{error}</div>}
+      <div className="page player-neo">
+        {/* Decorative floating chess piece */}
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-money-bill-wave" />
+        </motion.div>
+        
+        {/* Site dropdown sidebar (AnimatedSidebar) */}
+        <AnimatedSidebar links={adminLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        {/* Subscriptions */}
-        <div style={styles.tableWrap}>
-          <div style={{ textAlign: 'center' }}>
-            <span style={styles.rowCounter}>{`${Math.min(visSubs, players.length)} / ${players.length}`}</span>
-          </div>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}><i className="fas fa-user" /> Player Name</th>
-                <th style={styles.th}><i className="fas fa-crown" /> Subscription Level</th>
-                <th style={styles.th}><i className="fas fa-calendar" /> Date of Subscription</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={3} style={styles.empty}><i className="fas fa-info-circle" /> Loading subscriptions…</td></tr>
-              ) : subsShown.length === 0 ? (
-                <tr><td colSpan={3} style={styles.empty}><i className="fas fa-info-circle" /> No players available.</td></tr>
-              ) : (
-                subsShown.map((p, idx) => (
-                  <tr key={`${p.email || p.name || 'sub'}-${idx}`}>
-                    <td style={styles.td}>{p.name || 'N/A'}</td>
-                    <td style={styles.td}><span style={styles.badge}>Level {p.plan || 'Unknown'}</span></td>
-                    <td style={styles.td}>{p.start_date ? new Date(p.start_date).toLocaleDateString() : 'N/A'}</td>
-                  </tr>
-                ))
+        {/* Admin quick header: theme toggle */}
+        <div className="admin-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} aria-hidden="true" />
+          </motion.button>
+        </div>
+
+        {/* Content */}
+        <div className="content">
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-money-bill-wave" /> Payments & Subscriptions
+          </motion.h2>
+
+          {error && <div className="banner error">{error}</div>}
+
+          {/* Subscriptions */}
+          <motion.div
+            className="updates-section"
+            initial={{ opacity: 0, y: 28, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h4 style={{ color: 'var(--sea-green)', fontSize: '1.2rem', marginBottom: '1.5rem', fontFamily: 'Cinzel, serif' }}>
+              <i className="fas fa-crown" /> Player Subscriptions
+            </h4>
+            <div style={{ textAlign: 'center' }}>
+              <span className="row-counter">{`${Math.min(visSubs, players.length)} / ${players.length}`}</span>
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="th"><i className="fas fa-user" /> Player Name</th>
+                  <th className="th"><i className="fas fa-crown" /> Subscription Level</th>
+                  <th className="th"><i className="fas fa-calendar" /> Date of Subscription</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={3} className="empty"><i className="fas fa-info-circle" /> Loading subscriptions…</td></tr>
+                ) : subsShown.length === 0 ? (
+                  <tr><td colSpan={3} className="empty"><i className="fas fa-info-circle" /> No players available.</td></tr>
+                ) : (
+                  subsShown.map((p, idx) => (
+                    <tr key={`${p.email || p.name || 'sub'}-${idx}`}>
+                      <td className="td">{p.name || 'N/A'}</td>
+                      <td className="td"><span className="status-badge">Level {p.plan || 'Unknown'}</span></td>
+                      <td className="td">{p.start_date ? new Date(p.start_date).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+            <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {players.length > visSubs && (
+                <button type="button" className="more-btn" onClick={() => setVisSubs((v) => Math.min(v + 5, players.length))}>
+                  <i className="fas fa-chevron-down" /> More
+                </button>
               )}
-            </tbody>
-          </table>
-          <div style={styles.moreWrap}>
-            {players.length > visSubs && (
-              <button type="button" style={styles.moreBtn} onClick={() => setVisSubs((v) => Math.min(v + 5, players.length))}>
-                <i className="fas fa-chevron-down" /> More
-              </button>
-            )}
-            {visSubs > 5 && (
-              <button type="button" style={styles.moreBtn} onClick={() => setVisSubs(5)}>
-                <i className="fas fa-chevron-up" /> Hide
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Sales Report */}
-        <h2 style={styles.h2}>Sales Report</h2>
-        <div style={styles.stats}>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{totals.totalSales}</div>
-            <div style={styles.statLabel}>Total Sales</div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>₹{totals.totalRevenue.toFixed(2)}</div>
-            <div style={styles.statLabel}>Total Revenue</div>
-          </div>
-        </div>
-        <div style={styles.tableWrap}>
-          <div style={{ textAlign: 'center' }}>
-            <span style={styles.rowCounter}>{`${Math.min(visSales, sales.length)} / ${sales.length}`}</span>
-          </div>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Product</th>
-                <th style={styles.th}>Price</th>
-                <th style={styles.th}>Coordinator</th>
-                <th style={styles.th}>Buyer</th>
-                <th style={styles.th}>College</th>
-                <th style={styles.th}>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} style={styles.empty}><i className="fas fa-info-circle" /> Loading sales…</td></tr>
-              ) : salesShown.length === 0 ? (
-                <tr><td colSpan={6} style={styles.empty}><i className="fas fa-info-circle" /> No sales recorded.</td></tr>
-              ) : (
-                salesShown.map((s, idx) => (
-                  <tr key={`${s.product || 'sale'}-${idx}`}>
-                    <td style={styles.td}>{s.product || 'N/A'}</td>
-                    <td style={styles.td}>₹{s.price || 0}</td>
-                    <td style={styles.td}>{s.coordinator || 'N/A'}</td>
-                    <td style={styles.td}>{s.buyer || 'N/A'}</td>
-                    <td style={styles.td}>{s.college || 'N/A'}</td>
-                    <td style={styles.td}>{s.purchase_date ? new Date(s.purchase_date).toLocaleDateString() : 'N/A'}</td>
-                  </tr>
-                ))
+              {visSubs > 5 && (
+                <button type="button" className="more-btn" onClick={() => setVisSubs(5)}>
+                  <i className="fas fa-chevron-up" /> Hide
+                </button>
               )}
-            </tbody>
-          </table>
-          <div style={styles.moreWrap}>
-            {sales.length > visSales && (
-              <button type="button" style={styles.moreBtn} onClick={() => setVisSales((v) => Math.min(v + 5, sales.length))}>
-                <i className="fas fa-chevron-down" /> More
-              </button>
-            )}
-            {visSales > 5 && (
-              <button type="button" style={styles.moreBtn} onClick={() => setVisSales(5)}>
-                <i className="fas fa-chevron-up" /> Hide
-              </button>
-            )}
-          </div>
-        </div>
+            </div>
+          </motion.div>
 
-        {/* Tournament Sales */}
-        <h2 style={styles.h2}>Tournament Sales Report</h2>
-        <div style={styles.stats}>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>{totals.tourEnrollments}</div>
-            <div style={styles.statLabel}>Total Tournament Enrollments</div>
+          {/* Sales Report */}
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-chart-line" /> Sales Report
+          </motion.h2>
+          <div className="stats">
+            <div className="stat-card">
+              <div className="stat-value">{totals.totalSales}</div>
+              <div className="stat-label">Total Sales</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">₹{totals.totalRevenue.toFixed(2)}</div>
+              <div className="stat-label">Total Revenue</div>
+            </div>
           </div>
-          <div style={styles.statCard}>
-            <div style={styles.statValue}>₹{totals.tourRevenue.toFixed(2)}</div>
-            <div style={styles.statLabel}>Total Tournament Revenue</div>
-          </div>
-        </div>
-        <div style={styles.tableWrap}>
-          <div style={{ textAlign: 'center' }}>
-            <span style={styles.rowCounter}>{`${Math.min(visTour, tournamentSales.length)} / ${tournamentSales.length}`}</span>
-          </div>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Tournament</th>
-                <th style={styles.th}>Entry Fee</th>
-                <th style={styles.th}>Total Players/Teams</th>
-                <th style={styles.th}>Revenue</th>
-                <th style={styles.th}>Enrollment Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} style={styles.empty}><i className="fas fa-info-circle" /> Loading tournament sales…</td></tr>
-              ) : tourShown.length === 0 ? (
-                <tr><td colSpan={5} style={styles.empty}><i className="fas fa-info-circle" /> No tournament enrollments recorded.</td></tr>
-              ) : (
-                tourShown.map((t, idx) => (
-                  <tr key={`${t.name || 'tourn'}-${idx}`}>
-                    <td style={styles.td}>{t.name || 'N/A'}</td>
-                    <td style={styles.td}>₹{t.entry_fee || 0}</td>
-                    <td style={styles.td}>{t.total_enrollments || 0} {t.type === 'Individual' ? 'Players' : 'Teams'}</td>
-                    <td style={styles.td}>₹{(t.revenue || 0).toFixed(2)}</td>
-                    <td style={styles.td}>{t.enrollment_date ? new Date(t.enrollment_date).toLocaleDateString() : 'N/A'}</td>
-                  </tr>
-                ))
+          <motion.div
+            className="updates-section"
+            initial={{ opacity: 0, y: 28, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.3, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <span className="row-counter">{`${Math.min(visSales, sales.length)} / ${sales.length}`}</span>
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="th">Product</th>
+                  <th className="th">Price</th>
+                  <th className="th">Coordinator</th>
+                  <th className="th">Buyer</th>
+                  <th className="th">College</th>
+                  <th className="th">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} className="empty"><i className="fas fa-info-circle" /> Loading sales…</td></tr>
+                ) : salesShown.length === 0 ? (
+                  <tr><td colSpan={6} className="empty"><i className="fas fa-info-circle" /> No sales recorded.</td></tr>
+                ) : (
+                  salesShown.map((s, idx) => (
+                    <tr key={`${s.product || 'sale'}-${idx}`}>
+                      <td className="td">{s.product || 'N/A'}</td>
+                      <td className="td">₹{s.price || 0}</td>
+                      <td className="td">{s.coordinator || 'N/A'}</td>
+                      <td className="td">{s.buyer || 'N/A'}</td>
+                      <td className="td">{s.college || 'N/A'}</td>
+                      <td className="td">{s.purchase_date ? new Date(s.purchase_date).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+            <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {sales.length > visSales && (
+                <button type="button" className="more-btn" onClick={() => setVisSales((v) => Math.min(v + 5, sales.length))}>
+                  <i className="fas fa-chevron-down" /> More
+                </button>
               )}
-            </tbody>
-          </table>
-          <div style={styles.moreWrap}>
-            {tournamentSales.length > visTour && (
-              <button type="button" style={styles.moreBtn} onClick={() => setVisTour((v) => Math.min(v + 5, tournamentSales.length))}>
-                <i className="fas fa-chevron-down" /> More
-              </button>
-            )}
-            {visTour > 5 && (
-              <button type="button" style={styles.moreBtn} onClick={() => setVisTour(5)}>
-                <i className="fas fa-chevron-up" /> Hide
-              </button>
-            )}
+              {visSales > 5 && (
+                <button type="button" className="more-btn" onClick={() => setVisSales(5)}>
+                  <i className="fas fa-chevron-up" /> Hide
+                </button>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Tournament Sales */}
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-trophy" /> Tournament Sales Report
+          </motion.h2>
+          <div className="stats">
+            <div className="stat-card">
+              <div className="stat-value">{totals.tourEnrollments}</div>
+              <div className="stat-label">Total Tournament Enrollments</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">₹{totals.tourRevenue.toFixed(2)}</div>
+              <div className="stat-label">Total Tournament Revenue</div>
+            </div>
           </div>
-          <div style={styles.backRight}>
-            <Link to="/admin/admin_dashboard" style={styles.backLink}>
-              <i className="fas fa-arrow-left" /> Back to Dashboard
-            </Link>
-          </div>
+          <motion.div
+            className="updates-section"
+            initial={{ opacity: 0, y: 28, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <span className="row-counter">{`${Math.min(visTour, tournamentSales.length)} / ${tournamentSales.length}`}</span>
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="th">Tournament</th>
+                  <th className="th">Entry Fee</th>
+                  <th className="th">Total Players/Teams</th>
+                  <th className="th">Revenue</th>
+                  <th className="th">Enrollment Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={5} className="empty"><i className="fas fa-info-circle" /> Loading tournament sales…</td></tr>
+                ) : tourShown.length === 0 ? (
+                  <tr><td colSpan={5} className="empty"><i className="fas fa-info-circle" /> No tournament enrollments recorded.</td></tr>
+                ) : (
+                  tourShown.map((t, idx) => (
+                    <tr key={`${t.name || 'tourn'}-${idx}`}>
+                      <td className="td">{t.name || 'N/A'}</td>
+                      <td className="td">₹{t.entry_fee || 0}</td>
+                      <td className="td">{t.total_enrollments || 0} {t.type === 'Individual' ? 'Players' : 'Teams'}</td>
+                      <td className="td">₹{(t.revenue || 0).toFixed(2)}</td>
+                      <td className="td">{t.enrollment_date ? new Date(t.enrollment_date).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+            <div style={{ textAlign: 'center', margin: '1rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              {tournamentSales.length > visTour && (
+                <button type="button" className="more-btn" onClick={() => setVisTour((v) => Math.min(v + 5, tournamentSales.length))}>
+                  <i className="fas fa-chevron-down" /> More
+                </button>
+              )}
+              {visTour > 5 && (
+                <button type="button" className="more-btn" onClick={() => setVisTour(5)}>
+                  <i className="fas fa-chevron-up" /> Hide
+                </button>
+              )}
+            </div>
+            <div style={{ marginTop: '2rem', textAlign: 'right' }}>
+              <Link to="/admin/admin_dashboard" className="back-link">
+                <i className="fas fa-arrow-left" /> Back to Dashboard
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
