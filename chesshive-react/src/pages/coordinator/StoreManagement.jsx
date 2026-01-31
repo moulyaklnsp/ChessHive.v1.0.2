@@ -3,12 +3,29 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, addProduct } from '../../features/products/productsSlice';
 import SearchFilter from '../../components/SearchFilter';
-
-// React conversion of views/coordinator/store_management.html
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
 const VISIBLE_COUNT = 8;
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
+
 function StoreManagement() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const dispatch = useDispatch();
   const productState = useSelector((s) => s.products || {});
   const [visible, setVisible] = useState(VISIBLE_COUNT);
@@ -118,29 +135,15 @@ function StoreManagement() {
     }
   };
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 1200, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginBottom: '2rem' },
-    label: { fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: 8, display: 'block' },
-    input: (hasError) => ({ width: '100%', padding: '0.8rem', border: `2px solid ${hasError ? '#c62828' : '#2E8B57'}`, borderRadius: 8, fontFamily: 'Playfair Display, serif' }),
-    error: { color: '#c62828', fontSize: '0.9rem', marginTop: 4 },
-    btn: { background: '#2E8B57', color: '#fff', border: 'none', padding: '1rem', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' },
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '2rem', marginTop: '2rem' },
-    cardProd: { background: '#fff', borderRadius: 15, overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
-    imgWrap: { width: '100%', height: 200, overflow: 'hidden' },
-    img: { width: '100%', height: '100%', objectFit: 'cover' },
-    info: { padding: '1.5rem' },
-    price: { color: '#2E8B57', fontWeight: 'bold', marginBottom: 8 },
-    available: { color: '#666' },
-    moreWrap: { textAlign: 'center', margin: '2rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' },
-    moreBtn: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#87CEEB', color: '#2E8B57', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold', cursor: 'pointer', border: 'none' },
-    backRow: { textAlign: 'right', marginTop: '2rem' },
-    backLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    empty: { textAlign: 'center', padding: '2rem', color: '#2E8B57', fontStyle: 'italic', background: '#fff', borderRadius: 15, boxShadow: '0 4px 15px rgba(0,0,0,0.1)', marginTop: '2rem' },
-    msg: (type) => ({ marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 8, color: type === 'success' ? '#1b5e20' : '#c62828', background: type === 'success' ? 'rgba(76,175,80,0.15)' : 'rgba(198,40,40,0.15)' })
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   // Utility for safe image URLs
   const getImgSrc = (imgSrc) => {
@@ -151,127 +154,234 @@ function StoreManagement() {
   };
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="bag">🛍️</span> Store Management</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .form-group { margin-bottom: 1rem; }
+        .form-label { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:8px; display:block; }
+        .form-input { width:100%; padding:0.8rem; border:2px solid var(--sea-green); border-radius:8px; font-family:'Playfair Display', serif; background:var(--card-bg); color:var(--text-color); }
+        .form-input.error { border-color:#c62828; }
+        .error-text { color:#c62828; font-size:0.9rem; margin-top:4px; }
+        .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; display:flex; align-items:center; gap:0.5rem; }
+        .products-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:2rem; margin-top:2rem; }
+        .product-card { background:var(--card-bg); border-radius:15px; overflow:hidden; border:1px solid var(--card-border); }
+        .product-img { width:100%; height:200px; overflow:hidden; }
+        .product-img img { width:100%; height:100%; object-fit:cover; }
+        .product-info { padding:1.5rem; }
+        .product-price { color:var(--sea-green); font-weight:bold; margin-bottom:8px; }
+        .product-available { color:var(--text-color); opacity:0.7; }
+        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sky-blue); color:var(--sea-green); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; cursor:pointer; border:none; }
+        .message { margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; }
+        .message.success { color:#1b5e20; background:rgba(76,175,80,0.15); }
+        .message.error { color:#c62828; background:rgba(198,40,40,0.15); }
+        .empty-state { text-align:center; padding:2rem; color:var(--sea-green); font-style:italic; background:var(--card-bg); border-radius:15px; margin-top:2rem; border:1px solid var(--card-border); }
+      `}</style>
 
-        <div style={styles.card}>
-          {message && (
-            <div style={styles.msg(message.type)}>
-              <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} aria-hidden="true" /> {message.text}
-            </div>
-          )}
-          <form onSubmit={onSubmit}>
-            <div>
-              <label style={styles.label}><i className="fas fa-tag" aria-hidden="true"></i> Product Name:</label>
-              <input
-                style={styles.input(!!fieldErrors.productName)}
-                type="text"
-                value={form.productName}
-                onChange={(e) => setForm({ ...form, productName: e.target.value })}
-                required
-              />
-              {fieldErrors.productName && <div style={styles.error}>{fieldErrors.productName}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-tag" aria-hidden="true"></i> Product Category:</label>
-              <input
-                style={styles.input(!!fieldErrors.productCategory)}
-                type="text"
-                value={form.productCategory}
-                onChange={(e) => setForm({ ...form, productCategory: e.target.value })}
-                required
-              />
-              {fieldErrors.productCategory && <div style={styles.error}>{fieldErrors.productCategory}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-rupee-sign" aria-hidden="true"></i> Price:</label>
-              <input
-                style={styles.input(!!fieldErrors.productPrice)}
-                type="number"
-                step="0.01"
-                value={form.productPrice}
-                onChange={(e) => setForm({ ...form, productPrice: e.target.value })}
-                required
-              />
-              {fieldErrors.productPrice && <div style={styles.error}>{fieldErrors.productPrice}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-image" aria-hidden="true"></i> Image URL:</label>
-              <input
-                style={styles.input(!!fieldErrors.productImage)}
-                type="text"
-                value={form.productImage}
-                onChange={(e) => setForm({ ...form, productImage: e.target.value })}
-                required
-              />
-              {fieldErrors.productImage && <div style={styles.error}>{fieldErrors.productImage}</div>}
-            </div>
-            <div>
-              <label style={styles.label}><i className="fas fa-boxes" aria-hidden="true"></i> Availability:</label>
-              <input
-                style={styles.input(!!fieldErrors.availability)}
-                type="number"
-                value={form.availability}
-                onChange={(e) => setForm({ ...form, availability: e.target.value })}
-                required
-              />
-              {fieldErrors.availability && <div style={styles.error}>{fieldErrors.availability}</div>}
-            </div>
-            <button type="submit" style={styles.btn}>
-              <i className="fas fa-plus-circle" aria-hidden="true"></i> Add Product
-            </button>
-          </form>
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-shopping-bag" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
+
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
         </div>
 
-        <h2 style={styles.h2}><span aria-hidden="true">🛍️</span> Products List</h2>
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-store" /> Store Management
+          </motion.h1>
 
-        <SearchFilter search={filter.search} category={filter.category} categories={[...new Set(productsList.map(p => p.category).filter(Boolean))]} onChange={setFilter} />
-
-        {productState.loading && <div className="loading">Loading products…</div>}
-        {!productState.loading && productState.error && (
-          <div style={styles.empty}><i className="fas fa-box-open" aria-hidden="true"></i> {productState.error}</div>
-        )}
-        {!productState.loading && !productState.error && filteredProducts.length === 0 && (
-          <div style={styles.empty}><i className="fas fa-box-open" aria-hidden="true"></i> No products available.</div>
-        )}
-
-        {!productState.loading && !productState.error && filteredProducts.length > 0 && (
-          <>
-            <div style={styles.grid}>
-              {filteredProducts.slice(0, visible).map((p, idx) => (
-                <div key={(p._id || idx) + ''} style={styles.cardProd}>
-                  <div style={styles.imgWrap}>
-                    <img src={getImgSrc(p.image_url || p.imageUrl)} alt={p.name} onError={(e)=>{ e.currentTarget.src='/images/placeholder.jpg'; e.currentTarget.alt='Image not available'; }} style={styles.img} />
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {message && (
+              <div className={`message ${message.type}`}>
+                <i className={`fas ${message.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`} /> {message.text}
+              </div>
+            )}
+            <form onSubmit={onSubmit}>
+              <div className="form-group">
+                <label className="form-label"><i className="fas fa-tag" /> Product Name:</label>
+                <input
+                  className={`form-input ${fieldErrors.productName ? 'error' : ''}`}
+                  type="text"
+                  value={form.productName}
+                  onChange={(e) => setForm({ ...form, productName: e.target.value })}
+                  required
+                />
+                {fieldErrors.productName && <div className="error-text">{fieldErrors.productName}</div>}
+              </div>
+              <div className="form-group">
+                <label className="form-label"><i className="fas fa-tag" /> Product Category:</label>
+                <input
+                  className={`form-input ${fieldErrors.productCategory ? 'error' : ''}`}
+                  type="text"
+                  value={form.productCategory}
+                  onChange={(e) => setForm({ ...form, productCategory: e.target.value })}
+                  required
+                />
+                {fieldErrors.productCategory && <div className="error-text">{fieldErrors.productCategory}</div>}
+              </div>
+              <div className="form-group">
+                <label className="form-label"><i className="fas fa-rupee-sign" /> Price:</label>
+                <input
+                  className={`form-input ${fieldErrors.productPrice ? 'error' : ''}`}
+                  type="number"
+                  step="0.01"
+                  value={form.productPrice}
+                  onChange={(e) => setForm({ ...form, productPrice: e.target.value })}
+                  required
+                />
+                {fieldErrors.productPrice && <div className="error-text">{fieldErrors.productPrice}</div>}
+              </div>
+              <div className="form-group">
+                <label className="form-label"><i className="fas fa-image" /> Product Image:</label>
+                <input
+                  className="form-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    setProductImageFile(f || null);
+                  }}
+                />
+                {productImagePreview && (
+                  <div style={{ marginTop: 10 }}>
+                    <img src={productImagePreview} alt="Preview" style={{ width: 220, height: 140, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--card-border)' }} />
                   </div>
-                  <div style={styles.info}>
-                    <h4 style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '0.5rem', fontSize: '1.2rem' }}>{p.name}</h4>
-                    <h4 style={{ fontFamily: 'Cinzel, serif', color: '#2E8B57', marginBottom: '0.5rem', fontSize: '1rem' }}>{p.category}</h4>
-                    <p style={styles.price}><i className="fas fa-rupee-sign" aria-hidden="true"></i> {p.price}</p>
-                    <p style={styles.available}><i className="fas fa-box" aria-hidden="true"></i> Available: {p.availability}</p>
-                  </div>
+                )}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ opacity: 0.85, marginBottom: 6 }}>Or paste an Image URL (optional if you upload a file):</div>
+                  <input
+                    className={`form-input ${fieldErrors.productImage ? 'error' : ''}`}
+                    type="text"
+                    value={form.productImage}
+                    onChange={(e) => setForm({ ...form, productImage: e.target.value })}
+                  />
+                  {fieldErrors.productImage && <div className="error-text">{fieldErrors.productImage}</div>}
                 </div>
-              ))}
-            </div>
-            <div style={styles.moreWrap}>
-              {visible < filteredProducts.length && (
-                <button style={styles.moreBtn} onClick={() => setVisible((v) => v + VISIBLE_COUNT)}>
-                  <i className="fas fa-chevron-down" aria-hidden="true"></i> More
-                </button>
-              )}
-              {visible > VISIBLE_COUNT && (
-                <button style={styles.moreBtn} onClick={() => setVisible(VISIBLE_COUNT)}>
-                  <i className="fas fa-chevron-up" aria-hidden="true"></i> Hide
-                </button>
-              )}
-            </div>
-          </>
-        )}
+              </div>
+              <div className="form-group">
+                <label className="form-label"><i className="fas fa-boxes" /> Availability:</label>
+                <input
+                  className={`form-input ${fieldErrors.availability ? 'error' : ''}`}
+                  type="number"
+                  value={form.availability}
+                  onChange={(e) => setForm({ ...form, availability: e.target.value })}
+                  required
+                />
+                {fieldErrors.availability && <div className="error-text">{fieldErrors.availability}</div>}
+              </div>
+              <button type="submit" className="btn-primary">
+                <i className="fas fa-plus-circle" /> Add Product
+              </button>
+            </form>
+          </motion.div>
 
-        <div style={styles.backRow}>
-          <Link to="/coordinator/coordinator_dashboard" style={styles.backLink}>
-            <i className="fas fa-arrow-left" aria-hidden="true"></i> Back to Dashboard
-          </Link>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-shopping-bag" /> Products List
+          </motion.h1>
+
+          <SearchFilter search={filter.search} category={filter.category} categories={[...new Set(productsList.map(p => p.category).filter(Boolean))]} onChange={setFilter} />
+
+          {productState.loading && <div className="loading">Loading products…</div>}
+          {!productState.loading && productState.error && (
+            <div className="empty-state"><i className="fas fa-box-open" /> {productState.error}</div>
+          )}
+          {!productState.loading && !productState.error && filteredProducts.length === 0 && (
+            <div className="empty-state"><i className="fas fa-box-open" /> No products available.</div>
+          )}
+
+          {!productState.loading && !productState.error && filteredProducts.length > 0 && (
+            <>
+              <div className="products-grid">
+                {filteredProducts.slice(0, visible).map((p, idx) => (
+                  <motion.div
+                    key={(p._id || idx) + ''}
+                    className="product-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1, duration: 0.5 }}
+                  >
+                    <div className="product-img">
+                      <img src={getImgSrc(p.image_url || p.imageUrl)} alt={p.name} onError={(e)=>{ e.currentTarget.src='/images/placeholder.jpg'; e.currentTarget.alt='Image not available'; }} />
+                    </div>
+                    <div className="product-info">
+                      <h4 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '0.5rem', fontSize: '1.2rem' }}>{p.name}</h4>
+                      <h4 style={{ fontFamily: 'Cinzel, serif', color: 'var(--sea-green)', marginBottom: '0.5rem', fontSize: '1rem' }}>{p.category}</h4>
+                      <p className="product-price"><i className="fas fa-rupee-sign" /> {p.price}</p>
+                      <p className="product-available"><i className="fas fa-box" /> Available: {p.availability}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              <div style={{ textAlign: 'center', margin: '2rem 0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                {visible < filteredProducts.length && (
+                  <button className="action-btn" onClick={() => setVisible((v) => v + VISIBLE_COUNT)}>
+                    <i className="fas fa-chevron-down" /> More
+                  </button>
+                )}
+                {visible > VISIBLE_COUNT && (
+                  <button className="action-btn" onClick={() => setVisible(VISIBLE_COUNT)}>
+                    <i className="fas fa-chevron-up" /> Hide
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          <div style={{ textAlign: 'right', marginTop: '2rem' }}>
+            <Link to="/coordinator/coordinator_dashboard" className="action-btn">
+              <i className="fas fa-arrow-left" /> Back to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
     </div>

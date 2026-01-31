@@ -1,7 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import '../../styles/playerNeoNoir.css';
+import { motion } from 'framer-motion';
+import usePlayerTheme from '../../hooks/usePlayerTheme';
+import AnimatedSidebar from '../../components/AnimatedSidebar';
 
-// React conversion of views/coordinator/rankings.html
+const sectionVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.12,
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  })
+};
 
 function useQuery() {
   const { search } = useLocation();
@@ -9,6 +25,7 @@ function useQuery() {
 }
 
 function CoordinatorRankings() {
+  const [isDark, toggleTheme] = usePlayerTheme();
   const query = useQuery();
   const tournamentId = query.get('tournament_id');
 
@@ -40,72 +57,135 @@ function CoordinatorRankings() {
     load();
   }, [tournamentId]);
 
-  const styles = {
-    root: { fontFamily: 'Playfair Display, serif', backgroundColor: '#FFFDD0', minHeight: '100vh', padding: '2rem' },
-    container: { maxWidth: 900, margin: '0 auto' },
-    h2: { fontFamily: 'Cinzel, serif', fontSize: '2.5rem', color: '#2E8B57', marginBottom: '2rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' },
-    card: { background: '#fff', borderRadius: 15, padding: '2rem', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' },
-    th: { backgroundColor: '#2E8B57', color: '#fff', padding: '1rem', textAlign: 'left', fontFamily: 'Cinzel, serif' },
-    td: { padding: '1rem', borderBottom: '1px solid rgba(46,139,87,0.2)' },
-    rank: { fontWeight: 'bold', color: '#2E8B57', fontFamily: 'Cinzel, serif' },
-    score: { fontWeight: 'bold', color: '#2E8B57' },
-    nav: { textAlign: 'right' },
-    navLink: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2E8B57', color: '#fff', textDecoration: 'none', padding: '0.8rem 1.5rem', borderRadius: 8, fontFamily: 'Cinzel, serif', fontWeight: 'bold' },
-    top1: { backgroundColor: 'rgba(255, 215, 0, 0.1)' },
-    top2: { backgroundColor: 'rgba(192, 192, 192, 0.1)' },
-    top3: { backgroundColor: 'rgba(205, 127, 50, 0.1)' },
-    err: { color: 'red', textAlign: 'center', marginBottom: '1rem' },
-  };
+  const coordinatorLinks = [
+    { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
+    { path: '/coordinator/tournament_management', label: 'Tournaments', icon: 'fas fa-trophy' },
+    { path: '/coordinator/player_stats', label: 'Player Stats', icon: 'fas fa-chess' },
+    { path: '/coordinator/streaming_control', label: 'Streaming Control', icon: 'fas fa-broadcast-tower' },
+    { path: '/coordinator/store_management', label: 'Store', icon: 'fas fa-store' },
+    { path: '/coordinator/coordinator_meetings', label: 'Meetings', icon: 'fas fa-calendar' },
+    { path: '/coordinator/coordinator_chat', label: 'Live Chat', icon: 'fas fa-comments' }
+  ];
 
   return (
-    <div style={styles.root}>
-      <div style={styles.container}>
-        <h2 style={styles.h2}><span role="img" aria-label="trophy">🏆</span> Final Rankings</h2>
+    <div style={{ minHeight: '100vh' }}>
+      <style>{`
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, #root { min-height: 100vh; }
+        .page { font-family: 'Playfair Display', serif; background-color: var(--page-bg); min-height: 100vh; display:flex; color: var(--text-color); }
+        .content { flex-grow:1; margin-left:0; padding:2rem; }
+        h1 { font-family:'Cinzel', serif; color:var(--sea-green); margin-bottom:2rem; font-size:2.5rem; display:flex; align-items:center; gap:1rem; }
+        .updates-section { background:var(--card-bg); border-radius:15px; padding:2rem; margin-bottom:2rem; box-shadow:none; border:1px solid var(--card-border); transition: transform 0.3s ease; }
+        .updates-section:hover { transform: translateY(-5px); }
+        .rankings-table { width:100%; border-collapse:collapse; margin-bottom:2rem; }
+        .rankings-table th { background:var(--sea-green); color:var(--on-accent); padding:1rem; text-align:left; font-family:'Cinzel', serif; }
+        .rankings-table td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
+        .rank-text { font-weight:bold; color:var(--sea-green); font-family:'Cinzel', serif; }
+        .score-text { font-weight:bold; color:var(--sea-green); }
+        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sea-green); color:var(--on-accent); text-decoration:none; padding:0.8rem 1.5rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; }
+        .top1 { background:rgba(255, 215, 0, 0.1); }
+        .top2 { background:rgba(192, 192, 192, 0.1); }
+        .top3 { background:rgba(205, 127, 50, 0.1); }
+        .error-text { color:red; text-align:center; margin-bottom:1rem; }
+      `}</style>
 
-        {error ? <div style={styles.err}>{error}</div> : null}
+      <div className="page player-neo">
+        <motion.div
+          className="chess-knight-float"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 0.14, scale: 1 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 0, fontSize: '2.5rem', color: 'var(--sea-green)' }}
+          aria-hidden="true"
+        >
+          <i className="fas fa-medal" />
+        </motion.div>
+        
+        <AnimatedSidebar links={coordinatorLinks} logo={<i className="fas fa-chess" />} title={`ChessHive`} />
 
-        <div style={styles.card}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Rank</th>
-                <th style={styles.th}>Player Name</th>
-                <th style={styles.th}>Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
+        <div className="coordinator-dash-header" style={{ position: 'fixed', top: 18, right: 18, zIndex: 1001, display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <motion.button
+            type="button"
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
+              color: 'var(--text-color)',
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '1.1rem'
+            }}
+          >
+            <i className={isDark ? 'fas fa-sun' : 'fas fa-moon'} />
+          </motion.button>
+        </div>
+
+        <div className="content">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <i className="fas fa-trophy" /> Final Rankings
+          </motion.h1>
+
+          {error && <div className="error-text">{error}</div>}
+
+          <motion.div
+            className="updates-section"
+            custom={0}
+            variants={sectionVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <table className="rankings-table">
+              <thead>
                 <tr>
-                  <td style={styles.td} colSpan={3}>Loading rankings...</td>
+                  <th>Rank</th>
+                  <th>Player Name</th>
+                  <th>Score</th>
                 </tr>
-              )}
-              {!loading && !error && rankings.length === 0 && (
-                <tr>
-                  <td style={styles.td} colSpan={3}>No rankings available.</td>
-                </tr>
-              )}
-              {!loading && !error && rankings.map((player, index) => {
-                const rankNum = index + 1;
-                const rowStyle = rankNum === 1 ? styles.top1 : rankNum === 2 ? styles.top2 : rankNum === 3 ? styles.top3 : undefined;
-                return (
-                  <tr key={player.playerName + index} style={rowStyle}>
-                    <td style={styles.td}>
-                      <span style={styles.rank}>{rankNum}</span> {rankNum <= 3 && <i className="fas fa-medal" aria-hidden="true" style={{ fontSize: '1.2rem', marginLeft: 6 }} />}
-                    </td>
-                    <td style={styles.td}>{player.playerName}</td>
-                    <td style={{ ...styles.td, ...styles.score }}>{player.score}</td>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={3}>Loading rankings...</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                )}
+                {!loading && !error && rankings.length === 0 && (
+                  <tr>
+                    <td colSpan={3}>No rankings available.</td>
+                  </tr>
+                )}
+                {!loading && !error && rankings.map((player, index) => {
+                  const rankNum = index + 1;
+                  const rowClass = rankNum === 1 ? 'top1' : rankNum === 2 ? 'top2' : rankNum === 3 ? 'top3' : '';
+                  return (
+                    <tr key={player.playerName + index} className={rowClass}>
+                      <td>
+                        <span className="rank-text">{rankNum}</span> {rankNum <= 3 && <i className="fas fa-medal" style={{ fontSize: '1.2rem', marginLeft: 6 }} />}
+                      </td>
+                      <td>{player.playerName}</td>
+                      <td className="score-text">{player.score}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-          <div style={styles.nav}>
-            <Link to="/coordinator/tournament_management" style={styles.navLink}>
-              <i className="fas fa-users" aria-hidden="true" /> Back to tournaments
-            </Link>
-          </div>
+            <div style={{ textAlign: 'right' }}>
+              <Link to="/coordinator/tournament_management" className="action-btn">
+                <i className="fas fa-users" /> Back to tournaments
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
