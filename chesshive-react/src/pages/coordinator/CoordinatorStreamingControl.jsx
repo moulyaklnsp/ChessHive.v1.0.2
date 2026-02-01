@@ -263,7 +263,7 @@ export default function CoordinatorStreamingControl() {
         .form-input { width:100%; padding:0.65rem; border-radius:10px; border:2px solid var(--sea-green); background:var(--card-bg); color:var(--text-color); }
         .form-label { font-family:'Cinzel', serif; color:var(--sea-green); font-size:0.9rem; margin-bottom:0.5rem; display:block; }
         .btn-primary { background:var(--sea-green); color:var(--on-accent); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
-        .action-btn { background:var(--sky-blue); color:var(--sea-green); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
+        .action-btn { background:var(--sky-blue); color:var(--on-accent); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
         .btn-danger { background:#ff4d4d; color:var(--on-accent); border:none; padding:0.6rem 1rem; border-radius:8px; cursor:pointer; font-family:'Cinzel', serif; font-weight:bold; text-decoration:none; display:inline-flex; gap:0.5rem; align-items:center; }
         .status-pill { padding:0.25rem 0.6rem; border-radius:999px; font-size:0.85rem; border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-color); }
         .error-box { background:#ffdddd; color:#b00020; padding:0.75rem; border-radius:10px; border:1px solid rgba(176,0,32,0.25); margin-bottom:1rem; }

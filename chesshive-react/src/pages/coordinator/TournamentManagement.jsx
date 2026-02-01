@@ -290,8 +290,10 @@ function TournamentManagement() {
         .tournament-table { width:100%; border-collapse:collapse; }
         .tournament-table th { background:var(--sea-green); color:var(--on-accent); padding:1rem; text-align:left; font-family:'Cinzel', serif; }
         .tournament-table td { padding:1rem; border-bottom:1px solid rgba(var(--sea-green-rgb, 27, 94, 63), 0.2); }
-        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sky-blue); color:var(--sea-green); text-decoration:none; padding:0.5rem 1rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; margin:0.2rem; border:none; cursor:pointer; }
+        .action-btn { display:inline-flex; align-items:center; gap:0.5rem; background:var(--sky-blue); color:var(--on-accent); text-decoration:none; padding:0.5rem 1rem; border-radius:8px; font-family:'Cinzel', serif; font-weight:bold; margin:0.2rem; border:none; cursor:pointer; }
         .remove-btn { background:#c62828; color:var(--on-accent); }
+        .edit-btn { background:var(--sky-blue); color:var(--on-accent); }
+        .feedback-btn { background:var(--sky-blue); color:var(--on-accent); }
         .message { margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; }
         .message.success { color:#1b5e20; background:rgba(76,175,80,0.15); }
         .message.error { color:#c62828; background:rgba(198,40,40,0.15); }
@@ -498,7 +500,7 @@ function TournamentManagement() {
                           <td>{typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}</td>
                           <td style={{ fontWeight: 'bold', color: statusClass === 'completed' ? 'var(--sea-green)' : statusClass === 'ongoing' ? 'var(--sky-blue)' : statusClass === 'yet-to-start' ? '#666' : '#c62828' }}><i className="fas fa-circle" /> {status}</td>
                           <td>
-                          {t.status === 'Approved' && (
+                          {(['Approved', 'Ongoing', 'Completed', 'Yet to Start'].includes(t.status) || ['Approved', 'Ongoing', 'Completed', 'Yet to Start'].includes(status)) && (
                             <>
                                 <Link to={`/coordinator/enrolled_players?tournament_id=${t._id}`} className="action-btn">
                                   <i className="fas fa-users" /> Players
@@ -515,7 +517,7 @@ function TournamentManagement() {
                                 )}
                               </>
                             )}
-                            <button className="action-btn" onClick={() => onEdit(t._id)}>
+                            <button className="action-btn edit-btn" onClick={() => onEdit(t._id)}>
                               <i className="fas fa-edit" /> Edit
                             </button>
                           </td>
@@ -529,7 +531,7 @@ function TournamentManagement() {
                                   <i className="fas fa-eye" /> View Feedback
                                 </a>
                               ) : (
-                                <button className="action-btn" onClick={() => requestFeedback(t._id)}>
+                                <button className="action-btn feedback-btn" onClick={() => requestFeedback(t._id)}>
                                   <i className="fas fa-paper-plane" /> Send Feedback Form
                                 </button>
                               )
