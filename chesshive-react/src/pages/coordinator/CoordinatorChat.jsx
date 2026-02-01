@@ -369,7 +369,7 @@ function CoordinatorChat() {
                 onClick={() => setChatMode('private_search')}
               >
                 <ChoiceEmblem kind="private" />
-                <div style={styles.choiceLabel}>Team Communication</div>
+                <div style={styles.choiceLabel}>One-on-one Communication</div>
               </button>
             </div>
           </div>
@@ -421,14 +421,14 @@ function CoordinatorChat() {
               </button>
             </div>
             <div style={styles.card}>
-              <h2 style={styles.h2}><i className="fas fa-users-cog" /> Your Team Communications</h2>
+              <h2 style={styles.h2}><i className="fas fa-users-cog" /> Your One-on-one Communications</h2>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                 <select style={{ ...styles.select, flex: 1 }} value={role} onChange={(e) => setRole(e.target.value)}>
                   <option>Coordinator</option>
                   <option>Player</option>
                 </select>
                 <input
-                  placeholder="Search team members or players"
+                  placeholder="Search members or players"
                   value={usernameSearch}
                   onChange={(e) => setUsernameSearch(e.target.value)}
                   style={{ ...styles.input, flex: 2 }}
@@ -437,7 +437,7 @@ function CoordinatorChat() {
                 <button style={styles.button} onClick={loadContacts}>Refresh</button>
               </div>
               <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                {contacts.length === 0 && registeredUsers.length === 0 && <div style={{ color: 'var(--text-color)', textAlign: 'center', padding: '2rem' }}>No team communications yet. Search for coordinators or players to start chatting.</div>}
+                {contacts.length === 0 && registeredUsers.length === 0 && <div style={{ color: 'var(--text-color)', textAlign: 'center', padding: '2rem' }}>No One-on-one communications yet. Search for coordinators or players to start chatting.</div>}
                 {contacts.map((c, idx) => (
                   <div
                     key={c.contact}
@@ -447,7 +447,7 @@ function CoordinatorChat() {
                     onClick={() => { setReceiver(c.contact); setChatMode('private_chat'); }}
                   >
                     <div style={{ fontWeight: 'bold', color: 'var(--sea-green)', fontSize: '1.1rem' }}><i className="fas fa-user-tie" /> {c.contact}</div>
-                    <div style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>{c.lastMessage || 'Start team communication'}</div>
+                    <div style={{ color: 'var(--text-color)', fontSize: '0.9rem' }}>{c.lastMessage || 'Start One-on-one communication'}</div>
                     <div style={{ color: 'var(--text-color)', fontSize: '0.8rem' }}>{c.timestamp ? new Date(c.timestamp).toLocaleTimeString() : ''}</div>
                   </div>
                 ))}
@@ -477,10 +477,10 @@ function CoordinatorChat() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <button onClick={() => navigate('/coordinator/coordinator_dashboard')} style={styles.button}>Back to Dashboard</button>
-                <h2 style={{ margin: 0, fontFamily: 'Cinzel, serif', color: 'var(--sea-green)' }}><i className="fas fa-users-cog" /> Team Chat with {receiver}</h2>
+                <h2 style={{ margin: 0, fontFamily: 'Cinzel, serif', color: 'var(--sea-green)' }}><i className="fas fa-users-cog" /> One-on-one Chat with {receiver}</h2>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <button style={styles.button} onClick={() => setChatMode('private_search')}>Back to Team</button>
+                <button style={styles.button} onClick={() => setChatMode('private_search')}>Back to One-on-one</button>
                 <button style={styles.button} onClick={() => setChatMode('choice')}>Change Mode</button>
                 <div style={{ color: 'var(--text-color)', fontSize: 14 }}>Connected</div>
               </div>
@@ -497,7 +497,7 @@ function CoordinatorChat() {
                 id="chatMessage"
                 style={{ ...styles.input, marginBottom: 0 }}
                 type="text"
-                placeholder="Type a team message"
+                placeholder="Type a One-on-one message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') sendMessage(); }}
