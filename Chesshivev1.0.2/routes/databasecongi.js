@@ -1,6 +1,7 @@
 const { MongoClient } = require('mongodb');
+require('dotenv').config();
 
-const uri = 'mongodb://localhost:27017';
+const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/chesshive';
 const dbName = 'chesshive';
 
 let db;
@@ -9,6 +10,7 @@ async function connectDB() {
   const client = new MongoClient(uri);
   try {
     await client.connect();
+    console.log('MongoDB URI:', uri.replace(/:[^:@]+@/, ':****@')); // Log URI with hidden password
     db = client.db(dbName);
     console.log('Connected to MongoDB');
 
