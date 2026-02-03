@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { connectDB } = require('./routes/databasecongi');
 const utils = require('./utils');
 const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
@@ -876,7 +877,8 @@ router.post('/players/restore/:id', async (req, res) => {
       return res.status(400).json({ message: 'Account is already active.' });
     }
 
-    if (user.email !== email || user.password !== password) {
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 

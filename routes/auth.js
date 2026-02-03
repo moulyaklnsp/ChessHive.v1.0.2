@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { connectDB } = require('./databasecongi');
 const { ObjectId } = require('mongodb');
 const { swissPairing, Player } = require('../player_app');
@@ -207,6 +208,7 @@ router.post('/signup', async (req, res) => {
     return res.render('signup', { errors, name, dob, gender, college, email, phone, role });
   }
 
+  const hashed = await bcrypt.hash(password, 12);
   const user = {
     name,
     dob: new Date(dob),
@@ -214,7 +216,7 @@ router.post('/signup', async (req, res) => {
     college,
     email,
     phone,
-    password,
+    password: hashed,
     role,
     isDeleted: 0,
     AICF_ID: aicf_id || '',

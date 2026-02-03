@@ -1,0 +1,48 @@
+New Features Overview
+
+1) Player: Watch
+The Watch experience gives players a dedicated space to follow ongoing chess activity without participating in a live match. It is designed for viewing and discovery, keeping players engaged even when they are not actively playing.
+
+What it does
+- Provides a spectator-focused page for players to browse and watch chess content.
+- Aggregates available viewing sources into a single, clean UI (for example, live boards, streams, or curated content).
+- Enables players to quickly switch between different viewing options without leaving the player area.
+
+Why it matters
+- Increases player engagement by offering meaningful activity outside of active tournament play.
+- Supports campus communities by allowing players to learn from matches and stay connected to events.
+- Helps new users explore the platform’s chess ecosystem without needing to enroll or queue.
+
+User flow (high level)
+- Player opens the Watch page from the player dashboard.
+- The page lists or highlights available viewing options.
+- Player selects a source and watches content in a focused viewer.
+
+Design considerations
+- Emphasis on a distraction-free viewer layout with quick navigation between sources.
+- Optimized to avoid heavy interactions; the page is read‑only by design.
+- Works well on common screen sizes for dorm/campus use.
+
+2) Coordinator: Streaming Control
+Streaming Control is a coordinator-facing tool that centralizes management of broadcast content for tournaments and events. It enables coordinators to curate viewing experiences that players can access via Watch.
+
+What it does
+- Lets coordinators manage streaming inputs (for example, adding, enabling, or updating stream sources).
+- Organizes what players see in Watch by controlling available streams and metadata.
+- Provides a single administrative surface to keep live viewing content accurate and current.
+
+Why it matters
+- Ensures that only valid, up‑to‑date viewing sources are surfaced to players.
+- Reduces confusion by aligning official tournament content with the player’s Watch page.
+- Gives coordinators a clear operational workflow for live events.
+
+User flow (high level)
+- Coordinator opens Streaming Control from the coordinator dashboard.
+- Coordinator adds or updates stream information (name, provider, or link).
+- Changes are reflected in the player Watch experience.
+
+Design considerations
+- Simple, form‑based controls to reduce errors and speed up updates.
+- Clear state indicators (active/inactive) for each stream entry.
+- Built for quick edits during live events.
+

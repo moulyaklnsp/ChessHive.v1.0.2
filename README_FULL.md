@@ -68,6 +68,23 @@ ChessHive
    ```
 5. Open `http://localhost:3000` in your browser.  
 
+## Environment variables (important) ⚙️
+Create a `.env` from the `.env.example` file. Minimum variables used by the app:
+- PORT (default 3001)
+- MONGODB_URI (e.g. mongodb://localhost:27017)
+- MONGODB_DB (default: chesshive)
+- SESSION_SECRET
+- SESSION_COOKIE_NAME
+- SESSION_TTL_SECONDS
+- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+- CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+- CLIENT_ORIGIN (frontend origin for redirects)
+- NODE_ENV (development|production)
+- REACT_APP_SOCKET_URL
+
+(See `.env.example` for full template and usage.)
+
+
 ## Key Files and Functions
 ### Key Files
 - **`app.js`**: Main application entry point; initializes Express server, sets up middleware, and routes for all user roles (player, coordinator, admin, organizer).  
