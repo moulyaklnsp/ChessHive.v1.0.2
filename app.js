@@ -1,9 +1,14 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const methodOverride = require('method-override');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { Server } = require('socket.io');
+const bcrypt = require('bcryptjs');
 // nodemailer is optional. If not installed or SMTP not configured, magic link will be logged to console.
 let nodemailer;
 try { nodemailer = require('nodemailer'); } catch (e) { nodemailer = null; }
@@ -29,22 +34,73 @@ const server = http.createServer({ maxHeaderSize: 1048576 }, app);
 const io = new Server(server, { cors: { origin: ['http://localhost:3000', 'http://localhost:3001'], methods: ['GET', 'POST'], credentials: true } });
 const PORT = process.env.PORT || 3001;
 
+const mongoSessionUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/chesshive';
+const sessionTtlSeconds = parseInt(process.env.SESSION_TTL_SECONDS || String(14 * 24 * 60 * 60), 10);
+
+// Trust proxy when behind a reverse proxy (enables secure cookies)
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+
+// Create session store with compatibility for multiple connect-mongo versions
+let sessionStore;
+try {
+  const MongoStoreLib = require('connect-mongo');
+  if (MongoStoreLib && typeof MongoStoreLib.create === 'function') {
+    sessionStore = MongoStoreLib.create({
+      mongoUrl: mongoSessionUrl,
+      collectionName: 'sessions',
+      ttl: sessionTtlSeconds,
+      autoRemove: 'native',
+      touchAfter: 24 * 3600
+    });
+  } else if (typeof MongoStoreLib === 'function') {
+    // older connect-mongo exported a function that takes session
+    sessionStore = MongoStoreLib(session)({
+      url: mongoSessionUrl,
+      collection: 'sessions',
+      ttl: sessionTtlSeconds
+    });
+  } else {
+    sessionStore = null;
+  }
+} catch (e) {
+  console.warn('connect-mongo not available for session store:', e);
+  sessionStore = null;
+}
+
 app.use(session({
   name: process.env.SESSION_COOKIE_NAME || 'sid',
   secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
   saveUninitialized: false,
-  rolling: false,
-  cookie: { secure: false, sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000 }
+  rolling: true,
+  store: sessionStore,
+  cookie: {
+    secure: (process.env.NODE_ENV === 'production'),
+    sameSite: (process.env.NODE_ENV === 'production') ? 'none' : 'lax',
+    httpOnly: true,
+    maxAge: sessionTtlSeconds * 1000
+  }
 }));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(methodOverride('_method'));
-app.use(express.static('public'));
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
+<<<<<<< HEAD
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for local dev (React injects scripts)
+}));
+// Rate limiter - generous for local dev with many tabs; only apply to API routes
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for local dev (React injects scripts)
+}));
+// Rate limiter - generous for local dev with many tabs; only apply to API routes
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000, // Allow 1000 requests per 15 min window (handles 10+ tabs easily)
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.path.startsWith('/api') // Only rate-limit /api/* routes
+});
+app.use(limiter);
 // mount optional auth router
 try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
 
@@ -88,23 +144,45 @@ app.use('/organizer', isOrganizer, organizerRouter);
 app.use('/coordinator', isCoordinator, coordinatorRouter);
 app.use('/player', isPlayer, playerRouter.router);
 
-// Serve index
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'views', 'index.html')));
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+<<<<<<< HEAD
+// Redirect HTTP -> HTTPS in production
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(`https://${req.get('host')}${req.originalUrl}`);
+    }
+// Redirect HTTP -> HTTPS in production
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(`https://${req.get('host')}${req.originalUrl}`);
+    }
+    next();
+  });
+}
 
-// Login with OTP
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body || {};
-  try {
+// Serve React production build when available
+if ((process.env.NODE_ENV || 'development') === 'production') {
+  const clientBuildPath = path.join(__dirname, 'chesshive-react', 'build');
+  if (fs.existsSync(clientBuildPath)) {
+    app.use(express.static(clientBuildPath));
+    app.get('*', (req, res) => res.sendFile(path.join(clientBuildPath, 'index.html')));
+  }
+}
+
     const db = await connectDB();
-    const user = await db.collection('users').findOne({ email, password });
+<<<<<<< HEAD
+    const user = await db.collection('users').findOne({ email });
     if (!user) return res.status(400).json({ success: false, message: 'Invalid credentials' });
-    if (user.isDeleted) {
-      return res.status(403).json({
-        success: false,
-        message: 'Account has been deleted',
-        restoreRequired: true,
-        deletedUserId: user._id.toString(),
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) return res.status(400).json({ success: false, message: 'Invalid credentials' });
+=======
+    const user = await db.collection('users').findOne({ email });
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) return res.status(400).json({ success: false, message: 'Invalid credentials' });
         deletedUserRole: user.role || null
       });
     }
@@ -454,6 +532,36 @@ app.get('/api/chat/contacts', async (req, res) => {
 const onlineUsers = new Map(); // socket.id -> { username, role }
 const usernameToSockets = new Map(); // username -> Set(socket.id)
 
+<<<<<<< HEAD
+function broadcastUsers() {
+  const unique = Array.from(new Map(Array.from(onlineUsers.values()).map(u => [u.username, u])).values());
+  io.emit('updateUsers', unique);
+}
+
+function privateRoomName(u1, u2) {
+  return `pm:${[u1, u2].sort().join(':')}`;
+}
+
+io.on('connection', (socket) => {
+  socket.on('join', ({ username, role }) => {
+    if (!username) return;
+    onlineUsers.set(socket.id, { username, role });
+    const set = usernameToSockets.get(username) || new Set();
+    set.add(socket.id);
+    usernameToSockets.set(username, set);
+    broadcastUsers();
+  });
+
+  socket.on('disconnect', () => {
+    const info = onlineUsers.get(socket.id);
+    if (info && info.username) {
+      const set = usernameToSockets.get(info.username);
+      if (set) {
+        set.delete(socket.id);
+        if (set.size === 0) usernameToSockets.delete(info.username);
+        else usernameToSockets.set(info.username, set);
+      }
+=======
 // ------------- Socket.IO live match (in-memory) -------------
 // This is intentionally in-memory (no schema changes) to keep it minimal and non-invasive.
 // Clients still use the existing chessJoin/chessMove events for board sync.
@@ -538,8 +646,38 @@ function findAndCreateMatch(entry) {
       if (aPref === bPref) return null; // can't both be white/black
       entryColor = aPref;
       otherColor = bPref;
+>>>>>>> 9fbf3234bfbd3468068c1c995f0117162e54e259
     }
+    onlineUsers.delete(socket.id);
+    broadcastUsers();
+  });
 
+<<<<<<< HEAD
+  // Chat messaging
+  socket.on('chatMessage', async ({ sender, receiver, message }) => {
+    const socketInfo = onlineUsers.get(socket.id) || {};
+    const actualSender = socketInfo.username || sender;
+    if (!actualSender || !message) return;
+    const payload = { sender: actualSender, message, receiver: receiver || 'All' };
+    const db = await connectDB();
+    try {
+      if (!receiver || receiver === 'All') {
+        io.emit('message', payload);
+        await db.collection('chat_messages').insertOne({ room: 'global', sender: actualSender, message, timestamp: new Date() });
+      } else {
+        const room = privateRoomName(actualSender, receiver);
+        const senderSet = usernameToSockets.get(actualSender) || new Set();
+        const receiverSet = usernameToSockets.get(receiver) || new Set();
+        const allIds = new Set([...senderSet, ...receiverSet]);
+        for (const id of allIds) {
+          const s = io.sockets.sockets.get ? io.sockets.sockets.get(id) : io.sockets.sockets[id];
+          if (s && s.emit) s.emit('message', payload);
+        }
+        await db.collection('chat_messages').insertOne({ room, sender: actualSender, receiver, message, timestamp: new Date() });
+      }
+    } catch (e) {
+      console.error('chatMessage error:', e);
+=======
     // Remove matched other from queue
     matchQueue.splice(i, 1);
     return { other, entryColor, otherColor };
@@ -576,8 +714,18 @@ io.on('connection', (socket) => {
     // Remove invites created by this socket
     for (const [targetId, inv] of pendingInvites.entries()) {
       if (inv && inv.fromSocketId === socket.id) pendingInvites.delete(targetId);
+>>>>>>> 9fbf3234bfbd3468068c1c995f0117162e54e259
     }
+  });
 
+<<<<<<< HEAD
+  // Chess events
+  socket.on('chessJoin', ({ room }) => {
+    if (!room) return;
+    socket.join(room);
+  });
+
+=======
     // If in a live match, notify opponent
     const room = socketToMatchRoom.get(socket.id);
     if (room) {
@@ -974,6 +1122,7 @@ io.on('connection', (socket) => {
     socket.join(room);
   });
 
+>>>>>>> 9fbf3234bfbd3468068c1c995f0117162e54e259
   socket.on('chessMove', async ({ room, move }) => {
     if (!room || !move) return;
     socket.to(room).emit('chessMove', move);

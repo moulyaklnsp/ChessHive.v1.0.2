@@ -206,8 +206,6 @@ function App() {
             <PlayerChat />
           </motion.div>
         } />
-        {/* Live Match removed for player user type */}
-        <Route path="/player/live_match" element={<Navigate to="/player/player_dashboard" replace />} />
         <Route path="/player/watch" element={
           <motion.div
             initial={{ opacity: 0 }}

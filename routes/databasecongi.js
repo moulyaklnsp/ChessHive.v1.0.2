@@ -1,24 +1,41 @@
 const { MongoClient } = require('mongodb');
 
-const uri = 'mongodb://localhost:27017';
-const dbName = 'chesshive';
+const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const dbName = process.env.MONGODB_DB || 'chesshive';
 
 let db;
+let client;
+let initializing;
 
 async function connectDB() {
-  const client = new MongoClient(uri);
-  try {
-    await client.connect();
-    db = client.db(dbName);
-    console.log('Connected to MongoDB');
+  if (db) return db;
+  if (initializing) return initializing;
 
-    // Initialize collections with schemas
-    await initializeCollections(db);
-    return db;
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    throw err;
-  }
+  initializing = (async () => {
+    try {
+      if (!client) {
+        client = new MongoClient(uri, {
+          maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL || '50', 10),
+          minPoolSize: parseInt(process.env.MONGODB_MIN_POOL || '5', 10),
+          serverSelectionTimeoutMS: 5000
+        });
+      }
+      await client.connect();
+      db = client.db(dbName);
+      console.log('Connected to MongoDB');
+
+      // Initialize collections with schemas
+      await initializeCollections(db);
+      return db;
+    } catch (err) {
+      console.error('MongoDB connection error:', err);
+      throw err;
+    } finally {
+      initializing = null;
+    }
+  })();
+
+  return initializing;
 }
 
 async function initializeCollections(db) {

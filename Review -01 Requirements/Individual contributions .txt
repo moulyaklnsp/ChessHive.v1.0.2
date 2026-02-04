@@ -1,0 +1,407 @@
+ChessHive - Individual Contributions
+====================================
+
+1. Moula P (S20230010170)
+   ---------------------------
+   A. Feedback Form in Player User Type:
+      - Developed a comprehensive feedback submission system integrated into the Player Dashboard
+      - Features:
+        * Tournament-specific feedback collection triggered by notifications
+        * Rating system (1-5 stars) for tournament experience
+        * Comments section for detailed player feedback
+        * Real-time feedback submission with validation
+        * Integration with backend API endpoint (/player/api/submit-feedback)
+        * Automatic notification dismissal after feedback submission
+      
+   B. Entire Coordinator User Type (12 Features):
+      1. Coordinator Dashboard
+         - Overview of enrolled players, ongoing tournaments, and statistics
+         - Quick access navigation to all coordinator features
+         - Real-time updates on tournament status and player activity
+      
+      2. Coordinator Chat
+         - Real-time messaging system with Socket.IO integration
+         - Chat with enrolled players and other coordinators
+         - Message history and online status indicators
+         - Typing indicators and read receipts
+      
+      3. Coordinator Meetings
+         - Schedule and manage virtual meetings with organizers and players
+         - Meeting calendar view with upcoming and past meetings
+         - Search and filter functionality for meeting management
+         - Meeting details including time, participants, and agendas
+      
+      4. Coordinator Profile
+         - View and edit personal profile information
+         - College/institution affiliation management
+         - Contact information and profile photo upload
+         - Account settings and preferences
+      
+      5. Enrolled Players
+         - Complete list of players enrolled under the coordinator
+         - Player profile viewing with detailed statistics
+         - Player performance tracking and enrollment status
+         - Search and filter capabilities for player management
+      
+      6. Feedback View
+         - View all feedback submitted by enrolled players
+         - Tournament-wise feedback analysis
+         - Rating aggregation and comments review
+         - Export feedback data for reporting purposes
+      
+      7. Coordinator Pairings
+         - View tournament pairings for enrolled players
+         - Round-by-round pairing information
+         - Match results and standings tracking
+         - Conflict resolution and pairing adjustments
+      
+      8. Coordinator Player Stats
+         - Detailed statistics dashboard for all enrolled players
+         - Performance metrics including win/loss ratios, ratings, and growth
+         - Comparative analysis across players
+         - Historical data visualization and trends
+      
+      9. Coordinator Rankings
+         - View global and college-specific rankings
+         - Enrolled player rankings and leaderboards
+         - Filter by tournament, time period, and rating categories
+         - Export ranking data for institutional reporting
+      
+      10. Store Management
+          - Manage chess equipment and merchandise store
+          - Product catalog creation and editing
+          - Inventory tracking and stock management
+          - Order processing and fulfillment for enrolled players
+          - Pricing and discount management
+      
+      11. Tournament Management
+          - Create and manage tournaments for the college/institution
+          - Tournament registration handling
+          - Schedule management and round configuration
+          - Player enrollment and withdrawal processing
+          - Results entry and standings updates
+      
+      12. Coordinator Streaming Control (New Feature)
+          - Control live streaming of tournament matches
+          - Select which games to broadcast to spectators
+          - Manage multiple simultaneous streams
+          - Stream quality and camera angle controls
+          - Viewer analytics and engagement metrics
+          - Integration with Player Watch feature for seamless viewing
+
+
+2. Tejaswi (S20230010054)
+   ------------------------
+   Entire Organizer User Type (8 Features):
+   
+   1. Organizer Dashboard
+      - Comprehensive overview of all college tournaments and events
+      - Key performance indicators for the institution
+      - Real-time statistics on tournaments, coordinators, and revenue
+      - Quick action buttons for common administrative tasks
+      - Alerts and notifications for pending approvals
+   
+   2. Organizer Profile
+      - Manage institutional profile and contact information
+      - College/university branding and logo management
+      - Administrative contact details and verification
+      - Account settings and role-based access controls
+   
+   3. Organizer Tournament
+      - View all tournaments organized by the institution
+      - Approve or reject tournament proposals from coordinators
+      - Monitor tournament progress and results
+      - Multi-tournament management dashboard
+      - Tournament analytics and performance reports
+   
+   4. College Stats
+      - Comprehensive statistics for the entire institution
+      - Player performance metrics across all tournaments
+      - Tournament participation and success rates
+      - Revenue and financial analytics
+      - Trend analysis and historical data comparison
+      - Export reports for institutional review
+   
+   5. Coordinator Management
+      - Add, edit, and remove coordinators
+      - Assign coordinators to specific departments or teams
+      - Monitor coordinator activity and performance
+      - Access control and permission management
+      - Coordinator evaluation and feedback system
+   
+   6. Meetings
+      - Schedule and manage meetings with coordinators
+      - Calendar integration for meeting planning
+      - Meeting agenda creation and participant management
+      - Virtual meeting room access
+      - Meeting minutes and action items tracking
+   
+   7. Sales Analysis
+      - Detailed financial reports for store transactions
+      - Revenue tracking by product, category, and time period
+      - Sales trends and forecasting
+      - Profit margin analysis
+      - Coordinator-wise sales performance comparison
+   
+   8. Store Monitoring
+      - Monitor all store activities across coordinators
+      - Product catalog oversight and approval
+      - Inventory tracking at institutional level
+      - Order fulfillment monitoring
+      - Pricing policy enforcement and discount approvals
+
+
+3. Sai Vivash Dara (S20230010066)
+   --------------------------------
+   A. Animations and Transitions:
+      - Implemented smooth page transitions using Framer Motion
+      - Features:
+        * Fade-in/fade-out animations for all page navigations
+        * 3D flip animations for Login/Signup pages (rotateY transitions)
+        * Perspective effects for enhanced user experience
+        * AnimatePresence for smooth component mounting/unmounting
+        * Custom animation timing and easing functions
+        * Responsive animations optimized for performance
+   
+   B. Multi-Factor Authentication (MFA):
+      - Developed complete MFA verification system
+      - Features:
+        * Email-based verification code generation and delivery
+        * Secure OTP (One-Time Password) implementation
+        * Verification page with code input and validation
+        * Resend code functionality with rate limiting
+        * Session management for authenticated users
+        * Security measures against brute force attacks
+   
+   C. Entire Player User Type (13 Core Features + 10 Theme Previews):
+      
+      Core Features:
+      1. Player Dashboard
+         - Personalized welcome screen with player statistics
+         - Upcoming tournaments and match schedules
+         - Recent game history and results
+         - Notifications for feedback requests, match invitations, and updates
+         - Quick access to all player features
+         - Performance summary cards
+      
+      2. Player Profile
+         - View and edit personal information
+         - Profile photo upload with Cloudinary integration
+         - Chess rating and ranking display
+         - Achievement badges and milestones
+         - Player bio and preferences
+         - Account security settings
+      
+      3. Player Tournament
+         - Browse and join available tournaments
+         - View tournament details (format, time control, prize pool)
+         - Registration and payment processing
+         - My tournaments view (upcoming, ongoing, completed)
+         - Tournament rules and regulations access
+         - Withdrawal and refund management
+      
+      4. Player Growth
+         - Detailed performance analytics and growth tracking
+         - Rating progression charts and graphs
+         - Win/loss/draw statistics
+         - Opening repertoire analysis
+         - Performance trends over time
+         - Comparative analysis with peers
+      
+      5. Player Pairings
+         - View current round pairings
+         - Match schedule and opponent information
+         - Results submission for completed games
+         - Round-by-round standings
+         - Tie-break calculations and rankings
+      
+      6. Player Settings
+         - Account preferences and customization
+         - Theme selection (light/dark/gaming modes)
+         - Notification settings and email preferences
+         - Privacy controls and visibility settings
+         - Language and localization options
+         - Data export and account management
+      
+      7. Player Chat
+         - Real-time messaging with other players
+         - Socket.IO powered instant messaging
+         - Online status indicators
+         - Chat history and message search
+         - Typing indicators and delivery receipts
+         - Block and report functionality
+      
+      8. Player Rankings
+         - Global leaderboards and rankings
+         - College/institution-specific rankings
+         - Filter by rating category, time control, and tournament type
+         - Historical ranking trends
+         - Player comparison tools
+      
+      9. Player Store
+         - Browse and purchase chess equipment and merchandise
+         - Product search and category filtering (SearchFilter component)
+         - Product details with images and specifications
+         - Shopping cart and checkout system
+         - Order history and tracking
+         - Payment integration
+      
+      10. Player Subscription
+          - View available subscription plans
+          - Subscribe to premium features and services
+          - Billing history and invoice management
+          - Plan upgrade/downgrade options
+          - Auto-renewal settings
+          - Subscription benefits overview
+      
+      11. Player Watch (New Feature)
+          - Spectate live tournament matches in real-time
+          - Multiple game viewing with board state updates
+          - View games being streamed by coordinators
+          - Commentary and analysis display
+          - Player information and statistics sidebar
+          - Favorites and follow functionality
+      
+      12. Player TV
+          - Curated chess content and video library
+          - Recorded tournament games and highlights
+          - Educational content and tutorials
+          - Featured players and interviews
+          - Video streaming with playback controls
+      
+      13. Player Feedback (in Dashboard)
+          - Submit feedback for completed tournaments
+          - Rating system for tournament experience
+          - Comments and suggestions submission
+      
+      Theme Preview Features (10 Themes):
+      - ThemePreview: Main theme selection interface
+      - ThemePreview1: Classic light theme with traditional board
+      - ThemePreview2: Dark gaming theme with neon accents
+      - ThemePreview3: Neo-noir theme with high contrast
+      - ThemePreview1V2: Enhanced version of classic theme
+      - ThemePreview2V2: Improved dark theme with better accessibility
+      - ThemePreview3V2: Refined neo-noir with custom pieces
+      - ThemePreview4V2: Modern minimalist theme
+      - ThemePreview5V2: Vibrant colorful theme
+      - ThemePreview6V2: Professional tournament theme
+      
+      Each theme preview includes:
+      * Live chess board preview with themed pieces
+      * Color palette showcase
+      * Interactive element demonstrations
+      * Apply theme functionality
+      * Responsive design for all screen sizes
+
+
+4. Neelukumar (S20230010163)
+   ---------------------------
+   A. Static Pages (5 Pages):
+      1. Home Page (Home.jsx)
+         - Landing page with project introduction
+         - Hero section with call-to-action buttons
+         - Features showcase and highlights
+         - Navigation to other sections of the website
+         - Responsive design with modern UI elements
+      
+      2. About Page (About.jsx)
+         - Information about ChessHive platform
+         - Team introduction and mission statement
+         - Platform features and benefits
+         - Technology stack overview
+         - Contact information
+      
+      3. Chess Story Page (ChessStory.jsx)
+         - History and evolution of chess
+         - Stories and anecdotes about famous players
+         - Educational content about chess culture
+         - Engaging narrative with visual elements
+         - Timeline of chess milestones
+      
+      4. Contact Us Page (ContactUs.jsx)
+         - Contact form for inquiries and support
+         - Email and contact information
+         - Social media links
+         - Location and address information
+         - FAQ section
+      
+      5. Error Page (ErrorPage.jsx)
+         - 404 and error handling page
+         - User-friendly error messages
+         - Navigation options to return to main sections
+         - Custom styled error display
+   
+   B. Search Bar Component (SearchFilter):
+      - Reusable search and filter component used in Player Store
+      - Features:
+        * Text-based search functionality
+        * Category dropdown filtering
+        * Real-time search with debouncing
+        * Dynamic category generation from product data
+        * Integration with product listing displays
+        * Responsive design for mobile and desktop
+        * Clear/reset filter options
+      - Implementation:
+        * Created in components/SearchFilter.jsx
+        * Integrated into PlayerStore.jsx for product filtering
+        * Handles both search query and category-based filtering
+        * Exports filtered results to parent components
+
+
+5. Ashlesha (S20230010080)
+   -------------------------
+   Entire Admin User Type (6 Features):
+   
+   1. Admin Dashboard
+      - System-wide overview and control panel
+      - Key metrics for entire platform (users, tournaments, revenue)
+      - Recent activity logs and alerts
+      - Quick actions for common administrative tasks
+      - System health monitoring and performance metrics
+      - User growth analytics and engagement statistics
+   
+   2. Admin Tournament Management
+      - Oversee all tournaments across all institutions
+      - Approve or reject tournament proposals
+      - Monitor tournament integrity and compliance
+      - Dispute resolution and arbitration
+      - Tournament format standardization
+      - Global tournament calendar management
+      - Generate tournament reports and statistics
+   
+   3. Admin Coordinator Management
+      - Manage all coordinators across all institutions
+      - Add, edit, remove, and suspend coordinator accounts
+      - Coordinator verification and approval process
+      - Access control and permission assignment
+      - Monitor coordinator activity and performance
+      - Handle coordinator disputes and complaints
+      - Coordinator training and resource management
+   
+   4. Admin Organizer Management
+      - Manage all organizer accounts (colleges/institutions)
+      - Approve new institutional registrations
+      - Edit organizer profiles and settings
+      - Monitor institutional compliance with platform policies
+      - Access control and role management
+      - Institutional performance tracking
+      - Handle organizer support requests
+   
+   5. Admin Player Management
+      - Oversee all player accounts on the platform
+      - Player account verification and moderation
+      - Handle player reports and disputes
+      - Suspend or ban accounts for policy violations
+      - Player statistics and activity monitoring
+      - Reset passwords and resolve account issues
+      - Mass communication with player base
+   
+   6. Admin Payments
+      - Monitor all financial transactions on the platform
+      - Payment gateway management and configuration
+      - Transaction history and financial reports
+      - Revenue tracking by source (subscriptions, tournaments, store)
+      - Refund processing and dispute resolution
+      - Commission and payout management
+      - Financial analytics and forecasting
+      - Tax reporting and compliance tools

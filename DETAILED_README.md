@@ -1,16 +1,16 @@
-# ChessHive — Detailed Technical README
+# ChessHive — Detailed README
 
-> Comprehensive mapping of architecture, files, APIs, data stores and flows for the ChessHive project.
+This README explains how to start the backend and frontend, the static pages available, user types and features, and where to find the core code. It is written for both developers and evaluators.
 
 ---
 
-## 🚀 Project Summary
-ChessHive is a campus-focused chess community platform with multiple user roles (player, coordinator, organizer, admin). It supports signup/login (OTP-based), tournaments (create/approve/enroll/pairings), matchmaking & live matches, store & product sales, meetings scheduling, notifications, and player profiles.
+## 1) Project overview
+ChessHive is a campus-focused chess community platform with multiple roles: Player, Coordinator, Organizer, and Admin. It supports OTP-based authentication, tournament workflows, a store with purchases, meetings, notifications, and player profiles.
 
 Key folders:
-- Root backend (this folder) — primary Express + MongoDB + Socket.IO server. Main runtime: `app.js`.
-- `chesshive-react/` — React frontend (SPA) using React Router and Redux slices for features.
-- `Chesshivev1.0.2/` — legacy copy kept for reference.
+- Root backend (this folder) — Express + MongoDB + Socket.IO server. Entry file: [app.js](app.js).
+- React frontend — SPA at [chesshive-react](chesshive-react).
+- Legacy copy — [Chesshivev1.0.2](Chesshivev1.0.2) kept for reference.
 
 ---
 
@@ -28,8 +28,33 @@ Key folders:
 
 ---
 
-## 🧭 Architecture Overview
-This section describes how pieces fit together and where responsibilities lie.
+## 2) Requirements
+- Node.js (LTS recommended)
+- MongoDB running locally at `mongodb://localhost:27017`
+- Optional email SMTP for OTP delivery (see Environment section)
+
+---
+
+## 3) Start the backend (server)
+1. Open a terminal in the project root folder.
+2. Install dependencies:
+   - `npm install`
+3. Start MongoDB (local service or `mongod`).
+4. Run the server:
+   - `node app.js`
+
+By default, the backend runs on port `3001` unless `PORT` is set.
+
+---
+
+## 4) Start the frontend (React)
+1. Open a terminal in [chesshive-react](chesshive-react).
+2. Install dependencies:
+   - `npm install`
+3. Start the app:
+   - `npm start`
+
+The frontend runs on `http://localhost:3000` and proxies API requests to `http://localhost:3001` (configured in [chesshive-react/package.json](chesshive-react/package.json)).
 
 ### Backend responsibilities
 - **Auth & Sessions**: `app.js` and `routes/auth.js` handle signup, login, OTP generation and verification, and session establishment (stored in `req.session`).
@@ -98,312 +123,216 @@ All backend code is in the root backend unless specified.
 
 ---
 
-## 🗄️ Database schema & collections (summary)
-File: `routes/databasecongi.js` initializes validators for major collections. Key collections:
-- `users` — schema with required `name,email,password,role,isDeleted` (role enum: admin/organizer/coordinator/player)
-- `tournaments` — name, date, location, entry_fee, status, added_by, type, no_of_rounds
-- `tournament_pairings` — stores pairings, rounds, bye info
-- `feedbacks` — tournament feedback per player
-- `user_balances` — wallet_balance per `user_id`
-- `subscriptionstable` — subscription periods
-- `products` and `sales` — store data
-- `meetingsdb` — meetings scheduled by organizers/coordinators
-- `notifications` — player notifications (e.g., feedback_request)
-- `otps`, `signup_otps` — OTP storage for login/signup
-- `player_stats`, `tournament_players`, `enrolledtournaments_team` — tournament/player enrollment and stats
+## 5) Environment configuration (optional but recommended)
+Set these variables in your system environment for real OTP email delivery:
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+
+For production hardening, also configure:
+- `SESSION_SECRET`
+- `SESSION_COOKIE_NAME`
+
+If SMTP is not configured, OTPs are logged to the server console or use a test account.
 
 ---
 
-## 🔁 Typical Data Flows (step-by-step)
-### 1) Signup -> Verify -> Create user
-1. Frontend POST `/api/signup` with signup data; server validates and stores in `signup_otps` + generates OTP (collection `otps`).
-2. Email OTP (nodemailer). Frontend asks user to enter OTP.
-3. POST `/api/verify-signup-otp` validates OTP, creates `users` entry, creates a `user_balances` document for players, sets `req.session` and redirects to role-specific dashboard.
+## 6) Static pages and public assets
+The backend serves static assets from [public](public). The React app includes static pages under [chesshive-react/src/pages](chesshive-react/src/pages).
 
-### 2) Login flow (email + password -> OTP)
-1. POST `/api/login` with email+password; server verifies credentials.
-2. If user exists, generate OTP stored in `otps` and send by email (Ethereal fall-back available if no SMTP configured).
-3. POST `/api/verify-login-otp` validates OTP and sets session values (userEmail, userRole, username, userCollege).
+Common static pages in the React app:
+- Home page: [chesshive-react/src/pages/Home.jsx](chesshive-react/src/pages/Home.jsx)
+- About: [chesshive-react/src/pages/About.jsx](chesshive-react/src/pages/About.jsx)
+- Contact Us: [chesshive-react/src/pages/ContactUs.jsx](chesshive-react/src/pages/ContactUs.jsx)
+- Chess Story (branding / narrative): [chesshive-react/src/pages/ChessStory.jsx](chesshive-react/src/pages/ChessStory.jsx)
 
-### 3) Create/Approve Tournament
-1. Coordinator POST `/coordinator/api/tournaments` to create tournament; document added with `status: 'Pending'`.
-2. Organizer reviews and POST `/organizer/api/tournaments/approve` to set `status: 'Approved'` and populate `approved_by`, `approved_date`.
-3. When tournament begins or when pairing requested, `coordinator_app.js` uses swiss pairing to compute rounds and writes `tournament_pairings` collection.
-
-### 4) Enroll & Tournament Player Lifecycle
-1. Players enroll (flow may be stored in `tournament_players` or `enrolledtournaments_team` depending on team vs individual).
-2. Once enrolled, pairings reference players; match results update `player_stats` and leaderboard computed via `GET /player/api/rankings`.
-
-### 5) Matchmaking & Moves
-1. Player POST `/player/api/request-match` -> if queue empty, create `ticket`; else create `match` in memory and update ticket owners.
-2. Players can poll ticket via `/player/api/match/ticket/:ticketId` or check `/player/api/match/:matchId` for status.
-3. Moves posted to `/player/api/match/:matchId/move` update `matches` state.
-
-### 6) Store purchase
-1. Player adds funds by POST `/player/add-funds` (server updates `user_balances`).
-2. Purchase endpoint verifies wallet, deducts price, writes `sales` record and reduces product `availability`.
+Static server-side resources:
+- Images: [public/images](public/images)
+- JS helpers (legacy pages): [public/js](public/js)
 
 ---
 
-## ⚙️ Server & Run Instructions
-### Requirements
-- Node.js (a reasonably recent LTS); the root backend uses `socket.io` and the `mongodb` driver.
-- MongoDB running locally on `mongodb://localhost:27017` (default DB name: `chesshive`).
-- Optional SMTP env vars for real email delivery: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
-- Optional: set `SESSION_SECRET` and `SESSION_COOKIE_NAME` in env for production.
+## 7) User types and features (detailed)
+ChessHive has four user roles. Each role has distinct dashboards and permissions.
 
-### Start backend (root)
-1. cd .\
-2. npm install
-3. Start MongoDB (e.g., `mongod`)
-4. node app.js (defaults to `PORT=3001` if not set)
+### 7.1 Player
+Primary goal: play tournaments and manage profile/wallet.
 
-### Start frontend (React)
-1. cd chesshive-react
-2. npm install
-3. npm start (by default `react-scripts` starts at `http://localhost:3000`). Proxy config in `package.json` points to `http://localhost:3001` so API calls to `/api/*` are proxied to backend.
+Key features (detailed):
+- **OTP signup & login**: Player registers with email + password, then verifies with OTP. Sessions store role, email, and college for personalized dashboards.
+- **Tournament discovery**: Browse approved tournaments with date, type, location, and entry fee. Visibility is limited to approved events.
+- **Enrollment flow**: Enroll into tournaments; enrollment status is tracked server-side and used by pairing and stats.
+- **Rankings & stats**: View ranking/leaderboards and player performance stats computed from tournament pairings and results.
+- **Wallet & funds**: Add funds to wallet, view current balance, and track deductions for purchases or subscriptions.
+- **Store purchases**: Buy products listed by organizers/coordinators; purchase updates wallet and inserts a sales record.
+- **Notifications**: Receive notifications for feedback requests, tournament updates, and other announcements. Mark as read from the UI.
+- **Profile overview**: View basic profile details, college affiliation, and participation history.
 
-### Dev tips
-- You can use dev header overrides for role checks (see `isCoordinator`/`isPlayer` in `app.js`) in development mode to bypass login for testing: add HTTP headers (`x-dev-role`, `x-dev-email`) in requests.
-- If SMTP not configured, the server uses Ethereal test accounts or logs OTPs in console for testing.
+Main API routes:
+- Auth: `/api/signup`, `/api/login`, `/api/verify-signup-otp`, `/api/verify-login-otp`
+- Tournaments: `/player/api/tournaments`, `/player/api/enroll`, `/player/api/rankings`
+- Wallet: `/player/add-funds`
+- Notifications: `/api/notifications`, `/api/notifications/mark-read`
 
----
+Relevant backend files:
+- [player_app.js](player_app.js)
+- [app.js](app.js)
+- [routes/auth.js](routes/auth.js)
 
-## 🔒 Security & Limitations
-- Passwords are stored plainly in this codebase (no hashing) — **do not** use real passwords on public deployments. Add bcrypt hashing and secure handling.
-- Matchmaking is in-memory and thus not horizontally scalable — use persistent storage (DB) or implement Socket.io hubs for real-time matching when scaling.
-- OTPs are stored in `otps` collection and expire after 5 minutes; ensure proper cleanup and auditing as needed.
-
----
-
-## 🧩 Mapping to diagrams & class design (detailed)
-This section expands the high-level mapping into a diagram-ready, itemized reference so you can draw a complete class diagram meeting the assignment requirements.
-
-### 1) Entities and Value Objects (detailed)
-For your class diagram, treat each **Entity** as a separate class (with an id and mutable state). Below are suggested attributes and a couple of behaviour methods (if applicable). Use the repository names and collection fields to pick attributes.
-
-- **User (Entity)** — file: `routes/auth.js`, collection: `users`
-  - attributes: id, name, email, password, role (admin|organizer|coordinator|player), college, phone, dob, isDeleted
-  - methods: authenticate(), changePassword(), updateProfile()
-
-- **Player (Entity / specialization of User)** — logical class: (can inherit from User)
-  - attributes: rating, walletBalance, subscription, statsRef
-  - methods: enrollTournament(tournamentId), addFunds(amount)
-
-- **Tournament (Aggregate Root)** — collection: `tournaments`
-  - attributes: id, name, date, time, location, entry_fee (Money), type, noOfRounds, coordinator (username), status (TournamentStatus)
-  - methods: approve(), reject(), addEnrollment(), computePairings()
-
-- **Enrollment (Entity)** — collections: `tournament_players` or `enrolledtournaments_team`
-  - attributes: id, tournamentId, playerId/username, college, roleInTeam, status, feePaid (Money)
-  - methods: approvePlayer(), refund()
-
-- **Match (Aggregate Root)** — in-memory `matches` + persisted `tournament_pairings`
-  - attributes: matchId, players[2], state (GameState), moves[] (ChessMove), colors, result
-  - methods: applyMove(move), endMatch(result)
-
-- **Pairing / Round (Entity)** — persisted in `tournament_pairings`
-  - attributes: roundNumber, pairings[] (each pairing has player1, player2, result), byePlayer
-
-- **Product (Entity)** — collection: `products`
-  - attributes: id, name, price (Money), imageUrl, coordinator, college, availability
-  - methods: reserve(), reduceAvailability()
-
-- **Sale / Order (Entity)** — collection: `sales`
-  - attributes: id, productId, buyer, price (Money), college, purchaseDate
-  - methods: refund(), receipt()
-
-- **Meeting (Entity)** — collection: `meetingsdb`
-  - attributes: id, title, date, time, link, role, name
-  - methods: schedule(), cancel()
-
-- **Notification (Entity)** — collection: `notifications`
-  - attributes: id, userId, type, tournamentId?, read (bool), date, payload
-  - methods: markRead(), deliver()
-
-Value objects (immutable small aggregated types):
-- **Money (Value Object)** — amount, currency
-- **GameState (Value Object)** — fen (string)
-- **ChessMove (Value Object)** — from, to, at (timestamp)
-- **TournamentStatus (enum)** — Pending, Approved, Rejected, Removed
-
----
-### 2) Aggregates & Relations (how to model in your class diagram)
-Use composition (filled diamond) when an aggregate "owns" internal entities or value objects. Use association for references and multiplicities.
-
-- **Tournament (Aggregate Root)**
-  - owns 0..* **Enrollment** (composition)
-  - has 0..* **Pairings** (composition)
-  - references 1 **User** (coordinator) (association)
-
-- **Player (Aggregate Root)**
-  - has 0..* **Match** references (association)
-  - owns **Wallet** (part of Player or as `user_balances`) (composition)
-
-- **Match (Aggregate Root)**
-  - owns 0..* **ChessMove** (value objects) (composition)
-  - contains 1 **GameState** (value object)
-
-- **Product (Aggregate Root)**
-  - has 0..* **Sale** (association)
-
-Multiplicities and example associations to include in the diagram:
-- Tournament 1 --- 0..* Enrollment
-- Enrollment * --- 1 Player (or reference to User)
-- Tournament 1 --- 0..* Pairing
-- Pairing 1 --- 0..* Match
-- Match 1 --- 0..* ChessMove
-- Product 1 --- 0..* Sale
-
-Add labels where helpful (e.g., "enrolledPlayers", "pairings").
-
----
-### 3) Services (domain & application services)
-Map services to files that implement their primary behavior. Show service classes in diagram (as separate nodes) and add dependency arrows to the Repositories they use.
-
-- **AuthService** — file: `routes/auth.js` and `app.js` login handlers
-  - responsibilities: signup(), sendOtp(), verifyOtp(), restoreAccount(), sessionManagement()
-  - uses: `UserRepository`, `OtpRepository`
-
-- **TournamentService** — `coordinator_app.js`, `organizer_app.js`
-  - responsibilities: createTournament(), updateTournament(), approveTournament(), rejectTournament(), scheduleTournament()
-  - uses: `TournamentRepository`, `NotificationRepository`, `TournamentPairingsRepository`
-
-- **PairingService** — function `swissPairing` in `coordinator_app.js`
-  - responsibilities: generatePairings(players, rounds), persistPairings()
-  - uses: `TournamentRepository`, `TournamentPairingsRepository`, `PlayerRepository`
-
-- **MatchService / MatchmakingService** — `player_app.js`
-  - responsibilities: requestMatch(), createTicket(), pairPlayers(), acceptMatch(), submitMove()
-  - uses: in-memory (matches map) or `MatchRepository` (if persisted), `NotificationService`
-
-- **StoreService** — `organizer_app.js` endpoints
-  - responsibilities: addProduct(), listProducts(), processPurchase(), salesReport()
-  - uses: `ProductRepository`, `SaleRepository`, `WalletRepository` (`user_balances`)
-
-- **NotificationService** — `app.js` and router endpoints
-  - responsibilities: createNotification(), listNotifications(), markRead()
-  - uses: `NotificationRepository`, `UserRepository`, `TournamentRepository`
-
-- **MeetingService** — `organizer_app.js`
-  - responsibilities: scheduleMeeting(), listMeetingsForUser()
-  - uses: `MeetingRepository`
-
-- **RankingService** — (logical) computes tournament standings using `player_stats` and `tournament_pairings`
-
----
-### 4) Repositories (persistence mapping)
-Model repositories as interfaces in your class diagram (label as <<repository>>). Use collection names and common methods.
-
-- **UserRepository** — collection: `users` — methods: findById(), findByEmail(), save(), update()
-- **TournamentRepository** — collection: `tournaments` — methods: find(), findById(), save(), update()
-- **TournamentPairingsRepository** — collection: `tournament_pairings` — methods: savePairings(), getPairingsByTournament()
-- **EnrollmentRepository** — collections: `tournament_players`, `enrolledtournaments_team` — methods: enroll(), findByTournament()
-- **MatchRepository** — (optional/persistent) collection: `tournament_pairings` / in-memory `matches` — methods: saveMatch(), updateMatch()
-- **ProductRepository** — collection: `products`
-- **SaleRepository** — collection: `sales`
-- **MeetingRepository** — collection: `meetingsdb`
-- **NotificationRepository** — collection: `notifications`
-- **OtpRepository** — collections: `otps`, `signup_otps`
-- **WalletRepository** — collection: `user_balances`
-
----
-### 5) Relations between Services and Repositories
-Draw directed dependency arrows (service -> repository). Here are the main pairs:
-- AuthService -> UserRepository, OtpRepository
-- TournamentService -> TournamentRepository, TournamentPairingsRepository, NotificationRepository
-- PairingService -> TournamentPairingsRepository, PlayerRepository
-- MatchService -> MatchRepository (or in-memory store) and NotificationService
-- StoreService -> ProductRepository, SaleRepository, WalletRepository
-- NotificationService -> NotificationRepository, UserRepository
-
-Add multiplicities where appropriate (e.g., TournamentService may call TournamentRepository for a single tournament or query many). Indicate whether calls are read (GET) or write (POST/UPDATE) if you want more detail.
-
----
-### 6) Hubs (real-time channels)
-The project has Socket.IO available (`socket.io` dependency). The following Hubs are good to include in the diagram (presented as separate components or classes labelled <<hub>>):
-- **MatchHub** (planned / can be implemented using `socket.io`)
-  - responsibilities: broadcastMove(matchId, move), invite(opponent), notifyMatchStart(), notifyMatchEnd()
-  - interacts with: MatchService, NotificationService
-- **ChatHub**
-  - responsibilities: sendMessage(room, payload), joinRoom(), fetchHistory()
-  - interacts with: NotificationService (for mentions) and `chat_messages` collection when persisting
-- **NotificationHub**
-  - responsibilities: pushNotification(userId, payload), subscribe(userId)
-  - interacts with: NotificationService
-
-Note: Currently some functionality is implemented via polling and in-memory maps; if you implement hubs, draw them as separate components and show the service calls they perform.
-
----
-### 7) Relations between Hubs and Services
-Use dependency arrows from each Hub to the Services they call.
-- MatchHub -> MatchService (create match, apply moves), NotificationService (send match invites)
-- ChatHub -> NotificationService (create mention notifications), MeetingService (for meeting rooms)
-- NotificationHub -> NotificationService (reads DB) and UserRepository (user session lookup)
-
----
-### Diagram drawing tips & checklist (so you don’t miss any required item)
-- Header: **Project name**, **Project domain**, **Project number**, **Team leader name + roll**, **All team members + roll numbers** (place this top center). This is required by assignment.
-- Diagram elements to include: Entities, Value Objects (use <<value>>), Aggregates (mark aggregate roots), Services (<<service>>), Repositories (<<repository>>), Hubs (<<hub>>).
-- Use composition (filled diamond) from aggregate root to owned entities/value objects (e.g., Tournament -> Enrollment). Use plain association for references (e.g., Enrollment -> Player).
-- Annotate multiplicities (1, 0..*, 1..*). Add simple method names in each class (e.g., Tournament.approve(), Match.applyMove()).
-- Show service -> repository dependencies (dashed or solid dependency arrows) and hub -> service relations.
-- Include a short legend on the diagram explaining symbols (composition, aggregation, association, dependency, multiplicity).
-- Export as PNG or JPEG from draw.io or PlantUML plugin. **Do not use AI-generated images**.
-
----
-### Example minimal class list to draw (copy into draw.io or PlantUML)
-- User
-- Player : inherits User
-- Tournament (aggregate root)
-- Enrollment
-- Pairing / Round
-- Match (aggregate root)
-- ChessMove <<value>>
-- GameState <<value>>
-- Product
-- Sale
-- Meeting
-- Notification
-- AuthService <<service>>
-- TournamentService <<service>>
-- MatchService <<service>>
-- StoreService <<service>>
-- NotificationService <<service>>
-- UserRepository <<repository>>
-- TournamentRepository <<repository>>
-- MatchRepository <<repository>>
-- ProductRepository <<repository>>
-- MatchHub <<hub>>
-- ChatHub <<hub>>
-- NotificationHub <<hub>>
-
-Add the header block with project and team details, then lay out aggregates clearly and connect services to repositories and hubs to services.
+Relevant frontend pages:
+- [chesshive-react/src/pages/player](chesshive-react/src/pages/player)
+- [chesshive-react/src/pages/Login.jsx](chesshive-react/src/pages/Login.jsx)
+- [chesshive-react/src/pages/Signup.jsx](chesshive-react/src/pages/Signup.jsx)
 
 ---
 
+### 7.2 Coordinator
+Primary goal: create and manage tournaments and pairings.
+
+Key features (detailed):
+- **Tournament creation**: Define tournament name, schedule, location, entry fee, number of rounds, and type. Newly created events default to Pending status.
+- **Tournament updates**: Edit tournament details (date/time/location/fee) and soft-delete when needed.
+- **Swiss pairing engine**: Generate round pairings with bye handling, score-based ordering, and avoidance of repeat opponents.
+- **Enrollment oversight**: Monitor enrolled players/teams and ensure pairing uses the correct participant list.
+- **Store product creation (optional flow)**: Add products to the store catalog tied to coordinator identity/college.
+- **Tournament lifecycle**: Trigger pairing per round and manage round progression based on results.
+
+Main API routes:
+- `/coordinator/api/tournaments` (GET/POST/PUT/DELETE)
+- `/coordinator/api/store/addproducts`
+
+Relevant backend files:
+- [coordinator_app.js](coordinator_app.js)
+
+Relevant frontend pages:
+- [chesshive-react/src/pages/coordinator](chesshive-react/src/pages/coordinator)
+
 ---
 
-## ✅ Recommendations & Next Steps (for improvements)
-- Use **bcrypt** for password hashing and use environment-configured JWT or secure cookies for sessions in production.
-- Replace in-memory matchmaking with **Socket.IO** hubs (server -> room per match) for real-time updates and horizontal scaling.
-- Add automated tests for pairing (edge cases: odd players, repeated opponents), notifications, and transactions (wallet/purchase).
-- Add input sanitization & rate limiting on public endpoints (e.g., OTP sending) to reduce abuse.
+### 7.3 Organizer
+Primary goal: approve tournaments, manage store and meetings.
+
+Key features (detailed):
+- **Tournament approval**: Review coordinator-submitted tournaments and approve or reject with status changes and audit metadata (approver, date).
+- **Tournament oversight**: View all tournaments across colleges and statuses to monitor platform activity.
+- **Store inventory**: View and manage product listings and availability; see aggregated sales.
+- **Sales reporting**: Access summary of purchases, buyer details, and total revenue per item.
+- **Meetings management**: Schedule meetings for coordinators/players, share meeting links, and list meetings organized by the current user.
+
+Main API routes:
+- `/organizer/api/tournaments`
+- `/organizer/api/tournaments/approve`
+- `/organizer/api/tournaments/reject`
+- `/organizer/api/store`
+- `/organizer/api/meetings`
+
+Relevant backend files:
+- [organizer_app.js](organizer_app.js)
+
+Relevant frontend pages:
+- [chesshive-react/src/pages/organizer](chesshive-react/src/pages/organizer)
 
 ---
 
-## 📌 Quick references (files → responsibilities)
-- `app.js` — server entry, login/verify OTP, session, notification endpoints, mounts routers.
-- `routes/databasecongi.js` — DB connect, collections + validators
-- `routes/auth.js` — signup flows (OTP, signup data storage)
-- `coordinator_app.js` — tournament creation, pairing generation (Swiss algorithm)
-- `organizer_app.js` — approve/reject tournaments, store & sales aggregation, meeting endpoints
-- `player_app.js` — matchmaking queue, match endpoints, basic player REST CRUD
+### 7.4 Admin
+Primary goal: platform oversight and user management.
+
+Key features (detailed):
+- **System dashboard**: High-level overview of platform activity including users, tournaments, and financial flows.
+- **User management**: View and manage coordinators, organizers, and players; enable or remove access (as implemented in UI).
+- **Payments review**: Inspect payment and wallet-related records to identify anomalies or confirm activity.
+- **Administrative visibility**: Access to cross-role data for troubleshooting and monitoring.
+
+Main backend file:
+- [admin_app.js](admin_app.js)
+
+Relevant frontend pages:
+- [chesshive-react/src/pages/admin](chesshive-react/src/pages/admin)
+
+---
+
+## 8) Authentication and session flow
+1. User signs up or logs in using email + password.
+2. Server sends OTP via email.
+3. User submits OTP to verify.
+4. Server sets session values (`req.session`) for role, name, email, and college.
+
+Backend auth is in [routes/auth.js](routes/auth.js) and [app.js](app.js).
+
+---
+
+## 9) Tournaments and pairing workflow
+1. Coordinator creates a tournament (status: Pending).
+2. Organizer approves or rejects.
+3. Coordinator triggers Swiss pairing per round.
+4. Pairings are stored in MongoDB (collection: `tournament_pairings`).
+
+Swiss pairing logic is implemented in [coordinator_app.js](coordinator_app.js).
+
+---
+
+## 10) Store and payments
+Store products and sales are stored in MongoDB (`products`, `sales`).
+
+Flow:
+1. Organizer or Coordinator adds products.
+2. Player adds funds to wallet.
+3. Player buys product → wallet decreases → sale recorded.
+
+Backend logic in:
+- [organizer_app.js](organizer_app.js)
+- [coordinator_app.js](coordinator_app.js)
+- [player_app.js](player_app.js)
+
+---
+
+## 11) Notifications
+Notifications are stored in MongoDB (`notifications`).
+
+Endpoints:
+- `GET /api/notifications`
+- `POST /api/notifications/mark-read`
+
+Backend entry: [app.js](app.js)
+
+---
+
+## 12) Database collections (summary)
+MongoDB collections include:
+- `users`, `otps`, `signup_otps`
+- `tournaments`, `tournament_pairings`, `tournament_players`, `enrolledtournaments_team`
+- `products`, `sales`
+- `meetingsdb`, `notifications`, `feedbacks`
+- `user_balances`, `player_stats`, `subscriptionstable`
+
+Validation rules are defined in [routes/databasecongi.js](routes/databasecongi.js).
+
+---
+
+## 13) Troubleshooting
+If the frontend install fails due to peer dependency conflicts, ensure the React Three libraries match React 18:
+- `@react-three/drei` should be version 9.x
+- `@react-three/fiber` should be version 8.x
+
+If OTP emails are not arriving, check SMTP config or watch the backend console for logged OTPs.
+
+---
+
+## 14) Quick file map
+- Server entry: [app.js](app.js)
+- Role APIs: [admin_app.js](admin_app.js), [organizer_app.js](organizer_app.js), [coordinator_app.js](coordinator_app.js), [player_app.js](player_app.js)
+- Auth routes: [routes/auth.js](routes/auth.js)
+- Database setup: [routes/databasecongi.js](routes/databasecongi.js)
+- Frontend entry: [chesshive-react/src/index.js](chesshive-react/src/index.js)
+- Frontend routes: [chesshive-react/src/App.js](chesshive-react/src/App.js)
+- `player_app.js` — player APIs for tournaments, wallet, notifications, and profile
 - `chesshive-react/src/pages/*` — UI pages; map by name to backend endpoints (see comments in README above)
 
 ---
 
-## 🛣️ Route Types (Application vs Custom vs Error vs Third‑Party)
+## Route Types (Application vs Custom vs Error vs Third‑Party)
 This section classifies the routes used in this project and shows where they are implemented and what they do.
 
 > Scope note: This project has **backend HTTP routes (Express)** and **frontend client-side routes (React Router)**.
@@ -474,5 +403,3 @@ These are SPA routes handled in the browser, not on Express.
 
 **What it does**
 - Controls which React page component renders for paths like `/login`, `/player/player_dashboard`, `/coordinator/tournament_management`, etc.
-
-> Note: there is currently no React Router `*` (wildcard) route in `chesshive-react/src/App.js` for a frontend “Not Found” page.
