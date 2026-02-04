@@ -14,6 +14,20 @@ Key folders:
 
 ---
 
+## 📁 Repo layout (high level)
+- Root backend
+  - `app.js` — main Express server; mounts routers and defines global APIs (login, OTP verify, notifications, session, etc.). Uses express-session.
+  - `organizer_app.js`, `coordinator_app.js`, `player_app.js`, `admin_app.js` — role-specific routers with REST endpoints.
+  - `routes/*` — helper routes like `auth.js` (signup, OTP flow) and `databasecongi.js` (Mongo connection & collection initialization).
+  - `public/` — static assets for server-rendered pages.
+  - `utils.js` — small helpers used across apps.
+- chesshive-react/
+  - `src/pages/*` — React pages (PlayerTournament, Login, Signup, Player dashboard pages, Coordinator/Organizer pages, ContactUs etc.)
+  - `src/features/*` — redux slices (auth, notifications, products, sales)
+  - `src/components/*` — UI components used by pages
+
+---
+
 ## 2) Requirements
 - Node.js (LTS recommended)
 - MongoDB running locally at `mongodb://localhost:27017`
@@ -41,6 +55,71 @@ By default, the backend runs on port `3001` unless `PORT` is set.
    - `npm start`
 
 The frontend runs on `http://localhost:3000` and proxies API requests to `http://localhost:3001` (configured in [chesshive-react/package.json](chesshive-react/package.json)).
+
+### Backend responsibilities
+- **Auth & Sessions**: `app.js` and `routes/auth.js` handle signup, login, OTP generation and verification, and session establishment (stored in `req.session`).
+- **Data layer (repositories)**: MongoDB collections are defined and validated in `routes/databasecongi.js`. Collections include `users`, `tournaments`, `products`, `sales`, `meetingsdb`, `notifications`, `otps`, `signup_otps`, `user_balances`, `subscriptionstable`, `player_stats`, `tournament_pairings`, etc.
+- **Domain logic**: Coordinators create tournaments and pairings (`coordinator_app.js`), organizers approve/reject tournaments and manage store/sales (`organizer_app.js`), players interact with tournaments and matchmaking (`player_app.js`). Pairings algorithm (Swiss pairing) is implemented in `coordinator_app.js` (`swissPairing`).
+- **Matchmaking & live matches**: `player_app.js` handles match flow; Socket.IO in `app.js` coordinates live matches (join, invite, move updates, clocks). Some matchmaking state may still be in-memory.
+- **Payments & Wallet**: Wallet balances stored in `user_balances` and updated by `/player/add-funds`, subscriptions deducted and stored in `subscriptionstable`, product purchases inserted into `sales`.
+- **Notifications**: Stored in `notifications` collection; player-facing endpoints exist at `/api/notifications` and `/api/notifications/mark-read`.
+
+### Frontend responsibilities
+- **Pages** call backend REST endpoints for the flows:
+  - `Login` -> POST `/api/login`, POST `/api/verify-login-otp`
+  - `Signup` -> POST `/api/signup` and `/api/verify-signup-otp`
+  - `PlayerTournament` -> GET `/player/api/tournaments` (shows tournaments + enrollment)
+  - Store pages -> GET `/organizer/api/store` or `/coordinator/api/store/products` and POST purchase actions
+  - Notifications UI -> GET `/api/notifications`
+- **Redux** slices sync server state for notifications, products, sales, and auth.
+
+---
+
+## 🔗 Detailed API & File Map (key endpoints)
+All backend code is in the root backend unless specified.
+
+### Authentication & sessions
+- POST `/api/signup` (routes/auth.js) — takes signup form, stores signup data in `signup_otps` and sends OTP.
+- POST `/api/verify-signup-otp` — validates OTP and creates a `users` entry; initializes `user_balances` for players.
+- POST `/api/login` (app.js) — validates email/password, generates a login OTP inserted into `otps`, emails OTP.
+- POST `/api/verify-login-otp` — validates and sets session (`req.session.userID`, `userEmail`, `userRole`, username, college, etc.).
+- GET `/api/session` — returns session summary to client.
+
+### Tournaments & Pairing
+- Coordinator:
+  - GET `/coordinator/api/tournaments` — fetch tournaments for coordinator (coordinator_app.js)
+  - POST `/coordinator/api/tournaments` — create a tournament
+  - PUT `/coordinator/api/tournaments/:id` — update tournament
+  - DELETE `/coordinator/api/tournaments/:id` — soft remove tournament
+- Organizer:
+  - GET `/organizer/api/tournaments` — list tournaments (organizer_app.js)
+  - POST `/organizer/api/tournaments/approve` — mark `status: 'Approved'`
+  - POST `/organizer/api/tournaments/reject` — mark `status: 'Rejected'`
+- **Pairings**: `coordiantor_app.js` implements `swissPairing(players, totalRounds)` which sorts by score, avoids repeats, assigns byes, and generates per-round pairings (stored in `tournament_pairings` collection).
+
+### Players & Matchmaking
+- POST `/player/api/request-match` — enqueue and create `tickets` in-memory; if queue pairs, a match is created and `tickets` updated with `matchId`.
+- POST `/player/api/match/request` — targeted request to another user; stored as `pendingRequests` in memory.
+- POST `/player/api/match/accept` — accept request, create a `matchId`, assign colors.
+- GET `/player/api/match/:matchId` — get match info / role
+- POST `/player/api/match/:matchId/move` — submit a move; stored in `matches` map (moves array) and optionally update `state.fen`.
+- Poll-based endpoints for ticket/status: GET `/player/api/match/ticket/:ticketId`.
+
+> Note: matchmaking uses in-memory data structures; if you need persistence or horizontal scaling, migrate to DB-backed or WebSocket-based match hubs.
+
+### Store & Sales
+- GET `/organizer/api/store` — list `products` and aggregated `sales`
+- POST `/coordinator/api/store/addproducts` — add product document to `products` collection
+- Purchases: purchases create a `sales` document and update `user_balances` (wallets) via `/player/add-funds` and purchase endpoints that decrement wallets.
+
+### Meetings & Notifications
+- POST `/organizer/api/meetings` — insert into `meetingsdb`
+- GET `/organizer/api/meetings/organized` — meetings organized by the session user
+- GET `/api/notifications`, POST `/api/notifications/mark-read`
+
+### Contact & Feedback
+- `/contactus` — server-rendered form handler that inserts into `contact` collection.
+- Feedback endpoints exist to request feedback for tournaments and insert `feedbacks` documents.
 
 ---
 
