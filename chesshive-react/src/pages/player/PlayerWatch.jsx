@@ -91,7 +91,7 @@ export default function PlayerWatch() {
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <div className="section-title">TV</div>
+          <div className="section-title"><i className="fas fa-satellite-dish" style={{ marginRight: '0.5rem' }} />Live Chess TV</div>
           <div className="mini-grid">
             <div className="card">
               <div className="tv-card">
@@ -99,7 +99,7 @@ export default function PlayerWatch() {
                   <div className="tv-logo" aria-hidden="true"><img src="https://lichess.org/favicon.ico" alt="" /></div>
                   <div>
                     <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, color: 'var(--sea-green)' }}>Lichess TV</div>
-                    <div className="muted" style={{ marginTop: '0.2rem' }}>Opens in our TV view (embedded study).</div>
+                    <div className="muted" style={{ marginTop: '0.2rem' }}>Live streaming from Lichess - watch top rated games in real-time!</div>
                   </div>
                 </div>
                 <button className="btn" type="button" onClick={() => navigate('/player/tv/lichess')}>
@@ -114,7 +114,7 @@ export default function PlayerWatch() {
                   <div className="tv-logo" aria-hidden="true"><img src="https://www.chess.com/favicon.ico" alt="" /></div>
                   <div>
                     <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 800, color: 'var(--sea-green)' }}>Chess.com TV</div>
-                    <div className="muted" style={{ marginTop: '0.2rem' }}>Opens in our TV view (embedded).</div>
+                    <div className="muted" style={{ marginTop: '0.2rem' }}>View featured games & live streamers from Chess.com</div>
                   </div>
                 </div>
                 <button className="btn" type="button" onClick={() => navigate('/player/tv/chesscom')}>
