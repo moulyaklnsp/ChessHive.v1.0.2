@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { Server } = require('socket.io');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // JWT for player authentication
 // nodemailer is optional. If not installed or SMTP not configured, magic link will be logged to console.
 let nodemailer;
 try { nodemailer = require('nodemailer'); } catch (e) { nodemailer = null; }
@@ -33,6 +34,31 @@ app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3001'], crede
 const server = http.createServer({ maxHeaderSize: 1048576 }, app);
 const io = new Server(server, { cors: { origin: ['http://localhost:3000', 'http://localhost:3001'], methods: ['GET', 'POST'], credentials: true } });
 const PORT = process.env.PORT || 3001;
+
+// JWT Configuration for Player authentication
+const JWT_SECRET = process.env.JWT_SECRET || 'chesshive_jwt_secret_key_change_in_production';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'; // Token expires in 7 days
+
+// Helper function to generate JWT token for players
+function generatePlayerToken(user) {
+  const payload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+    username: user.name,
+    college: user.college
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+// Helper function to verify JWT token
+function verifyPlayerToken(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    return null;
+  }
+}
 
 const mongoSessionUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/chesshive';
 const sessionTtlSeconds = parseInt(process.env.SESSION_TTL_SECONDS || String(14 * 24 * 60 * 60), 10);
@@ -105,8 +131,34 @@ app.set('views', path.join(__dirname, 'views'));
 try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
 
 // Role middleware
-const isAdmin = (req, res, next) => { if (req.session.userRole === 'admin') next(); else res.status(403).send('Unauthorized'); };
-const isOrganizer = (req, res, next) => { if (req.session.userRole === 'organizer') next(); else res.status(403).send('Unauthorized'); };
+const isAdmin = (req, res, next) => { 
+  if (req.session.userRole === 'admin') return next();
+  // Dev convenience: allow header override
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const headerRole = (req.get('x-dev-role') || '').toLowerCase();
+  const headerEmail = req.get('x-dev-email');
+  if (isDev && headerRole === 'admin' && headerEmail) {
+    req.session.userRole = 'admin';
+    req.session.userEmail = headerEmail;
+    req.session.username = req.session.username || headerEmail;
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Unauthorized' });
+};
+const isOrganizer = (req, res, next) => { 
+  if (req.session.userRole === 'organizer') return next();
+  // Dev convenience: allow header override
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const headerRole = (req.get('x-dev-role') || '').toLowerCase();
+  const headerEmail = req.get('x-dev-email');
+  if (isDev && headerRole === 'organizer' && headerEmail) {
+    req.session.userRole = 'organizer';
+    req.session.userEmail = headerEmail;
+    req.session.username = req.session.username || headerEmail;
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Unauthorized' });
+};
 const isCoordinator = (req, res, next) => {
   if (req.session.userRole === 'coordinator') return next();
   // Dev convenience: allow header override to unblock local React without breaking production
@@ -120,10 +172,27 @@ const isCoordinator = (req, res, next) => {
     req.session.username = req.session.username || headerEmail;
     return next();
   }
-  return res.status(403).send('Unauthorized');
+  return res.status(403).json({ success: false, message: 'Unauthorized' });
 };
 const isPlayer = (req, res, next) => {
-  // Dev mode: allow override with headers (helps local React dev)
+  // 1. Check JWT token in Authorization header (Bearer token)
+  const authHeader = req.get('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const decoded = verifyPlayerToken(token);
+    if (decoded && decoded.role === 'player') {
+      // Attach user info to request for downstream use
+      req.jwtUser = decoded;
+      req.session.userRole = 'player';
+      req.session.userEmail = decoded.email;
+      req.session.username = decoded.username;
+      req.session.userID = decoded.userId;
+      req.session.userCollege = decoded.college;
+      return next();
+    }
+  }
+
+  // 2. Dev mode: allow override with headers (helps local React dev)
   const isDev = (process.env.NODE_ENV || 'development') !== 'production';
   const headerRole = (req.get('x-dev-role') || '').toLowerCase();
   const headerEmail = req.get('x-dev-email');
@@ -134,7 +203,10 @@ const isPlayer = (req, res, next) => {
     req.session.username = headerUsername || headerEmail.split('@')[0];
     console.log('DEV: isPlayer bypass enabled for', req.session.userEmail);
   }
-  if (req.session.userRole === 'player') next(); else res.status(403).send('Unauthorized');
+  
+  // 3. Check session-based authentication
+  if (req.session.userRole === 'player') return next();
+  return res.status(403).json({ success: false, message: 'Unauthorized' });
 };
 const isAdminOrOrganizer = (req, res, next) => { if (req.session.userRole === 'admin' || req.session.userRole === 'organizer') next(); else res.status(403).json({ success: false, message: 'Unauthorized' }); };
 
@@ -326,14 +398,28 @@ app.post('/api/verify-login-otp', async (req, res) => {
     req.session.collegeName = user.college;
 
     let redirectUrl = '';
+    let token = null;
+    
     switch (user.role) {
       case 'admin': redirectUrl = '/admin/admin_dashboard'; break;
       case 'organizer': redirectUrl = '/organizer/organizer_dashboard'; break;
       case 'coordinator': redirectUrl = '/coordinator/coordinator_dashboard'; break;
-      case 'player': redirectUrl = '/player/player_dashboard?success-message=Player Login Successful'; break;
+      case 'player': 
+        redirectUrl = '/player/player_dashboard?success-message=Player Login Successful';
+        // Generate JWT token for player
+        token = generatePlayerToken(user);
+        break;
       default: return res.status(400).json({ success: false, message: 'Invalid Role' });
     }
-    res.json({ success: true, redirectUrl });
+    
+    // Include token in response for players
+    const response = { success: true, redirectUrl };
+    if (token) {
+      response.token = token;
+      response.tokenType = 'Bearer';
+      response.expiresIn = JWT_EXPIRES_IN;
+    }
+    res.json(response);
   } catch (err) {
     console.error('OTP verify error:', err);
     res.status(500).json({ success: false, message: 'Unexpected server error' });
@@ -342,9 +428,95 @@ app.post('/api/verify-login-otp', async (req, res) => {
 
 
 
-// Session info
+// Session info (also supports JWT for players)
 app.get('/api/session', (req, res) => {
-  res.json({ userEmail: req.session.userEmail || null, userRole: req.session.userRole || null, username: req.session.username || null });
+  // Check for JWT token first
+  const authHeader = req.get('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const decoded = verifyPlayerToken(token);
+    if (decoded && decoded.role === 'player') {
+      return res.json({ 
+        userEmail: decoded.email, 
+        userRole: decoded.role, 
+        username: decoded.username,
+        college: decoded.college,
+        userId: decoded.userId,
+        authMethod: 'jwt'
+      });
+    }
+  }
+  // Fall back to session
+  res.json({ 
+    userEmail: req.session.userEmail || null, 
+    userRole: req.session.userRole || null, 
+    username: req.session.username || null,
+    authMethod: 'session'
+  });
+});
+
+// JWT Token verification endpoint (for players)
+app.get('/api/player/verify-token', (req, res) => {
+  const authHeader = req.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
+  const token = authHeader.substring(7);
+  const decoded = verifyPlayerToken(token);
+  if (!decoded) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+  if (decoded.role !== 'player') {
+    return res.status(403).json({ success: false, message: 'Token is not for player role' });
+  }
+  res.json({ 
+    success: true, 
+    user: {
+      userId: decoded.userId,
+      email: decoded.email,
+      username: decoded.username,
+      role: decoded.role,
+      college: decoded.college
+    },
+    expiresAt: new Date(decoded.exp * 1000).toISOString()
+  });
+});
+
+// JWT Token refresh endpoint (for players)
+app.post('/api/player/refresh-token', async (req, res) => {
+  const authHeader = req.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
+  const token = authHeader.substring(7);
+  const decoded = verifyPlayerToken(token);
+  if (!decoded) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+  if (decoded.role !== 'player') {
+    return res.status(403).json({ success: false, message: 'Token is not for player role' });
+  }
+  
+  try {
+    // Fetch fresh user data from database
+    const db = await connectDB();
+    const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) });
+    if (!user || user.isDeleted) {
+      return res.status(401).json({ success: false, message: 'User not found or deleted' });
+    }
+    
+    // Generate new token
+    const newToken = generatePlayerToken(user);
+    res.json({ 
+      success: true, 
+      token: newToken,
+      tokenType: 'Bearer',
+      expiresIn: JWT_EXPIRES_IN
+    });
+  } catch (err) {
+    console.error('Token refresh error:', err);
+    res.status(500).json({ success: false, message: 'Failed to refresh token' });
+  }
 });
 
 // Player notifications (root-level aliases for React client)
