@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -66,7 +67,7 @@ function OrganizerDashboard() {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch('/organizer/api/dashboard', { credentials: 'include' });
+      const res = await fetchAsOrganizer('/organizer/api/dashboard');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load dashboard');
       setOrganizerName(data.organizerName || 'Organizer');

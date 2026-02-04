@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
+import { fetchAsCoordinator } from '../../utils/fetchWithRole';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
 
@@ -34,7 +35,7 @@ function CoordinatorProfile() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/coordinator/api/profile', { credentials: 'include' });
+      const res = await fetchAsCoordinator('/coordinator/api/profile');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load profile');
       setProfile({ name: data.name || 'N/A', email: data.email || 'N/A', college: data.college || 'N/A' });
@@ -56,7 +57,7 @@ function CoordinatorProfile() {
     const ok = window.confirm('Are you sure you want to delete your account?');
     if (!ok) return;
     try {
-      const res = await fetch('/coordinator/api/profile', { method: 'DELETE', credentials: 'include' });
+      const res = await fetchAsCoordinator('/coordinator/api/profile', { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         alert('Account deleted successfully. You will be redirected to login page');
@@ -91,10 +92,9 @@ function CoordinatorProfile() {
       const formData = new FormData();
       formData.append('photo', photoFile);
 
-      const res = await fetch('/coordinator/api/upload-photo', {
+      const res = await fetchAsCoordinator('/coordinator/api/upload-photo', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
       });
 
       const data = await res.json();

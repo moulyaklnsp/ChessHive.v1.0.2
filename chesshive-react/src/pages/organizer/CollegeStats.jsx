@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -34,7 +35,7 @@ function CollegeStats() {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch('/organizer/api/college-stats', { credentials: 'include' });
+      const res = await fetchAsOrganizer('/organizer/api/college-stats');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch college stats');
       setStats({

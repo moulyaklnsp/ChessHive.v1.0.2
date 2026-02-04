@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -42,7 +43,7 @@ const StoreMonitoring = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/organizer/api/store', { credentials: 'include' });
+      const res = await fetchAsOrganizer('/organizer/api/store');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setProducts(Array.isArray(data?.products) ? data.products : []);

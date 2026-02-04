@@ -4,6 +4,7 @@ import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
+import { fetchAsCoordinator } from '../../utils/fetchWithRole';
 
 const ROWS_PER_PAGE = 5;
 
@@ -52,7 +53,7 @@ function TournamentManagement() {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch('/coordinator/api/tournaments', { credentials: 'include' });
+      const res = await fetchAsCoordinator('/coordinator/api/tournaments');
       if (!res.ok) throw new Error(`Failed: ${res.status}`);
       const data = await res.json();
       const list = Array.isArray(data?.tournaments) ? data.tournaments : [];
@@ -195,10 +196,9 @@ function TournamentManagement() {
     try {
       const endpoint = editingId ? `/coordinator/api/tournaments/${editingId}` : '/coordinator/api/tournaments';
       const method = editingId ? 'PUT' : 'POST';
-      const res = await fetch(endpoint, {
+      const res = await fetchAsCoordinator(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -231,7 +231,7 @@ function TournamentManagement() {
 
   const onRemove = async (id) => {
     try {
-      const res = await fetch(`/coordinator/api/tournaments/${id}`, { method: 'DELETE', credentials: 'include' });
+      const res = await fetchAsCoordinator(`/coordinator/api/tournaments/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || data.error || 'Failed to remove tournament');
       showMessage('Tournament removed', 'success');
@@ -244,10 +244,9 @@ function TournamentManagement() {
 
   const requestFeedback = async (id) => {
     try {
-      const res = await fetch(`/coordinator/api/tournaments/${id}/request-feedback`, {
+      const res = await fetchAsCoordinator(`/coordinator/api/tournaments/${id}/request-feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({})
       });
       const data = await res.json();

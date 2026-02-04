@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
+import { fetchAsCoordinator } from '../../utils/fetchWithRole';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import { useNavigate } from 'react-router-dom';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
@@ -60,8 +61,8 @@ function CoordinatorDashboard() {
       setError('');
       try {
         const [nameRes, meetRes] = await Promise.all([
-          fetch('/coordinator/api/name', { credentials: 'include' }),
-          fetch('/coordinator/api/meetings/upcoming', { credentials: 'include' }),
+          fetchAsCoordinator('/coordinator/api/name'),
+          fetchAsCoordinator('/coordinator/api/meetings/upcoming'),
         ]);
         const nameData = await nameRes.json();
         const meetingsData = await meetRes.json();

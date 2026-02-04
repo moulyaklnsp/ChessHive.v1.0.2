@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
+import { fetchAsCoordinator } from '../../utils/fetchWithRole';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
 
@@ -37,7 +38,7 @@ function CoordinatorMeetings() {
 
   const fetchOrganized = async () => {
     try {
-      const res = await fetch('/coordinator/api/meetings/organized', { credentials: 'include' });
+      const res = await fetchAsCoordinator('/coordinator/api/meetings/organized');
       const data = await res.json();
       setOrganized(Array.isArray(data) ? data : []);
       setOrgVisible(rowsPerPage);
@@ -49,7 +50,7 @@ function CoordinatorMeetings() {
 
   const fetchUpcoming = async () => {
     try {
-      const res = await fetch('/coordinator/api/meetings/upcoming', { credentials: 'include' });
+      const res = await fetchAsCoordinator('/coordinator/api/meetings/upcoming');
       const data = await res.json();
       setUpcoming(Array.isArray(data) ? data : []);
       setUpcVisible(rowsPerPage);
@@ -104,10 +105,9 @@ function CoordinatorMeetings() {
       return;
     }
     try {
-      const res = await fetch('/coordinator/api/meetings', {
+      const res = await fetchAsCoordinator('/coordinator/api/meetings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(form),
       });
       const data = await res.json();

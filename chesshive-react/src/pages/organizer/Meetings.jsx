@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -41,8 +42,8 @@ function Meetings() {
     try {
       setLoading(true);
       const [orgRes, upRes] = await Promise.all([
-        fetch('/organizer/api/meetings/organized', { credentials: 'include' }),
-        fetch('/organizer/api/meetings/upcoming', { credentials: 'include' })
+        fetchAsOrganizer('/organizer/api/meetings/organized'),
+        fetchAsOrganizer('/organizer/api/meetings/upcoming')
       ]);
       const [orgData, upData] = await Promise.all([orgRes.json(), upRes.json()]);
       setOrganized(Array.isArray(orgData) ? orgData : []);
@@ -97,10 +98,9 @@ function Meetings() {
     }
     const payload = { title: form.title.trim(), date: form.date, time: form.time.trim(), link: form.link.trim() };
     try {
-      const res = await fetch('/organizer/api/meetings', {
+      const res = await fetchAsOrganizer('/organizer/api/meetings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(payload)
       });
       const data = await res.json();

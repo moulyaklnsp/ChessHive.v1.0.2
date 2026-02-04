@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsAdmin } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -32,7 +33,7 @@ const AdminTournamentManagement = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/admin/api/tournaments', { credentials: 'include' });
+      const res = await fetchAsAdmin('/admin/api/tournaments');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setTournaments(Array.isArray(data?.tournaments) ? data.tournaments : []);

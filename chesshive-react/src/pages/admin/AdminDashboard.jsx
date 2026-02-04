@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { fetchAsAdmin } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -65,7 +66,7 @@ const AdminDashboard = () => {
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const res = await fetch('/admin/api/dashboard', { credentials: 'include' });
+      const res = await fetchAsAdmin('/admin/api/dashboard');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setAdminName(data?.adminName || 'Admin');

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsAdmin } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -33,7 +34,7 @@ const AdminCoordinatorManagement = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/admin/api/coordinators', { credentials: 'include' });
+      const res = await fetchAsAdmin('/admin/api/coordinators');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       // Legacy returned array directly; safeguard if API later wraps
@@ -70,7 +71,7 @@ const AdminCoordinatorManagement = () => {
   const handleRemove = async (email) => {
     if (!window.confirm(`Are you sure you want to remove ${email}?`)) return;
     try {
-      const res = await fetch(`/admin/api/coordinators/${encodeURIComponent(email)}`, { method: 'DELETE', credentials: 'include' });
+      const res = await fetchAsAdmin(`/admin/api/coordinators/${encodeURIComponent(email)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed');
       setCoordinators((prev) => prev.map((c) => (c.email === email ? { ...c, isDeleted: true } : c)));
       setNotice('Coordinator removed successfully.');
@@ -84,7 +85,7 @@ const AdminCoordinatorManagement = () => {
   const handleRestore = async (email) => {
     if (!window.confirm(`Are you sure you want to restore ${email}?`)) return;
     try {
-      const res = await fetch(`/admin/api/coordinators/restore/${encodeURIComponent(email)}`, { method: 'PATCH', credentials: 'include' });
+      const res = await fetchAsAdmin(`/admin/api/coordinators/restore/${encodeURIComponent(email)}`, { method: 'PATCH' });
       if (!res.ok) throw new Error('Failed');
       setCoordinators((prev) => prev.map((c) => (c.email === email ? { ...c, isDeleted: false } : c)));
       setNotice('Coordinator restored successfully.');

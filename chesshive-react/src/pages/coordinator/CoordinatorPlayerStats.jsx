@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
+import { fetchAsCoordinator } from '../../utils/fetchWithRole';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
 
@@ -31,7 +32,7 @@ function CoordinatorPlayerStats() {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch('/coordinator/api/player-stats', { credentials: 'include' });
+        const res = await fetchAsCoordinator('/coordinator/api/player-stats');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to fetch player stats');
         setPlayers(Array.isArray(data.players) ? data.players : []);
