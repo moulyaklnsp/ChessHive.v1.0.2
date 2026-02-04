@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsAdmin } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -33,7 +34,7 @@ const AdminOrganizerManagement = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/admin/api/organizers', { credentials: 'include' });
+      const res = await fetchAsAdmin('/admin/api/organizers');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setOrganizers(Array.isArray(data) ? data : (Array.isArray(data?.organizers) ? data.organizers : []));
@@ -69,7 +70,7 @@ const AdminOrganizerManagement = () => {
   const handleRemove = async (email) => {
     if (!window.confirm(`Are you sure you want to remove organizer: ${email}?`)) return;
     try {
-      const res = await fetch(`/admin/api/organizers/${encodeURIComponent(email)}`, { method: 'DELETE', credentials: 'include' });
+      const res = await fetchAsAdmin(`/admin/api/organizers/${encodeURIComponent(email)}`, { method: 'DELETE' });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || 'Failed to remove organizer.');
       setOrganizers((prev) => prev.map((o) => (o.email === email ? { ...o, isDeleted: true } : o)));
@@ -84,7 +85,7 @@ const AdminOrganizerManagement = () => {
   const handleRestore = async (email) => {
     if (!window.confirm(`Are you sure you want to restore organizer: ${email}?`)) return;
     try {
-      const res = await fetch(`/admin/api/organizers/restore/${encodeURIComponent(email)}`, { method: 'PATCH', credentials: 'include' });
+      const res = await fetchAsAdmin(`/admin/api/organizers/restore/${encodeURIComponent(email)}`, { method: 'PATCH' });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body?.error || 'Failed to restore organizer.');
       setOrganizers((prev) => prev.map((o) => (o.email === email ? { ...o, isDeleted: false } : o)));

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -61,9 +62,8 @@ const OrganizerProfile = () => {
     formData.append('photo', photoFile);
 
     try {
-      const res = await fetch('/organizer/api/upload-photo', {
+      const res = await fetchAsOrganizer('/organizer/api/upload-photo', {
         method: 'POST',
-        credentials: 'include',
         body: formData,
       });
 
@@ -89,9 +89,7 @@ const OrganizerProfile = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/organizer/api/profile', {
-          credentials: 'include',
-        });
+        const res = await fetchAsOrganizer('/organizer/api/profile');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!cancelled) {
@@ -128,10 +126,9 @@ const OrganizerProfile = () => {
       return;
     }
     try {
-      const res = await fetch(`/organizer/api/organizers/${encodeURIComponent(profile.email)}`, {
+      const res = await fetchAsOrganizer(`/organizer/api/organizers/${encodeURIComponent(profile.email)}`, {
         method: 'DELETE',
         headers: { Accept: 'application/json' },
-        credentials: 'include',
       });
       let data = {};
       try { data = await res.json(); } catch (_) {}

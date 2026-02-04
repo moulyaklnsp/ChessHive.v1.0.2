@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -47,7 +48,7 @@ const OrganizerTournament = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/organizer/api/tournaments', { credentials: 'include' });
+      const res = await fetchAsOrganizer('/organizer/api/tournaments');
       if (!res.ok) {
         if (res.status === 403) {
           setError('Unauthorized. Please login as an organizer.');
@@ -120,10 +121,9 @@ const OrganizerTournament = () => {
 
   const updateTournament = async (id, action) => {
     try {
-      const res = await fetch(`/organizer/api/tournaments/${action}`, {
+      const res = await fetchAsOrganizer(`/organizer/api/tournaments/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ tournamentId: id }),
       });
       const data = await res.json();

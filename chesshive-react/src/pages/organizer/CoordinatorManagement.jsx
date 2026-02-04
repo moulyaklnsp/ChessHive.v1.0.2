@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsOrganizer } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -34,7 +35,7 @@ function CoordinatorManagement() {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch('/organizer/api/coordinators', { credentials: 'include' });
+      const res = await fetchAsOrganizer('/organizer/api/coordinators');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch coordinators');
       const list = Array.isArray(data) ? data : [];
@@ -66,9 +67,8 @@ function CoordinatorManagement() {
   const onRemove = async (email) => {
     if (!window.confirm(`Are you sure you want to remove ${email}?`)) return;
     try {
-      const res = await fetch(`/organizer/api/coordinators/${encodeURIComponent(email)}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const res = await fetchAsOrganizer(`/organizer/api/coordinators/${encodeURIComponent(email)}`, {
+        method: 'DELETE'
       });
       if (!res.ok) throw new Error('Failed to remove coordinator');
       // update locally
@@ -83,9 +83,8 @@ function CoordinatorManagement() {
   const onRestore = async (email) => {
     if (!window.confirm(`Are you sure you want to restore ${email}?`)) return;
     try {
-      const res = await fetch(`/organizer/api/coordinators/restore/${encodeURIComponent(email)}`, {
-        method: 'PATCH',
-        credentials: 'include'
+      const res = await fetchAsOrganizer(`/organizer/api/coordinators/restore/${encodeURIComponent(email)}`, {
+        method: 'PATCH'
       });
       if (!res.ok) throw new Error('Failed to restore coordinator');
       setCoordinators((prev) => prev.map((c) => (c.email === email ? { ...c, isDeleted: false } : c)));

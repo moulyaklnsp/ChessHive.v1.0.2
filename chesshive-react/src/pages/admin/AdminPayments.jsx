@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchAsAdmin } from '../../utils/fetchWithRole';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
@@ -22,7 +23,7 @@ const AdminPayments = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/admin/api/payments', { credentials: 'include', cache: 'no-cache' });
+      const res = await fetchAsAdmin('/admin/api/payments', { cache: 'no-cache' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setPlayers(Array.isArray(data?.players) ? data.players : []);

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/playerNeoNoir.css';
 import { motion } from 'framer-motion';
+import { fetchAsCoordinator } from '../../utils/fetchWithRole';
 import usePlayerTheme from '../../hooks/usePlayerTheme';
 import AnimatedSidebar from '../../components/AnimatedSidebar';
 
@@ -67,7 +68,7 @@ export default function CoordinatorStreamingControl() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/coordinator/api/streams', { credentials: 'include' });
+      const res = await fetchAsCoordinator('/coordinator/api/streams');
       if (!res.ok) {
         if (res.status === 401) {
           navigate('/login');
@@ -134,9 +135,8 @@ export default function CoordinatorStreamingControl() {
     };
 
     try {
-      const res = await fetch('/coordinator/api/streams', {
+      const res = await fetchAsCoordinator('/coordinator/api/streams', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
@@ -152,9 +152,8 @@ export default function CoordinatorStreamingControl() {
 
   const patchStream = async (id, patch) => {
     try {
-      const res = await fetch(`/coordinator/api/streams/${id}`, {
+      const res = await fetchAsCoordinator(`/coordinator/api/streams/${id}`, {
         method: 'PATCH',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       });
@@ -169,9 +168,8 @@ export default function CoordinatorStreamingControl() {
   const deleteStream = async (id) => {
     if (!window.confirm('Delete this stream?')) return;
     try {
-      const res = await fetch(`/coordinator/api/streams/${id}`, {
+      const res = await fetchAsCoordinator(`/coordinator/api/streams/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
