@@ -75,8 +75,34 @@ app.set('views', path.join(__dirname, 'views'));
 try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
 
 // Role middleware
-const isAdmin = (req, res, next) => { if (req.session.userRole === 'admin') next(); else res.status(403).send('Unauthorized'); };
-const isOrganizer = (req, res, next) => { if (req.session.userRole === 'organizer') next(); else res.status(403).send('Unauthorized'); };
+const isAdmin = (req, res, next) => { 
+  if (req.session.userRole === 'admin') return next();
+  // Dev convenience: allow header override
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const headerRole = (req.get('x-dev-role') || '').toLowerCase();
+  const headerEmail = req.get('x-dev-email');
+  if (isDev && headerRole === 'admin' && headerEmail) {
+    req.session.userRole = 'admin';
+    req.session.userEmail = headerEmail;
+    req.session.username = req.session.username || headerEmail;
+    return next();
+  }
+  return res.status(403).send('Unauthorized');
+};
+const isOrganizer = (req, res, next) => { 
+  if (req.session.userRole === 'organizer') return next();
+  // Dev convenience: allow header override
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const headerRole = (req.get('x-dev-role') || '').toLowerCase();
+  const headerEmail = req.get('x-dev-email');
+  if (isDev && headerRole === 'organizer' && headerEmail) {
+    req.session.userRole = 'organizer';
+    req.session.userEmail = headerEmail;
+    req.session.username = req.session.username || headerEmail;
+    return next();
+  }
+  return res.status(403).send('Unauthorized');
+};
 const isCoordinator = (req, res, next) => {
   if (req.session.userRole === 'coordinator') return next();
   // Dev convenience: allow header override to unblock local React without breaking production

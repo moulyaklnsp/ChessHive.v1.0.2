@@ -27,7 +27,21 @@ export const verifyLoginOtp = createAsyncThunk('auth/verifyLoginOtp', async ({ e
 		});
 		const data = await res.json().catch(() => ({}));
 		if (!res.ok) return thunkAPI.rejectWithValue(data);
-		return data; // { success: true, redirectUrl }
+		
+		// Store user info in BOTH sessionStorage (per-tab) AND localStorage (persistent backup)
+		// sessionStorage: Allows different users per tab
+		// localStorage: Remembers last login when tab is reopened
+		if (data.user) {
+			sessionStorage.setItem('chesshive_user', JSON.stringify(data.user));
+			localStorage.setItem('chesshive_user_backup', JSON.stringify(data.user));
+		}
+		// Store JWT token for players (both storages)
+		if (data.token) {
+			sessionStorage.setItem('chesshive_token', data.token);
+			localStorage.setItem('chesshive_token_backup', data.token);
+		}
+		
+		return data; // { success: true, redirectUrl, user, token? }
 	} catch (err) {
 		return thunkAPI.rejectWithValue({ message: err.message || 'Network error' });
 	}
@@ -96,6 +110,15 @@ const authSlice = createSlice({
 		},
 		logout(state) {
 			state.user = null;
+			// Clear all stored auth data on logout
+			try {
+				sessionStorage.removeItem('chesshive_user');
+				sessionStorage.removeItem('chesshive_token');
+				localStorage.removeItem('chesshive_user_backup');
+				localStorage.removeItem('chesshive_token_backup');
+			} catch (e) {
+				console.warn('Failed to clear auth storage:', e);
+			}
 		},
 		clearError(state) {
 			state.error = null;

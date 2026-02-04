@@ -412,8 +412,17 @@ app.post('/api/verify-login-otp', async (req, res) => {
       default: return res.status(400).json({ success: false, message: 'Invalid Role' });
     }
     
-    // Include token in response for players
-    const response = { success: true, redirectUrl };
+    // Include user info and token in response for frontend to store
+    const response = { 
+      success: true, 
+      redirectUrl,
+      user: {
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        college: user.college
+      }
+    };
     if (token) {
       response.token = token;
       response.tokenType = 'Bearer';
