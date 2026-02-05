@@ -12,6 +12,8 @@ function useQuery() {
 function PlayerRankings() {
   const query = useQuery();
   const tournamentId = query.get('tournament_id');
+  const tournamentType = query.get('type') || 'individual'; // 'individual' or 'team'
+  const isTeamTournament = tournamentType === 'team';
 
   const [isDark, toggleTheme] = usePlayerTheme();
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,10 @@ function PlayerRankings() {
     }
     const run = async () => {
       try {
-        const res = await fetch(`/player/api/rankings?tournament_id=${encodeURIComponent(tournamentId)}`, {
+        const endpoint = isTeamTournament
+          ? `/player/api/team-rankings?tournament_id=${encodeURIComponent(tournamentId)}`
+          : `/player/api/rankings?tournament_id=${encodeURIComponent(tournamentId)}`;
+        const res = await fetch(endpoint, {
           credentials: 'include',
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -39,7 +44,7 @@ function PlayerRankings() {
       }
     };
     run();
-  }, [tournamentId]);
+  }, [tournamentId, isTeamTournament]);
 
   const styles = {
     root: { fontFamily: 'Playfair Display, serif', backgroundColor: 'var(--page-bg)', minHeight: '100vh', padding: '2rem', color: 'var(--text-color)' },
@@ -60,7 +65,7 @@ function PlayerRankings() {
     <div style={styles.root}>
       <div style={styles.container}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={styles.h2}><span role="img" aria-label="trophy">🏆</span> Final Rankings</h2>
+          <h2 style={styles.h2}><span role="img" aria-label="trophy">🏆</span> {isTeamTournament ? 'Team Rankings' : 'Final Rankings'}</h2>
           <div>
             <button onClick={toggleTheme} style={{ background: 'transparent', border: '2px solid var(--sea-green)', color: 'var(--sea-green)', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Cinzel, serif', fontWeight: 'bold' }}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
           </div>
@@ -71,21 +76,22 @@ function PlayerRankings() {
             <thead>
               <tr>
                 <th style={styles.th}>Rank</th>
-                <th style={styles.th}>Player Name</th>
+                <th style={styles.th}>{isTeamTournament ? 'Team Name' : 'Player Name'}</th>
+                {isTeamTournament && <th style={styles.th}>Team Members</th>}
                 <th style={styles.th}>Score</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td style={styles.td} colSpan={3}>Loading rankings...</td></tr>
+                <tr><td style={styles.td} colSpan={isTeamTournament ? 4 : 3}>Loading rankings...</td></tr>
               )}
               {!!error && !loading && (
-                <tr><td style={styles.td} colSpan={3}>{error}</td></tr>
+                <tr><td style={styles.td} colSpan={isTeamTournament ? 4 : 3}>{error}</td></tr>
               )}
               {!loading && !error && rankings.length === 0 && (
-                <tr><td style={styles.td} colSpan={3}>No rankings available.</td></tr>
+                <tr><td style={styles.td} colSpan={isTeamTournament ? 4 : 3}>{isTeamTournament ? 'No approved teams available for rankings.' : 'No rankings available.'}</td></tr>
               )}
-              {!loading && !error && rankings.map((p, idx) => {
+              {!loading && !error && rankings.map((item, idx) => {
                 const rankNum = idx + 1;
                 const rowStyle = {
                   ...(rankNum === 1 ? { backgroundColor: 'rgba(255,215,0,0.1)' } : {}),
@@ -93,14 +99,15 @@ function PlayerRankings() {
                   ...(rankNum === 3 ? { backgroundColor: 'rgba(205,127,50,0.1)' } : {}),
                 };
                 return (
-                  <tr key={p.playerName + '-' + idx} style={rowStyle}>
+                  <tr key={(isTeamTournament ? item.teamName : item.playerName) + '-' + idx} style={rowStyle}>
                     <td style={styles.td}>
                       <span style={{ ...styles.rank, ...(rankNum <= 3 ? styles.top3 : {}) }}>
                         {rankNum} {rankNum <= 3 ? <i className="fas fa-medal" aria-hidden="true" style={{ fontSize: '1.2rem' }}></i> : null}
                       </span>
                     </td>
-                    <td style={styles.td}>{p.playerName}</td>
-                    <td style={{ ...styles.td, ...styles.score }}>{p.score}</td>
+                    <td style={styles.td}>{isTeamTournament ? item.teamName : item.playerName}</td>
+                    {isTeamTournament && <td style={{ ...styles.td, fontSize: '0.9rem', opacity: 0.85 }}>{item.players?.join(', ')}</td>}
+                    <td style={{ ...styles.td, ...styles.score }}>{item.score}</td>
                   </tr>
                 );
               })}

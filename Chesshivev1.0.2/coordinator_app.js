@@ -20,6 +20,84 @@ class Player {
   }
 }
 
+// Team class for team tournament pairings
+class Team {
+  constructor(id, teamName, captainName, player1, player2, player3) {
+    this.id = id;
+    this.teamName = teamName;
+    this.captainName = captainName;
+    this.player1 = player1;
+    this.player2 = player2;
+    this.player3 = player3;
+    this.score = 0;
+    this.opponents = new Set();
+  }
+}
+
+// Swiss pairing for teams (same algorithm, treats teams as units)
+function swissTeamPairing(teams, totalRounds) {
+  let allRounds = [];
+  for (let round = 1; round <= totalRounds; round++) {
+    console.log(`Team Round ${round}: Starting with ${teams.length} teams`);
+    teams.sort((a, b) => b.score - a.score);
+    let pairings = [];
+    let byeTeam = null;
+    let paired = new Set();
+    if (teams.length % 2 !== 0) {
+      byeTeam = teams.pop();
+      byeTeam.score += 1;
+      console.log(`Team Round ${round}: Bye team is ${byeTeam.teamName}`);
+    }
+    console.log(`Team Round ${round}: Teams to pair: ${teams.map(t => t.teamName).join(", ")}`);
+    for (let i = 0; i < teams.length; i++) {
+      if (paired.has(teams[i].id)) continue;
+      let team1 = teams[i];
+      let team2 = null;
+      for (let j = i + 1; j < teams.length; j++) {
+        if (!paired.has(teams[j].id) && !team1.opponents.has(teams[j].id)) {
+          team2 = teams[j];
+          break;
+        }
+      }
+      if (!team2) {
+        for (let j = i + 1; j < teams.length; j++) {
+          if (!paired.has(teams[j].id)) {
+            team2 = teams[j];
+            break;
+          }
+        }
+      }
+      if (team2) {
+        paired.add(team1.id);
+        paired.add(team2.id);
+        team1.opponents.add(team2.id);
+        team2.opponents.add(team1.id);
+        let result = Math.random();
+        let matchResult;
+        if (result < 0.4) {
+          team1.score += 1;
+          matchResult = `${team1.teamName} Wins`;
+        } else if (result < 0.8) {
+          team2.score += 1;
+          matchResult = `${team2.teamName} Wins`;
+        } else {
+          team1.score += 0.5;
+          team2.score += 0.5;
+          matchResult = "Draw";
+        }
+        pairings.push({ team1, team2, result: matchResult });
+        console.log(`Team Round ${round}: Paired ${team1.teamName} vs ${team2.teamName} - ${matchResult}`);
+      } else {
+        console.log(`Team Round ${round}: Could not find a match for ${team1.teamName}`);
+      }
+    }
+    if (byeTeam) teams.push(byeTeam);
+    allRounds.push({ round, pairings, byeTeam });
+    console.log(`Team Round ${round}: Pairings created: ${pairings.length}`);
+  }
+  return allRounds;
+}
+
 function swissPairing(players, totalRounds) {
   let allRounds = [];
   for (let round = 1; round <= totalRounds; round++) {
@@ -963,6 +1041,255 @@ router.get('/api/rankings', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch rankings' });
   }
 });
+
+// Team Pairings API - for team tournaments
+router.get('/api/team-pairings', async (req, res) => {
+  const tournamentId = req.query.tournament_id;
+  const totalRounds = parseInt(req.query.rounds) || 5;
+  if (!tournamentId) {
+    return res.status(400).json({ error: 'Tournament ID is required' });
+  }
+
+  try {
+    const db = await connectDB();
+    const tid = new ObjectId(tournamentId);
+    
+    // Check tournament exists and is a team tournament
+    const tournament = await db.collection('tournaments').findOne({ _id: tid });
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+    
+    const tournamentType = (tournament.type || '').toLowerCase();
+    if (!['team', 'group'].includes(tournamentType)) {
+      return res.status(400).json({ error: 'This is not a team tournament' });
+    }
+    
+    // Get ONLY fully approved teams (all 3 members approved)
+    const approvedTeams = await db.collection('enrolledtournaments_team').find({
+      tournament_id: tid,
+      approved: 1
+    }).toArray();
+    
+    if (approvedTeams.length === 0) {
+      return res.json({ roundNumber: 1, allRounds: [], message: 'No approved teams enrolled' });
+    }
+
+    let storedPairings = await db.collection('tournament_team_pairings').findOne({ tournament_id: tid });
+    let allRounds;
+
+    // Regenerate pairings if no stored data or team count mismatch
+    const expectedTeamCount = storedPairings?.rounds?.[0]?.pairings?.length * 2 + (storedPairings?.rounds?.[0]?.byeTeam ? 1 : 0);
+    if (!storedPairings || storedPairings.totalRounds !== totalRounds || approvedTeams.length !== expectedTeamCount) {
+      console.log(`Regenerating team pairings for ${approvedTeams.length} teams`);
+      
+      // Create Team objects from approved enrollments
+      let teams = approvedTeams.map(enrollment => new Team(
+        enrollment._id,
+        `Team ${enrollment.captain_name}`, // Team name = "Team CaptainName"
+        enrollment.captain_name,
+        enrollment.player1_name,
+        enrollment.player2_name,
+        enrollment.player3_name
+      ));
+      
+      allRounds = swissTeamPairing(teams, totalRounds);
+
+      await db.collection('tournament_team_pairings').deleteOne({ tournament_id: tid }); // Remove old pairings
+      await db.collection('tournament_team_pairings').insertOne({
+        tournament_id: tid,
+        totalRounds: totalRounds,
+        rounds: allRounds.map(round => ({
+          round: round.round,
+          pairings: round.pairings.map(pairing => ({
+            team1: {
+              id: pairing.team1.id,
+              teamName: pairing.team1.teamName,
+              captainName: pairing.team1.captainName,
+              player1: pairing.team1.player1,
+              player2: pairing.team1.player2,
+              player3: pairing.team1.player3,
+              score: pairing.team1.score
+            },
+            team2: {
+              id: pairing.team2.id,
+              teamName: pairing.team2.teamName,
+              captainName: pairing.team2.captainName,
+              player1: pairing.team2.player1,
+              player2: pairing.team2.player2,
+              player3: pairing.team2.player3,
+              score: pairing.team2.score
+            },
+            result: pairing.result
+          })),
+          byeTeam: round.byeTeam ? {
+            id: round.byeTeam.id,
+            teamName: round.byeTeam.teamName,
+            captainName: round.byeTeam.captainName,
+            player1: round.byeTeam.player1,
+            player2: round.byeTeam.player2,
+            player3: round.byeTeam.player3,
+            score: round.byeTeam.score
+          } : null
+        }))
+      });
+    } else {
+      console.log('Using existing stored team pairings');
+      allRounds = storedPairings.rounds.map(round => {
+        const pairings = round.pairings.map(pairing => {
+          const team1 = new Team(pairing.team1.id, pairing.team1.teamName, pairing.team1.captainName, pairing.team1.player1, pairing.team1.player2, pairing.team1.player3);
+          team1.score = pairing.team1.score;
+          const team2 = new Team(pairing.team2.id, pairing.team2.teamName, pairing.team2.captainName, pairing.team2.player1, pairing.team2.player2, pairing.team2.player3);
+          team2.score = pairing.team2.score;
+          return { team1, team2, result: pairing.result };
+        });
+        const byeTeam = round.byeTeam ? new Team(round.byeTeam.id, round.byeTeam.teamName, round.byeTeam.captainName, round.byeTeam.player1, round.byeTeam.player2, round.byeTeam.player3) : null;
+        if (byeTeam) byeTeam.score = round.byeTeam.score;
+        return { round: round.round, pairings, byeTeam };
+      });
+    }
+
+    res.json({ roundNumber: totalRounds, allRounds, isTeamTournament: true });
+  } catch (error) {
+    console.error('Error fetching team pairings:', error);
+    res.status(500).json({ error: 'Failed to fetch team pairings' });
+  }
+});
+
+// Team Rankings API - for team tournaments
+router.get('/api/team-rankings', async (req, res) => {
+  try {
+    const tournamentId = req.query.tournament_id;
+    if (!tournamentId) {
+      return res.status(400).json({ error: 'Tournament ID is required' });
+    }
+    const db = await connectDB();
+    const tid = new ObjectId(tournamentId);
+    
+    // Check tournament exists and is a team tournament
+    const tournament = await db.collection('tournaments').findOne({ _id: tid });
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+    
+    const tournamentType = (tournament.type || '').toLowerCase();
+    if (!['team', 'group'].includes(tournamentType)) {
+      return res.status(400).json({ error: 'This is not a team tournament' });
+    }
+    
+    // Get approved teams
+    const approvedTeams = await db.collection('enrolledtournaments_team').find({
+      tournament_id: tid,
+      approved: 1
+    }).toArray();
+    
+    if (approvedTeams.length === 0) {
+      return res.json({ rankings: [], tournamentId, isTeamTournament: true });
+    }
+    
+    let storedPairings = await db.collection('tournament_team_pairings').findOne({ tournament_id: tid });
+    let rankings = [];
+    
+    if (!storedPairings) {
+      const totalRounds = 5;
+      let teams = approvedTeams.map(enrollment => new Team(
+        enrollment._id,
+        `Team ${enrollment.captain_name}`,
+        enrollment.captain_name,
+        enrollment.player1_name,
+        enrollment.player2_name,
+        enrollment.player3_name
+      ));
+      
+      const allRounds = swissTeamPairing(teams, totalRounds);
+      await db.collection('tournament_team_pairings').insertOne({
+        tournament_id: tid,
+        totalRounds: totalRounds,
+        rounds: allRounds.map(round => ({
+          round: round.round,
+          pairings: round.pairings.map(pairing => ({
+            team1: {
+              id: pairing.team1.id,
+              teamName: pairing.team1.teamName,
+              captainName: pairing.team1.captainName,
+              player1: pairing.team1.player1,
+              player2: pairing.team1.player2,
+              player3: pairing.team1.player3,
+              score: pairing.team1.score
+            },
+            team2: {
+              id: pairing.team2.id,
+              teamName: pairing.team2.teamName,
+              captainName: pairing.team2.captainName,
+              player1: pairing.team2.player1,
+              player2: pairing.team2.player2,
+              player3: pairing.team2.player3,
+              score: pairing.team2.score
+            },
+            result: pairing.result
+          })),
+          byeTeam: round.byeTeam ? {
+            id: round.byeTeam.id,
+            teamName: round.byeTeam.teamName,
+            captainName: round.byeTeam.captainName,
+            player1: round.byeTeam.player1,
+            player2: round.byeTeam.player2,
+            player3: round.byeTeam.player3,
+            score: round.byeTeam.score
+          } : null
+        }))
+      });
+      
+      rankings = teams.sort((a, b) => b.score - a.score).map((t, index) => ({
+        rank: index + 1,
+        teamName: t.teamName,
+        captainName: t.captainName,
+        players: [t.player1, t.player2, t.player3],
+        score: t.score
+      }));
+    } else {
+      let teamsMap = new Map();
+      approvedTeams.forEach(enrollment => {
+        teamsMap.set(enrollment._id.toString(), {
+          id: enrollment._id.toString(),
+          teamName: `Team ${enrollment.captain_name}`,
+          captainName: enrollment.captain_name,
+          players: [enrollment.player1_name, enrollment.player2_name, enrollment.player3_name],
+          score: 0
+        });
+      });
+      
+      storedPairings.rounds.forEach(round => {
+        round.pairings.forEach(pairing => {
+          const team1 = teamsMap.get(pairing.team1.id.toString());
+          const team2 = teamsMap.get(pairing.team2.id.toString());
+          if (team1) team1.score = pairing.team1.score;
+          if (team2) team2.score = pairing.team2.score;
+        });
+        if (round.byeTeam) {
+          const byeTeam = teamsMap.get(round.byeTeam.id.toString());
+          if (byeTeam) byeTeam.score = round.byeTeam.score;
+        }
+      });
+      
+      rankings = Array.from(teamsMap.values())
+        .sort((a, b) => b.score - a.score)
+        .map((t, index) => ({
+          rank: index + 1,
+          teamName: t.teamName,
+          captainName: t.captainName,
+          players: t.players,
+          score: t.score
+        }));
+    }
+    
+    res.json({ rankings, tournamentId, isTeamTournament: true });
+  } catch (error) {
+    console.error('Error fetching team rankings:', error);
+    res.status(500).json({ error: 'Failed to fetch team rankings' });
+  }
+});
+
 router.post('/api/tournaments/:id/request-feedback', async (req, res) => {
   console.log('Route hit: /api/tournaments/:id/request-feedback', 'ID:', req.params.id, 'Session:', req.session);
   try {
