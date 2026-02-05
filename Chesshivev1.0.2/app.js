@@ -19,6 +19,9 @@ const playerRouter = require('./player_app');
 
 const utils = require('./utils');
 const { ObjectId } = require('mongodb');
+const bcrypt = require('bcryptjs');
+
+const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
 
 const app = express();
 const cors = require('cors');
@@ -149,8 +152,13 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body || {};
   try {
     const db = await connectDB();
-    const user = await db.collection('users').findOne({ email, password });
+    const user = await db.collection('users').findOne({ email });
     if (!user) return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    if (!isBcryptHash(user.password)) {
+      return res.status(400).json({ success: false, message: 'Password not migrated. Please contact support.' });
+    }
+    const passwordOk = await bcrypt.compare(password, user.password);
+    if (!passwordOk) return res.status(400).json({ success: false, message: 'Invalid credentials' });
     if (user.isDeleted) {
       return res.status(403).json({
         success: false,
@@ -252,8 +260,15 @@ app.post('/api/restore-account', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid user id' });
     }
     const db = await connectDB();
-    const user = await db.collection('users').findOne({ _id: new ObjectId(id), email, password });
+    const user = await db.collection('users').findOne({ _id: new ObjectId(id), email });
     if (!user) {
+      return res.status(400).json({ success: false, message: 'User not found or invalid credentials' });
+    }
+    if (!isBcryptHash(user.password)) {
+      return res.status(400).json({ success: false, message: 'Password not migrated. Please contact support.' });
+    }
+    const passwordOk = await bcrypt.compare(password, user.password);
+    if (!passwordOk) {
       return res.status(400).json({ success: false, message: 'User not found or invalid credentials' });
     }
     if (!user.isDeleted) {
