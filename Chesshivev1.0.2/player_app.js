@@ -1459,6 +1459,41 @@ router.post('/api/mark-notification-read', async (req, res) => {
     res.status(500).json({ error: 'Failed to mark as read' });
   }
 });
+
+// API: Fetch live streams created by coordinators (for PlayerWatch)
+router.get('/api/streams', async (req, res) => {
+  if (!req.session.userEmail) return res.status(401).json({ error: 'Please log in' });
+
+  try {
+    const db = await connectDB();
+    // Fetch all live or featured streams (visible to players)
+    const streams = await db.collection('streams')
+      .find({ $or: [{ isLive: true }, { featured: true }] })
+      .sort({ featured: -1, updatedAt: -1, createdAt: -1 })
+      .toArray();
+
+    const out = (streams || []).map(s => ({
+      _id: s._id ? s._id.toString() : undefined,
+      title: s.title,
+      url: s.url,
+      platform: s.platform,
+      matchLabel: s.matchLabel,
+      description: s.description,
+      result: s.result,
+      isLive: s.isLive,
+      featured: s.featured,
+      createdByName: s.createdByName,
+      updatedAt: s.updatedAt,
+      createdAt: s.createdAt,
+    }));
+
+    return res.json(out);
+  } catch (error) {
+    console.error('Error fetching streams for player:', error);
+    return res.status(500).json({ error: 'Failed to fetch streams' });
+  }
+});
+
 // Single route for rendering HTML pages
 router.get('/:subpage?', (req, res) => {
   const subpage = req.params.subpage || 'player_dashboard';
