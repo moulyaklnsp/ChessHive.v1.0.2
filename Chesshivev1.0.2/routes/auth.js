@@ -4,6 +4,10 @@ const { connectDB } = require('./databasecongi');
 const { ObjectId } = require('mongodb');
 const { swissPairing, Player } = require('../player_app');
 const { uploadImageBuffer } = require('../utils/cloudinary');
+const bcrypt = require('bcryptjs');
+
+const BCRYPT_ROUNDS = 12;
+const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
 
 let multer;
 try { multer = require('multer'); } catch (e) { multer = null; }
@@ -42,6 +46,7 @@ router.post('/api/signup', async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already registered' });
     }
 
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     // Store signup data temporarily
     const signupData = {
       name,
@@ -50,7 +55,7 @@ router.post('/api/signup', async (req, res) => {
       college,
       email,
       phone,
-      password,
+      password: hashedPassword,
       role,
       aicf_id: aicf_id || '',
       fide_id: fide_id || ''
@@ -134,8 +139,13 @@ router.post('/api/verify-signup-otp', async (req, res) => {
     if (!signupRecord) return res.status(400).json({ success: false, message: 'Signup data not found' });
 
     // Create user
+    const storedPassword = signupRecord?.data?.password || '';
+    const passwordToStore = isBcryptHash(storedPassword)
+      ? storedPassword
+      : await bcrypt.hash(storedPassword, BCRYPT_ROUNDS);
     const user = {
       ...signupRecord.data,
+      password: passwordToStore,
       isDeleted: 0,
       AICF_ID: signupRecord.data.aicf_id || '',
       FIDE_ID: signupRecord.data.fide_id || ''
@@ -207,6 +217,7 @@ router.post('/signup', async (req, res) => {
     return res.render('signup', { errors, name, dob, gender, college, email, phone, role });
   }
 
+  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const user = {
     name,
     dob: new Date(dob),
@@ -214,7 +225,7 @@ router.post('/signup', async (req, res) => {
     college,
     email,
     phone,
-    password,
+    password: hashedPassword,
     role,
     isDeleted: 0,
     AICF_ID: aicf_id || '',
@@ -900,6 +911,249 @@ router.post('/admin_meetings/schedule', async (req, res) => {
   const meetings = await db.collection('meetingsdb').find().toArray();
   console.log('Current Meetings in DB:', meetings);
   res.redirect('/admin/admin_meetings');
+});
+
+// ===================== FORGOT PASSWORD ENDPOINTS =====================
+
+// Step 1: Request password reset - sends OTP to email
+router.post('/api/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'Valid email is required' });
+  }
+
+  try {
+    const db = await connectDB();
+    
+    // Check if user exists
+    const user = await db.collection('users').findOne({ email: email.toLowerCase(), isDeleted: { $ne: 1 } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address' });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    // Remove any existing OTPs for this email and type
+    await db.collection('otps').deleteMany({ email: email.toLowerCase(), type: 'forgot-password' });
+
+    // Store OTP in database
+    await db.collection('otps').insertOne({
+      email: email.toLowerCase(),
+      otp,
+      type: 'forgot-password',
+      expires_at: expiresAt,
+      used: false,
+      created_at: new Date()
+    });
+
+    // Send OTP via email
+    const nodemailer = require('nodemailer');
+    console.log(`Generated Forgot Password OTP for ${email}: ${otp}`);
+
+    async function sendForgotPasswordOtp(to, otp) {
+      if (!nodemailer) {
+        console.log(`nodemailer not installed. OTP for ${to}: ${otp}`);
+        return;
+      }
+
+      if (!process.env.SMTP_HOST) {
+        try {
+          const testAccount = await nodemailer.createTestAccount();
+          const transporter = nodemailer.createTransport({
+            host: testAccount.smtp.host,
+            port: testAccount.smtp.port,
+            secure: testAccount.smtp.secure,
+            auth: { user: testAccount.user, pass: testAccount.pass }
+          });
+          const info = await transporter.sendMail({
+            from: process.env.SMTP_FROM || '"ChessHive" <noreply@chesshive.com>',
+            to,
+            subject: 'ChessHive Password Reset OTP',
+            text: `Your password reset OTP is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #071327; color: #FFFDD0;">
+                <h2 style="color: #2E8B57; text-align: center;">ChessHive Password Reset</h2>
+                <p>You have requested to reset your password.</p>
+                <div style="background-color: rgba(46, 139, 87, 0.2); padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
+                  <p style="margin: 0; font-size: 14px;">Your OTP is:</p>
+                  <h1 style="color: #2E8B57; letter-spacing: 8px; margin: 10px 0;">${otp}</h1>
+                </div>
+                <p style="color: #ff6b6b; font-size: 12px;">This OTP is valid for 10 minutes only.</p>
+                <p style="font-size: 12px; color: rgba(255, 253, 208, 0.7);">If you did not request this password reset, please ignore this email.</p>
+              </div>
+            `
+          });
+          const previewUrl = nodemailer.getTestMessageUrl(info);
+          console.log(`Ethereal OTP preview for ${to}: ${previewUrl}`);
+        } catch (err) {
+          console.error('Failed to send via Ethereal:', err);
+        }
+      } else {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || '587', 10),
+            secure: (process.env.SMTP_SECURE === 'true'),
+            auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+          });
+          const info = await transporter.sendMail({
+            from: process.env.SMTP_FROM || '"ChessHive" <noreply@chesshive.com>',
+            to,
+            subject: 'ChessHive Password Reset OTP',
+            text: `Your password reset OTP is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #071327; color: #FFFDD0;">
+                <h2 style="color: #2E8B57; text-align: center;">ChessHive Password Reset</h2>
+                <p>You have requested to reset your password.</p>
+                <div style="background-color: rgba(46, 139, 87, 0.2); padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
+                  <p style="margin: 0; font-size: 14px;">Your OTP is:</p>
+                  <h1 style="color: #2E8B57; letter-spacing: 8px; margin: 10px 0;">${otp}</h1>
+                </div>
+                <p style="color: #ff6b6b; font-size: 12px;">This OTP is valid for 10 minutes only.</p>
+                <p style="font-size: 12px; color: rgba(255, 253, 208, 0.7);">If you did not request this password reset, please ignore this email.</p>
+              </div>
+            `
+          });
+          console.log('Password reset OTP email sent:', info && info.messageId);
+        } catch (err) {
+          console.error('Failed to send OTP email:', err);
+        }
+      }
+    }
+
+    await sendForgotPasswordOtp(email.toLowerCase(), otp);
+
+    return res.json({ success: true, message: 'OTP sent to your email address' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+// Step 2: Verify OTP for password reset
+router.post('/api/verify-forgot-password-otp', async (req, res) => {
+  const { email, otp } = req.body || {};
+
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+  }
+
+  try {
+    const db = await connectDB();
+    
+    const otpRecord = await db.collection('otps').findOne({
+      email: email.toLowerCase(),
+      otp,
+      type: 'forgot-password',
+      used: false
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    if (new Date() > otpRecord.expires_at) {
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Generate a reset token for the next step
+    const resetToken = require('crypto').randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Update OTP record with reset token (allows password reset without re-verifying)
+    await db.collection('otps').updateOne(
+      { _id: otpRecord._id },
+      { 
+        $set: { 
+          used: true,
+          resetToken,
+          resetTokenExpiry
+        } 
+      }
+    );
+
+    return res.json({ 
+      success: true, 
+      message: 'OTP verified successfully. You can now reset your password.',
+      resetToken
+    });
+  } catch (err) {
+    console.error('Verify forgot password OTP error:', err);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+});
+
+// Step 3: Reset password
+router.post('/api/reset-password', async (req, res) => {
+  const { email, resetToken, newPassword, confirmPassword } = req.body || {};
+
+  // Validate inputs
+  if (!email || !resetToken || !newPassword || !confirmPassword) {
+    return res.status(400).json({ success: false, message: 'All fields are required' });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ success: false, message: 'Passwords do not match' });
+  }
+
+  // Password validation
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(newPassword)) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Password must be at least 8 characters with one uppercase, one lowercase, and one special character' 
+    });
+  }
+
+  try {
+    const db = await connectDB();
+    
+    // Verify reset token
+    const otpRecord = await db.collection('otps').findOne({
+      email: email.toLowerCase(),
+      type: 'forgot-password',
+      resetToken,
+      used: true
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token. Please start over.' });
+    }
+
+    if (new Date() > otpRecord.resetTokenExpiry) {
+      return res.status(400).json({ success: false, message: 'Reset token has expired. Please start over.' });
+    }
+
+    // Check if user exists
+    const user = await db.collection('users').findOne({ email: email.toLowerCase(), isDeleted: { $ne: 1 } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+    // Update user's password
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { password: hashedPassword } }
+    );
+
+    // Delete the OTP record
+    await db.collection('otps').deleteOne({ _id: otpRecord._id });
+
+    console.log(`Password reset successful for user: ${email}`);
+
+    return res.json({ 
+      success: true, 
+      message: 'Password reset successful! You can now login with your new password.' 
+    });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    return res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
 });
 
 module.exports = router;

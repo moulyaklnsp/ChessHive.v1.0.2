@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { login, verifyLoginOtp } from '../features/auth/authSlice';
+import { login, verifyLoginOtp, restoreAccount, clearRestoreInfo } from '../features/auth/authSlice';
 import ChessBackground from "../components/ChessBackground";
 import AnimatedSidebar from "../components/AnimatedSidebar";
 import { GlassCard, FloatingButton } from "../components/AnimatedCard";
@@ -91,6 +91,42 @@ export default function Login() {
       console.error('OTP verify error:', err);
       setDynamicError('Failed to connect to server.');
     }
+  }
+
+  async function onRestoreAccount(e) {
+    e.preventDefault();
+    setDynamicError("");
+    if (!auth.restoreInfo?.userId) {
+      setDynamicError('Unable to restore account. Please try again.');
+      return;
+    }
+    try {
+      const result = await dispatch(restoreAccount({
+        id: auth.restoreInfo.userId,
+        email: email.trim(),
+        password
+      }));
+      if (result.meta.requestStatus === 'fulfilled') {
+        setDynamicSuccess('Account restored successfully! Redirecting...');
+        const redirectUrl = result.payload?.redirectUrl || '/';
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 1000);
+      } else {
+        const err = result.payload || result.error || {};
+        setDynamicError(err.message || 'Failed to restore account');
+      }
+    } catch (err) {
+      console.error('Restore account error:', err);
+      setDynamicError('Failed to connect to server.');
+    }
+  }
+
+  function cancelRestore() {
+    dispatch(clearRestoreInfo());
+    setDynamicError("");
+    setEmail("");
+    setPassword("");
   }
 
   const inputStyle = {
@@ -206,47 +242,118 @@ export default function Login() {
                 </motion.div>
               )}
 
-              <form onSubmit={auth.otpSent ? onVerifyOtp : onSubmitLogin}>
-                {!auth.otpSent ? (
-                  <>
+              {/* Restore Account View */}
+              {auth.restoreInfo ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <motion.div
+                    style={{
+                      background: 'rgba(255, 193, 7, 0.15)',
+                      border: '1px solid rgba(255, 193, 7, 0.3)',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      marginBottom: '1.5rem',
+                      textAlign: 'center'
+                    }}
+                  >
                     <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
-                      style={{ marginBottom: '1.5rem' }}
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      style={{ fontSize: '3rem', marginBottom: '1rem' }}
                     >
-                      <label style={labelStyle}>Email</label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={e => { if (!touched.email) setTouched(s => ({ ...s, email: true })); setEmail(e.target.value); }}
-                        onBlur={() => setTouched(s => ({ ...s, email: true }))}
-                        style={inputStyle}
-                        onFocus={(e) => e.target.style.borderColor = '#2E8B57'}
-                      />
-                      {emailError && <div style={{ color: '#ff6b6b', fontSize: '0.9rem', marginTop: '0.5rem' }}>{emailError}</div>}
+                      ⚠️
                     </motion.div>
+                    <h3 style={{ color: '#FFC107', fontFamily: "'Cinzel', serif", marginBottom: '0.5rem' }}>
+                      Account Deleted
+                    </h3>
+                    <p style={{ color: 'rgba(255, 253, 208, 0.8)', fontSize: '0.9rem' }}>
+                      This account was previously deleted. Would you like to restore it?
+                    </p>
+                  </motion.div>
 
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.7 }}
-                      style={{ marginBottom: '2rem' }}
-                    >
-                      <label style={labelStyle}>Password</label>
-                      <input
-                        type="password"
-                        required
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={e => { if (!touched.password) setTouched(s => ({ ...s, password: true })); setPassword(e.target.value); }}
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <FloatingButton onClick={onRestoreAccount}>
+                      {auth.loading ? 'Restoring...' : '✓ Restore Account'}
+                    </FloatingButton>
+                    <FloatingButton variant="outline" onClick={cancelRestore}>
+                      ✕ Cancel
+                    </FloatingButton>
+                  </div>
+                </motion.div>
+              ) : (
+                <form onSubmit={auth.otpSent ? onVerifyOtp : onSubmitLogin}>
+                  {!auth.otpSent ? (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        style={{ marginBottom: '1.5rem' }}
+                      >
+                        <label style={labelStyle}>Email</label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={e => { if (!touched.email) setTouched(s => ({ ...s, email: true })); setEmail(e.target.value); }}
+                          onBlur={() => setTouched(s => ({ ...s, email: true }))}
+                          style={inputStyle}
+                          onFocus={(e) => e.target.style.borderColor = '#2E8B57'}
+                        />
+                        {emailError && <div style={{ color: '#ff6b6b', fontSize: '0.9rem', marginTop: '0.5rem' }}>{emailError}</div>}
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7 }}
+                        style={{ marginBottom: '1rem' }}
+                      >
+                        <label style={labelStyle}>Password</label>
+                        <input
+                          type="password"
+                          required
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={e => { if (!touched.password) setTouched(s => ({ ...s, password: true })); setPassword(e.target.value); }}
                         onBlur={() => setTouched(s => ({ ...s, password: true }))}
                         style={inputStyle}
                         onFocus={(e) => e.target.style.borderColor = '#2E8B57'}
                       />
                       {passwordError && <div style={{ color: '#ff6b6b', fontSize: '0.9rem', marginTop: '0.5rem' }}>{passwordError}</div>}
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.75 }}
+                      style={{ marginBottom: '2rem', textAlign: 'right' }}
+                    >
+                      <span
+                        onClick={() => navigate('/forgot-password')}
+                        style={{
+                          color: '#2E8B57',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontFamily: "'Cinzel', serif",
+                          transition: 'all 0.3s ease',
+                          textDecoration: 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.textDecoration = 'underline';
+                          e.target.style.textShadow = '0 0 10px rgba(46, 139, 87, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.textDecoration = 'none';
+                          e.target.style.textShadow = 'none';
+                        }}
+                      >
+                        Forgot Password?
+                      </span>
                     </motion.div>
 
                     <FloatingButton delay={0.8}>
@@ -293,6 +400,7 @@ export default function Login() {
                   </>
                 )}
               </form>
+              )}
             </GlassCard>
           </motion.div>
 

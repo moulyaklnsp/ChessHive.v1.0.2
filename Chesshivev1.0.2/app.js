@@ -21,7 +21,25 @@ const utils = require('./utils');
 const { ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 
+const BCRYPT_ROUNDS = 12;
 const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
+const verifyPasswordAndMaybeMigrate = async (db, user, plainPassword) => {
+  const stored = user?.password;
+  if (!stored || typeof stored !== 'string') return false;
+  if (typeof plainPassword !== 'string' || plainPassword.length === 0) return false;
+
+  if (isBcryptHash(stored)) {
+    return bcrypt.compare(plainPassword, stored);
+  }
+
+  if (stored === plainPassword) {
+    const hashed = await bcrypt.hash(plainPassword, BCRYPT_ROUNDS);
+    await db.collection('users').updateOne({ _id: user._id }, { $set: { password: hashed } });
+    return true;
+  }
+
+  return false;
+};
 
 const app = express();
 const cors = require('cors');
@@ -75,7 +93,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // mount optional auth router
-try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
+try { const authrouter = require('./routes/auth'); app.use(authrouter); console.log('Auth router loaded successfully'); } catch (e) { console.error('Failed to load auth router:', e); }
 
 // Role middleware
 const isAdmin = (req, res, next) => { 
@@ -154,10 +172,7 @@ app.post('/api/login', async (req, res) => {
     const db = await connectDB();
     const user = await db.collection('users').findOne({ email });
     if (!user) return res.status(400).json({ success: false, message: 'Invalid credentials' });
-    if (!isBcryptHash(user.password)) {
-      return res.status(400).json({ success: false, message: 'Password not migrated. Please contact support.' });
-    }
-    const passwordOk = await bcrypt.compare(password, user.password);
+    const passwordOk = await verifyPasswordAndMaybeMigrate(db, user, password);
     if (!passwordOk) return res.status(400).json({ success: false, message: 'Invalid credentials' });
     if (user.isDeleted) {
       return res.status(403).json({
@@ -264,10 +279,7 @@ app.post('/api/restore-account', async (req, res) => {
     if (!user) {
       return res.status(400).json({ success: false, message: 'User not found or invalid credentials' });
     }
-    if (!isBcryptHash(user.password)) {
-      return res.status(400).json({ success: false, message: 'Password not migrated. Please contact support.' });
-    }
-    const passwordOk = await bcrypt.compare(password, user.password);
+    const passwordOk = await verifyPasswordAndMaybeMigrate(db, user, password);
     if (!passwordOk) {
       return res.status(400).json({ success: false, message: 'User not found or invalid credentials' });
     }
@@ -281,7 +293,28 @@ app.post('/api/restore-account', async (req, res) => {
     if (upd.modifiedCount === 0) {
       return res.status(500).json({ success: false, message: 'Failed to restore account' });
     }
-    return res.json({ success: true, message: 'Account restored successfully. Please login again to continue.' });
+
+    // Establish session for restored user
+    req.session.userID = user._id;
+    req.session.userEmail = user.email;
+    req.session.userRole = user.role;
+    req.session.username = user.name;
+    req.session.playerName = user.name;
+    req.session.userCollege = user.college;
+    req.session.collegeName = user.college;
+
+    // Determine redirect URL based on role
+    let redirectUrl = '/';
+    switch (user.role) {
+      case 'admin': redirectUrl = '/admin/admin_dashboard'; break;
+      case 'organizer': redirectUrl = '/organizer/organizer_dashboard'; break;
+      case 'coordinator': redirectUrl = '/coordinator/coordinator_dashboard'; break;
+      case 'player': redirectUrl = '/player/player_dashboard?success-message=' + encodeURIComponent('Account restored successfully! Welcome back!'); break;
+      default: redirectUrl = '/';
+    }
+
+    console.log(`Account restored for user: ${email}, role: ${user.role}`);
+    return res.json({ success: true, message: 'Account restored successfully!', redirectUrl });
   } catch (err) {
     console.error('Restore account error:', err);
     return res.status(500).json({ success: false, message: 'Unexpected server error' });
