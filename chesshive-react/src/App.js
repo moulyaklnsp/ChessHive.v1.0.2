@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
 import ContactUs from './pages/ContactUs';
 import Verify from './pages/auth/Verify';
 import PlayerDashboard from './pages/player/PlayerDashboard';
@@ -113,6 +114,16 @@ function App() {
             style={{ perspective: 1000 }}
           >
             <Signup />
+          </motion.div>
+        } />
+        <Route path="/forgot-password" element={
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ForgotPassword />
           </motion.div>
         } />
         <Route path="/verify" element={

@@ -79,6 +79,54 @@ export const verifySignupOtp = createAsyncThunk('auth/verifySignupOtp', async ({
 	}
 });
 
+// Thunk: request forgot password OTP
+export const forgotPassword = createAsyncThunk('auth/forgotPassword', async ({ email }, thunkAPI) => {
+	try {
+		const res = await fetch('/api/forgot-password', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email }),
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) return thunkAPI.rejectWithValue(data);
+		return data; // { success: true, message: 'OTP sent...' }
+	} catch (err) {
+		return thunkAPI.rejectWithValue({ message: err.message || 'Network error' });
+	}
+});
+
+// Thunk: verify forgot password OTP
+export const verifyForgotPasswordOtp = createAsyncThunk('auth/verifyForgotPasswordOtp', async ({ email, otp }, thunkAPI) => {
+	try {
+		const res = await fetch('/api/verify-forgot-password-otp', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, otp }),
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) return thunkAPI.rejectWithValue(data);
+		return data; // { success: true, resetToken }
+	} catch (err) {
+		return thunkAPI.rejectWithValue({ message: err.message || 'Network error' });
+	}
+});
+
+// Thunk: reset password
+export const resetPassword = createAsyncThunk('auth/resetPassword', async ({ email, resetToken, newPassword, confirmPassword }, thunkAPI) => {
+	try {
+		const res = await fetch('/api/reset-password', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, resetToken, newPassword, confirmPassword }),
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) return thunkAPI.rejectWithValue(data);
+		return data; // { success: true, message: 'Password reset successful' }
+	} catch (err) {
+		return thunkAPI.rejectWithValue({ message: err.message || 'Network error' });
+	}
+});
+
 // Thunk: fetch current session from server to rehydrate store on app start
 export const fetchSession = createAsyncThunk('auth/fetchSession', async (_, thunkAPI) => {
 	try {
@@ -86,6 +134,22 @@ export const fetchSession = createAsyncThunk('auth/fetchSession', async (_, thun
 		const data = await res.json().catch(() => ({}));
 		if (!res.ok) return thunkAPI.rejectWithValue(data);
 		return data; // expected { userEmail, userRole, username }
+	} catch (err) {
+		return thunkAPI.rejectWithValue({ message: err.message || 'Network error' });
+	}
+});
+
+// Thunk: restore deleted account
+export const restoreAccount = createAsyncThunk('auth/restoreAccount', async ({ id, email, password }, thunkAPI) => {
+	try {
+		const res = await fetch('/api/restore-account', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id, email, password }),
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) return thunkAPI.rejectWithValue(data);
+		return data; // { success: true, message, redirectUrl }
 	} catch (err) {
 		return thunkAPI.rejectWithValue({ message: err.message || 'Network error' });
 	}
@@ -99,6 +163,10 @@ const initialState = {
 	redirectUrl: null,
 	error: null,
 	restoreInfo: null,
+	// Forgot password state
+	forgotPasswordStep: 'email', // 'email' | 'otp' | 'reset' | 'success'
+	resetToken: null,
+	forgotPasswordEmail: null,
 };
 
 const authSlice = createSlice({
@@ -121,6 +189,16 @@ const authSlice = createSlice({
 			}
 		},
 		clearError(state) {
+			state.error = null;
+		},
+		resetForgotPassword(state) {
+			state.forgotPasswordStep = 'email';
+			state.resetToken = null;
+			state.forgotPasswordEmail = null;
+			state.error = null;
+		},
+		clearRestoreInfo(state) {
+			state.restoreInfo = null;
 			state.error = null;
 		}
 	},
@@ -187,10 +265,48 @@ const authSlice = createSlice({
 					s.user = null;
 				}
 			})
-			.addCase(fetchSession.rejected, (s, a) => { s.loading = false; /* ignore fetch errors for now */ });
+			.addCase(fetchSession.rejected, (s, a) => { s.loading = false; /* ignore fetch errors for now */ })
+
+			// Forgot Password flow
+			.addCase(forgotPassword.pending, (s) => { s.loading = true; s.error = null; })
+			.addCase(forgotPassword.fulfilled, (s, a) => {
+				s.loading = false;
+				if (a.payload && a.payload.success) {
+					s.forgotPasswordStep = 'otp';
+					s.forgotPasswordEmail = a.meta?.arg?.email || null;
+				}
+			})
+			.addCase(forgotPassword.rejected, (s, a) => { s.loading = false; s.error = a.payload?.message || a.error?.message; })
+
+			.addCase(verifyForgotPasswordOtp.pending, (s) => { s.loading = true; s.error = null; })
+			.addCase(verifyForgotPasswordOtp.fulfilled, (s, a) => {
+				s.loading = false;
+				if (a.payload && a.payload.success) {
+					s.forgotPasswordStep = 'reset';
+					s.resetToken = a.payload.resetToken || null;
+				}
+			})
+			.addCase(verifyForgotPasswordOtp.rejected, (s, a) => { s.loading = false; s.error = a.payload?.message || a.error?.message; })
+
+			.addCase(resetPassword.pending, (s) => { s.loading = true; s.error = null; })
+			.addCase(resetPassword.fulfilled, (s, a) => {
+				s.loading = false;
+				if (a.payload && a.payload.success) {
+					s.forgotPasswordStep = 'success';
+				}
+			})
+			.addCase(resetPassword.rejected, (s, a) => { s.loading = false; s.error = a.payload?.message || a.error?.message; })
+
+			// Restore account flow
+			.addCase(restoreAccount.pending, (s) => { s.loading = true; s.error = null; })
+			.addCase(restoreAccount.fulfilled, (s, a) => {
+				s.loading = false;
+				s.restoreInfo = null;
+				s.redirectUrl = a.payload?.redirectUrl || null;
+			})
+			.addCase(restoreAccount.rejected, (s, a) => { s.loading = false; s.error = a.payload?.message || a.error?.message; });
 	}
 });
 
-export const { setUser, logout, clearError } = authSlice.actions;
+export const { setUser, logout, clearError, resetForgotPassword, clearRestoreInfo } = authSlice.actions;
 export default authSlice.reducer;
-

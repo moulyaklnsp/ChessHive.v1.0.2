@@ -7,7 +7,25 @@ const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
 
+const BCRYPT_ROUNDS = 12;
 const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
+const verifyPasswordAndMaybeMigrate = async (db, user, plainPassword) => {
+  const stored = user?.password;
+  if (!stored || typeof stored !== 'string') return false;
+  if (typeof plainPassword !== 'string' || plainPassword.length === 0) return false;
+
+  if (isBcryptHash(stored)) {
+    return bcrypt.compare(plainPassword, stored);
+  }
+
+  if (stored === plainPassword) {
+    const hashed = await bcrypt.hash(plainPassword, BCRYPT_ROUNDS);
+    await db.collection('users').updateOne({ _id: user._id }, { $set: { password: hashed } });
+    return true;
+  }
+
+  return false;
+};
 let multer;
 try { multer = require('multer'); } catch (e) { multer = null; }
 router.use(express.json()); // Parses JSON
@@ -883,11 +901,7 @@ router.post('/players/restore/:id', async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials.' });
   }
 
-  if (!isBcryptHash(user.password)) {
-    return res.status(401).json({ message: 'Password not migrated. Please contact support.' });
-  }
-
-  const passwordOk = await bcrypt.compare(password, user.password);
+  const passwordOk = await verifyPasswordAndMaybeMigrate(db, user, password);
   if (!passwordOk) {
     return res.status(401).json({ message: 'Invalid credentials.' });
   }
