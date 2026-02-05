@@ -28,6 +28,8 @@ function CoordinatorRankings() {
   const [isDark, toggleTheme] = usePlayerTheme();
   const query = useQuery();
   const tournamentId = query.get('tournament_id');
+  const tournamentType = query.get('type') || 'individual'; // 'individual' or 'team'
+  const isTeamTournament = tournamentType === 'team';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,7 +45,10 @@ function CoordinatorRankings() {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch(`/coordinator/api/rankings?tournament_id=${encodeURIComponent(tournamentId)}`, { credentials: 'include' });
+        const endpoint = isTeamTournament 
+          ? `/coordinator/api/team-rankings?tournament_id=${encodeURIComponent(tournamentId)}`
+          : `/coordinator/api/rankings?tournament_id=${encodeURIComponent(tournamentId)}`;
+        const res = await fetch(endpoint, { credentials: 'include' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to load rankings');
         setRankings(Array.isArray(data.rankings) ? data.rankings : []);
@@ -55,7 +60,7 @@ function CoordinatorRankings() {
       }
     };
     load();
-  }, [tournamentId]);
+  }, [tournamentId, isTeamTournament]);
 
   const coordinatorLinks = [
     { path: '/coordinator/coordinator_profile', label: 'Profile', icon: 'fas fa-user' },
@@ -133,7 +138,7 @@ function CoordinatorRankings() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <i className="fas fa-trophy" /> Final Rankings
+            <i className="fas fa-trophy" /> {isTeamTournament ? 'Team Rankings' : 'Final Rankings'}
           </motion.h1>
 
           {error && <div className="error-text">{error}</div>}
@@ -149,31 +154,33 @@ function CoordinatorRankings() {
               <thead>
                 <tr>
                   <th>Rank</th>
-                  <th>Player Name</th>
+                  <th>{isTeamTournament ? 'Team Name' : 'Player Name'}</th>
+                  {isTeamTournament && <th>Team Members</th>}
                   <th>Score</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={3}>Loading rankings...</td>
+                    <td colSpan={isTeamTournament ? 4 : 3}>Loading rankings...</td>
                   </tr>
                 )}
                 {!loading && !error && rankings.length === 0 && (
                   <tr>
-                    <td colSpan={3}>No rankings available.</td>
+                    <td colSpan={isTeamTournament ? 4 : 3}>{isTeamTournament ? 'No approved teams available for rankings.' : 'No rankings available.'}</td>
                   </tr>
                 )}
-                {!loading && !error && rankings.map((player, index) => {
+                {!loading && !error && rankings.map((item, index) => {
                   const rankNum = index + 1;
                   const rowClass = rankNum === 1 ? 'top1' : rankNum === 2 ? 'top2' : rankNum === 3 ? 'top3' : '';
                   return (
-                    <tr key={player.playerName + index} className={rowClass}>
+                    <tr key={(isTeamTournament ? item.teamName : item.playerName) + index} className={rowClass}>
                       <td>
                         <span className="rank-text">{rankNum}</span> {rankNum <= 3 && <i className="fas fa-medal" style={{ fontSize: '1.2rem', marginLeft: 6 }} />}
                       </td>
-                      <td>{player.playerName}</td>
-                      <td className="score-text">{player.score}</td>
+                      <td>{isTeamTournament ? item.teamName : item.playerName}</td>
+                      {isTeamTournament && <td style={{ fontSize: '0.9rem', opacity: 0.85 }}>{item.players?.join(', ')}</td>}
+                      <td className="score-text">{item.score}</td>
                     </tr>
                   );
                 })}

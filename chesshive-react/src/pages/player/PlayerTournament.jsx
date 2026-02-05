@@ -479,22 +479,43 @@ function PlayerTournament() {
                     <td>
                       {!t.alreadyJoined ? (
                         <>
-                          <button type="button" className="join-team-btn" disabled={!subscriptionActive || loading} onClick={() => setOpenJoinFormId(openJoinFormId === t._id ? null : t._id)}>
-                            Join {!subscriptionActive ? '(SUBSCRIPTION REQUIRED)' : ''}
+                          <button type="button" className="join-team-btn" disabled={!subscriptionActive || loading || !raw.username} onClick={() => setOpenJoinFormId(openJoinFormId === t._id ? null : t._id)}>
+                            Join {!subscriptionActive ? '(SUBSCRIPTION REQUIRED)' : !raw.username ? '(Loading...)' : ''}
                           </button>
                           {openJoinFormId === t._id && (
                             <div className="join-form active">
                               <form onSubmit={(e) => {
                                 e.preventDefault();
-                                const player1 = e.currentTarget.player1.value;
-                                const player2 = e.currentTarget.player2.value;
-                                const player3 = e.currentTarget.player3.value;
+                                const player1 = raw.username; // Captain is always player1
+                                const player2 = e.currentTarget.player2.value.trim();
+                                const player3 = e.currentTarget.player3.value.trim();
+                                if (!player1) {
+                                  setMessage({ text: 'Unable to determine your username. Please refresh the page.', isError: true });
+                                  return;
+                                }
+                                if (!player2 || !player3) {
+                                  setMessage({ text: 'Please enter usernames for both teammates.', isError: true });
+                                  return;
+                                }
+                                if (player1 === player2 || player1 === player3 || player2 === player3) {
+                                  setMessage({ text: 'All three players must be different.', isError: true });
+                                  return;
+                                }
                                 joinTeam(t._id, { player1, player2, player3 });
                               }}>
-                                <label>Player 1:</label><input type="text" name="player1" required />
-                                <label>Player 2:</label><input type="text" name="player2" required />
-                                <label>Player 3:</label><input type="text" name="player3" required />
-                                <button type="submit" disabled={loading}>Submit Team</button>
+                                <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                                  <i className="fas fa-info-circle" /> You (captain) + 2 teammates = 3 players
+                                </div>
+                                <label>Player 1 (You - Captain):</label>
+                                <input type="text" name="player1" value={raw.username} disabled style={{ opacity: 0.7 }} />
+                                <label>Player 2 (Username):</label>
+                                <input type="text" name="player2" required placeholder="Enter teammate's username" />
+                                <label>Player 3 (Username):</label>
+                                <input type="text" name="player3" required placeholder="Enter teammate's username" />
+                                <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', opacity: 0.7 }}>
+                                  Teammates will receive a request to approve joining your team.
+                                </div>
+                                <button type="submit" disabled={loading}>{loading ? 'Submitting...' : 'Submit Team'}</button>
                               </form>
                             </div>
                           )}
@@ -504,15 +525,18 @@ function PlayerTournament() {
                           {t.approved ? (
                             <span className="status-pill enrolled">ENROLLED</span>
                           ) : (
-                            <span className="status-pill pending">PENDING</span>
+                            <span className="status-pill pending">PENDING APPROVAL</span>
                           )}
                           {t.needsApproval && (
                             <button className="btn small" onClick={() => approveTeamRequest(t.enrollmentId)} disabled={loading}>Approve</button>
                           )}
+                          {!t.approved && !t.needsApproval && (
+                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Waiting for teammates</span>
+                          )}
                           {t.approved && (
                             <>
-                              <a href={`/player/pairings?tournament_id=${t._id}&rounds=5`} className="btn small"><i className="fas fa-chess-board" /> Pairings</a>
-                              <a href={`/player/rankings?tournament_id=${t._id}`} className="btn small"><i className="fas fa-medal" /> Results</a>
+                              <a href={`/player/pairings?tournament_id=${t._id}&rounds=5&type=team`} className="btn small"><i className="fas fa-chess-board" /> Pairings</a>
+                              <a href={`/player/rankings?tournament_id=${t._id}&type=team`} className="btn small"><i className="fas fa-medal" /> Results</a>
                             </>
                           )}
                         </div>

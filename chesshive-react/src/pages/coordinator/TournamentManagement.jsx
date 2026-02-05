@@ -514,6 +514,16 @@ function TournamentManagement() {
                                     </Link>
                                   </>
                                 )}
+                                {t.type === 'Team' && (
+                                  <>
+                                    <Link to={`/coordinator/pairings?tournament_id=${t._id}&rounds=${typeof t.no_of_rounds !== 'undefined' ? t.no_of_rounds : t.noOfRounds}&type=team`} className="action-btn">
+                                      <i className="fas fa-chess-board" /> Team Pairings
+                                    </Link>
+                                    <Link to={`/coordinator/rankings?tournament_id=${t._id}&type=team`} className="action-btn">
+                                      <i className="fas fa-medal" /> Team Rankings
+                                    </Link>
+                                  </>
+                                )}
                               </>
                             )}
                             <button className="action-btn edit-btn" onClick={() => onEdit(t._id)}>

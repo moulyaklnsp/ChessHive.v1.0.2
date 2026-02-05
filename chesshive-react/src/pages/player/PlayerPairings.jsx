@@ -17,6 +17,8 @@ function PlayerPairings() {
   const query = useQuery();
   const tournamentId = query.get('tournament_id');
   const roundsParam = query.get('rounds') || '5';
+  const tournamentType = query.get('type') || 'individual'; // 'individual' or 'team'
+  const isTeamTournament = tournamentType === 'team';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,9 +47,10 @@ function PlayerPairings() {
 
     const run = async () => {
       try {
-        const res = await fetch(`/player/api/pairings?tournament_id=${encodeURIComponent(tournamentId)}&rounds=${encodeURIComponent(roundsParam)}`,
-          { credentials: 'include' }
-        );
+        const endpoint = isTeamTournament
+          ? `/player/api/team-pairings?tournament_id=${encodeURIComponent(tournamentId)}&rounds=${encodeURIComponent(roundsParam)}`
+          : `/player/api/pairings?tournament_id=${encodeURIComponent(tournamentId)}&rounds=${encodeURIComponent(roundsParam)}`;
+        const res = await fetch(endpoint, { credentials: 'include' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const rounds = data?.allRounds || [];
@@ -59,20 +62,29 @@ function PlayerPairings() {
       }
     };
     run();
-  }, [tournamentId, roundsParam]);
+  }, [tournamentId, roundsParam, isTeamTournament]);
 
-  // Build unique player list from all rounds
+  // Build unique player/team list from all rounds
   const players = useMemo(() => {
     const set = new Set();
     allRounds.forEach((round) => {
       (round.pairings || []).forEach((p) => {
-        if (p?.player1?.username) set.add(p.player1.username);
-        if (p?.player2?.username) set.add(p.player2.username);
+        if (isTeamTournament) {
+          if (p?.team1?.teamName) set.add(p.team1.teamName);
+          if (p?.team2?.teamName) set.add(p.team2.teamName);
+        } else {
+          if (p?.player1?.username) set.add(p.player1.username);
+          if (p?.player2?.username) set.add(p.player2.username);
+        }
       });
-      if (round?.byePlayer?.username) set.add(round.byePlayer.username);
+      if (isTeamTournament) {
+        if (round?.byeTeam?.teamName) set.add(round.byeTeam.teamName);
+      } else {
+        if (round?.byePlayer?.username) set.add(round.byePlayer.username);
+      }
     });
     return Array.from(set);
-  }, [allRounds]);
+  }, [allRounds, isTeamTournament]);
 
   // Draw tournament tree with D3 when ready
   useEffect(() => {
@@ -206,7 +218,7 @@ function PlayerPairings() {
       `}</style>
       <div style={styles.container}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <h1 style={styles.h1}>Pairings & Results</h1>
+          <h1 style={styles.h1}>{isTeamTournament ? 'Team Pairings & Results' : 'Pairings & Results'}</h1>
           <button onClick={toggleTheme} style={styles.toggleBtn}>{isDark ? 'Switch to Light' : 'Switch to Dark'}</button>
         </div>
 
@@ -214,7 +226,7 @@ function PlayerPairings() {
         {!!error && !loading && <p>{error}</p>}
 
         {!loading && !error && allRounds.length === 0 && (
-          <p>No pairings available.</p>
+          <p>{isTeamTournament ? 'No approved teams available for pairings. Teams must have all members approved first.' : 'No pairings available.'}</p>
         )}
 
         {!loading && !error && allRounds.map((round) => (
@@ -223,28 +235,55 @@ function PlayerPairings() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Player 1</th>
-                  <th style={styles.th}>Player 2</th>
+                  <th style={styles.th}>{isTeamTournament ? 'Team 1' : 'Player 1'}</th>
+                  <th style={styles.th}>{isTeamTournament ? 'Team 2' : 'Player 2'}</th>
                   <th style={styles.th}>Result</th>
                 </tr>
               </thead>
               <tbody>
                 {(round.pairings || []).map((pair, idx) => (
                   <tr key={idx}>
-                    <td style={styles.td}>
-                      {pair.player1?.username}{' '}
-                      <span style={styles.score}>(Score: {pair.player1?.score})</span>
-                    </td>
-                    <td style={styles.td}>
-                      {pair.player2?.username}{' '}
-                      <span style={styles.score}>(Score: {pair.player2?.score})</span>
-                    </td>
+                    {isTeamTournament ? (
+                      <>
+                        <td style={styles.td}>
+                          <strong>{pair.team1?.teamName}</strong>
+                          <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                            {pair.team1?.player1}, {pair.team1?.player2}, {pair.team1?.player3}
+                          </div>
+                          <span style={styles.score}>(Score: {pair.team1?.score})</span>
+                        </td>
+                        <td style={styles.td}>
+                          <strong>{pair.team2?.teamName}</strong>
+                          <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                            {pair.team2?.player1}, {pair.team2?.player2}, {pair.team2?.player3}
+                          </div>
+                          <span style={styles.score}>(Score: {pair.team2?.score})</span>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={styles.td}>
+                          {pair.player1?.username}{' '}
+                          <span style={styles.score}>(Score: {pair.player1?.score})</span>
+                        </td>
+                        <td style={styles.td}>
+                          {pair.player2?.username}{' '}
+                          <span style={styles.score}>(Score: {pair.player2?.score})</span>
+                        </td>
+                      </>
+                    )}
                     <td style={styles.td}>{pair.result}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {round.byePlayer && (
+            {isTeamTournament && round.byeTeam && (
+              <p style={styles.bye}>
+                <strong>BYE:</strong> {round.byeTeam?.teamName}{' '}
+                <span style={styles.score}>(Score: {round.byeTeam?.score})</span>
+              </p>
+            )}
+            {!isTeamTournament && round.byePlayer && (
               <p style={styles.bye}>
                 <strong>BYE:</strong> {round.byePlayer?.username}{' '}
                 <span style={styles.score}>(Score: {round.byePlayer?.score})</span>
