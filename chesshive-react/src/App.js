@@ -1,4 +1,3 @@
-import './App.css';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Home from './pages/Home';
@@ -206,8 +205,6 @@ function App() {
             <PlayerChat />
           </motion.div>
         } />
-        {/* Live Match removed for player user type */}
-        <Route path="/player/live_match" element={<Navigate to="/player/player_dashboard" replace />} />
         <Route path="/player/watch" element={
           <motion.div
             initial={{ opacity: 0 }}

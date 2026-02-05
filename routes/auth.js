@@ -4,6 +4,10 @@ const { connectDB } = require('./databasecongi');
 const { ObjectId } = require('mongodb');
 const { swissPairing, Player } = require('../player_app');
 const { uploadImageBuffer } = require('../utils/cloudinary');
+const bcrypt = require('bcryptjs');
+
+const BCRYPT_ROUNDS = 12;
+const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
 
 let multer;
 try { multer = require('multer'); } catch (e) { multer = null; }
@@ -42,6 +46,7 @@ router.post('/api/signup', async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already registered' });
     }
 
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     // Store signup data temporarily
     const signupData = {
       name,
@@ -50,7 +55,7 @@ router.post('/api/signup', async (req, res) => {
       college,
       email,
       phone,
-      password,
+      password: hashedPassword,
       role,
       aicf_id: aicf_id || '',
       fide_id: fide_id || ''
@@ -134,8 +139,13 @@ router.post('/api/verify-signup-otp', async (req, res) => {
     if (!signupRecord) return res.status(400).json({ success: false, message: 'Signup data not found' });
 
     // Create user
+    const storedPassword = signupRecord?.data?.password || '';
+    const passwordToStore = isBcryptHash(storedPassword)
+      ? storedPassword
+      : await bcrypt.hash(storedPassword, BCRYPT_ROUNDS);
     const user = {
       ...signupRecord.data,
+      password: passwordToStore,
       isDeleted: 0,
       AICF_ID: signupRecord.data.aicf_id || '',
       FIDE_ID: signupRecord.data.fide_id || ''
@@ -207,6 +217,7 @@ router.post('/signup', async (req, res) => {
     return res.render('signup', { errors, name, dob, gender, college, email, phone, role });
   }
 
+  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const user = {
     name,
     dob: new Date(dob),
@@ -214,7 +225,7 @@ router.post('/signup', async (req, res) => {
     college,
     email,
     phone,
-    password,
+    password: hashedPassword,
     role,
     isDeleted: 0,
     AICF_ID: aicf_id || '',

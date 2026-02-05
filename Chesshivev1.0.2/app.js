@@ -10,6 +10,8 @@ try { nodemailer = require('nodemailer'); } catch (e) { nodemailer = null; }
 require('dotenv').config();
 const { connectDB } = require('./routes/databasecongi');
 
+const mongoSessionUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/chesshive';
+
 const adminRouter = require('./admin_app');
 const organizerRouter = require('./organizer_app');
 const coordinatorRouter = require('./coordinator_app');
@@ -17,6 +19,9 @@ const playerRouter = require('./player_app');
 
 const utils = require('./utils');
 const { ObjectId } = require('mongodb');
+const bcrypt = require('bcryptjs');
+
+const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
 
 const app = express();
 const cors = require('cors');
@@ -29,13 +34,37 @@ const server = http.createServer({ maxHeaderSize: 1048576 }, app);
 const io = new Server(server, { cors: { origin: ['http://localhost:3000', 'http://localhost:3001'], methods: ['GET', 'POST'], credentials: true } });
 const PORT = process.env.PORT || 3001;
 
+// Create session store with compatibility for multiple connect-mongo versions
+let sessionStore = null;
+try {
+  const MongoStoreLib = require('connect-mongo');
+  if (MongoStoreLib && typeof MongoStoreLib.create === 'function') {
+    sessionStore = MongoStoreLib.create({
+      mongoUrl: mongoSessionUrl,
+      collectionName: 'sessions',
+      ttl: 24 * 60 * 60,
+      autoRemove: 'native',
+      touchAfter: 24 * 3600
+    });
+  } else if (typeof MongoStoreLib === 'function') {
+    sessionStore = MongoStoreLib(session)({
+      url: mongoSessionUrl,
+      collection: 'sessions',
+      ttl: 24 * 60 * 60
+    });
+  }
+} catch (e) {
+  console.warn('connect-mongo not available, using memory session store:', e.message);
+}
+
 app.use(session({
   name: process.env.SESSION_COOKIE_NAME || 'sid',
   secret: process.env.SESSION_SECRET || 'your_secret_key',
   resave: false,
   saveUninitialized: false,
-  rolling: false,
-  cookie: { secure: false, sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000 }
+  rolling: true,
+  store: sessionStore,
+  cookie: { secure: false, sameSite: 'lax', httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 app.use(express.urlencoded({ extended: true }));
@@ -49,8 +78,34 @@ app.set('views', path.join(__dirname, 'views'));
 try { const authrouter = require('./routes/auth'); app.use(authrouter); } catch (e) { /* optional */ }
 
 // Role middleware
-const isAdmin = (req, res, next) => { if (req.session.userRole === 'admin') next(); else res.status(403).send('Unauthorized'); };
-const isOrganizer = (req, res, next) => { if (req.session.userRole === 'organizer') next(); else res.status(403).send('Unauthorized'); };
+const isAdmin = (req, res, next) => { 
+  if (req.session.userRole === 'admin') return next();
+  // Dev convenience: allow header override
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const headerRole = (req.get('x-dev-role') || '').toLowerCase();
+  const headerEmail = req.get('x-dev-email');
+  if (isDev && headerRole === 'admin' && headerEmail) {
+    req.session.userRole = 'admin';
+    req.session.userEmail = headerEmail;
+    req.session.username = req.session.username || headerEmail;
+    return next();
+  }
+  return res.status(403).send('Unauthorized');
+};
+const isOrganizer = (req, res, next) => { 
+  if (req.session.userRole === 'organizer') return next();
+  // Dev convenience: allow header override
+  const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+  const headerRole = (req.get('x-dev-role') || '').toLowerCase();
+  const headerEmail = req.get('x-dev-email');
+  if (isDev && headerRole === 'organizer' && headerEmail) {
+    req.session.userRole = 'organizer';
+    req.session.userEmail = headerEmail;
+    req.session.username = req.session.username || headerEmail;
+    return next();
+  }
+  return res.status(403).send('Unauthorized');
+};
 const isCoordinator = (req, res, next) => {
   if (req.session.userRole === 'coordinator') return next();
   // Dev convenience: allow header override to unblock local React without breaking production
@@ -97,8 +152,13 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body || {};
   try {
     const db = await connectDB();
-    const user = await db.collection('users').findOne({ email, password });
+    const user = await db.collection('users').findOne({ email });
     if (!user) return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    if (!isBcryptHash(user.password)) {
+      return res.status(400).json({ success: false, message: 'Password not migrated. Please contact support.' });
+    }
+    const passwordOk = await bcrypt.compare(password, user.password);
+    if (!passwordOk) return res.status(400).json({ success: false, message: 'Invalid credentials' });
     if (user.isDeleted) {
       return res.status(403).json({
         success: false,
@@ -200,8 +260,15 @@ app.post('/api/restore-account', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid user id' });
     }
     const db = await connectDB();
-    const user = await db.collection('users').findOne({ _id: new ObjectId(id), email, password });
+    const user = await db.collection('users').findOne({ _id: new ObjectId(id), email });
     if (!user) {
+      return res.status(400).json({ success: false, message: 'User not found or invalid credentials' });
+    }
+    if (!isBcryptHash(user.password)) {
+      return res.status(400).json({ success: false, message: 'Password not migrated. Please contact support.' });
+    }
+    const passwordOk = await bcrypt.compare(password, user.password);
+    if (!passwordOk) {
       return res.status(400).json({ success: false, message: 'User not found or invalid credentials' });
     }
     if (!user.isDeleted) {
@@ -454,99 +521,6 @@ app.get('/api/chat/contacts', async (req, res) => {
 const onlineUsers = new Map(); // socket.id -> { username, role }
 const usernameToSockets = new Map(); // username -> Set(socket.id)
 
-// ------------- Socket.IO live match (in-memory) -------------
-// This is intentionally in-memory (no schema changes) to keep it minimal and non-invasive.
-// Clients still use the existing chessJoin/chessMove events for board sync.
-const matchQueue = []; // [{ socketId, username, baseMs, incMs, colorPref, requestedAt }]
-const socketToMatchRoom = new Map(); // socket.id -> room
-const roomToMatch = new Map(); // room -> { whiteSocketId, blackSocketId, whiteUsername, blackUsername, baseMs, incMs }
-
-// Direct match invites (in-memory)
-const matchInvites = new Map(); // inviteId -> { fromSocketId, toSocketId, fromUsername, toUsername, baseMs, incMs, colorPref, createdAt }
-
-function createInviteId() {
-  const rnd = Math.random().toString(36).slice(2, 10);
-  return `invite:${Date.now()}:${rnd}`;
-}
-const pendingInvites = new Map(); // targetSocketId -> { fromSocketId, fromUsername, baseMs, incMs, colorPref, createdAt }
-
-function normalizeColorPref(pref) {
-  const p = (pref || '').toString().toLowerCase();
-  if (p === 'white' || p === 'black') return p;
-  return 'random';
-}
-
-function createRoomId() {
-  const rnd = Math.random().toString(36).slice(2, 10);
-  return `match:${Date.now()}:${rnd}`;
-}
-
-function removeFromQueue(socketId) {
-  const idx = matchQueue.findIndex(q => q.socketId === socketId);
-  if (idx >= 0) matchQueue.splice(idx, 1);
-}
-
-function socketIsQueued(socketId) {
-  return matchQueue.some(q => q && q.socketId === socketId);
-}
-
-function getAvailableSocketForUsername(username) {
-  const set = usernameToSockets.get(username);
-  if (!set || set.size === 0) return null;
-  // pick any socket that is not in a match and not queued
-  for (const id of set) {
-    if (!socketToMatchRoom.has(id) && !socketIsQueued(id)) return id;
-  }
-  return null;
-}
-
-function resolveColors(requesterPref) {
-  const pref = normalizeColorPref(requesterPref);
-  if (pref === 'white') return { requester: 'white', opponent: 'black' };
-  if (pref === 'black') return { requester: 'black', opponent: 'white' };
-  const requester = (Math.random() < 0.5) ? 'white' : 'black';
-  return { requester, opponent: requester === 'white' ? 'black' : 'white' };
-}
-
-function findAndCreateMatch(entry) {
-  // Match only with same time control.
-  for (let i = 0; i < matchQueue.length; i++) {
-    const other = matchQueue[i];
-    if (!other) continue;
-    if (other.socketId === entry.socketId) continue;
-    if (other.username && entry.username && other.username === entry.username) continue;
-    if (other.baseMs !== entry.baseMs || other.incMs !== entry.incMs) continue;
-
-    const aPref = normalizeColorPref(entry.colorPref);
-    const bPref = normalizeColorPref(other.colorPref);
-
-    // Resolve colors; return null if impossible.
-    let entryColor = null;
-    let otherColor = null;
-
-    if (aPref === 'random' && bPref === 'random') {
-      entryColor = (Math.random() < 0.5) ? 'white' : 'black';
-      otherColor = entryColor === 'white' ? 'black' : 'white';
-    } else if (aPref !== 'random' && bPref === 'random') {
-      entryColor = aPref;
-      otherColor = aPref === 'white' ? 'black' : 'white';
-    } else if (aPref === 'random' && bPref !== 'random') {
-      otherColor = bPref;
-      entryColor = bPref === 'white' ? 'black' : 'white';
-    } else {
-      // both fixed
-      if (aPref === bPref) return null; // can't both be white/black
-      entryColor = aPref;
-      otherColor = bPref;
-    }
-
-    // Remove matched other from queue
-    matchQueue.splice(i, 1);
-    return { other, entryColor, otherColor };
-  }
-  return null;
-}
-
 function broadcastUsers() {
   const unique = Array.from(new Map(Array.from(onlineUsers.values()).map(u => [u.username, u])).values());
   io.emit('updateUsers', unique);
@@ -567,34 +541,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    // Remove from match queue (if queued)
-    removeFromQueue(socket.id);
-
-    // Remove any pending invites targeting this socket
-    pendingInvites.delete(socket.id);
-
-    // Remove invites created by this socket
-    for (const [targetId, inv] of pendingInvites.entries()) {
-      if (inv && inv.fromSocketId === socket.id) pendingInvites.delete(targetId);
-    }
-
-    // If in a live match, notify opponent
-    const room = socketToMatchRoom.get(socket.id);
-    if (room) {
-      const info = roomToMatch.get(room);
-      try {
-        socket.to(room).emit('matchOpponentLeft');
-      } catch (e) {
-        // ignore
-      }
-      if (info) {
-        socketToMatchRoom.delete(info.whiteSocketId);
-        socketToMatchRoom.delete(info.blackSocketId);
-      }
-      socketToMatchRoom.delete(socket.id);
-      roomToMatch.delete(room);
-    }
-
     const info = onlineUsers.get(socket.id);
     if (info && info.username) {
       const set = usernameToSockets.get(info.username);
@@ -606,339 +552,6 @@ io.on('connection', (socket) => {
     }
     onlineUsers.delete(socket.id);
     broadcastUsers();
-
-    // Clear any invites where this socket is sender/receiver
-    for (const [inviteId, inv] of matchInvites.entries()) {
-      if (!inv) continue;
-      if (inv.fromSocketId === socket.id || inv.toSocketId === socket.id) {
-        matchInvites.delete(inviteId);
-        // If receiver disconnected, tell sender (best-effort)
-        try {
-          if (inv.fromSocketId !== socket.id) {
-            const senderSock = io.sockets.sockets.get ? io.sockets.sockets.get(inv.fromSocketId) : io.sockets.sockets[inv.fromSocketId];
-            if (senderSock) senderSock.emit('matchInviteCancelled', { inviteId });
-          }
-        } catch (_) {}
-      }
-    }
-  });
-
-  // Live match request
-  socket.on('matchRequest', async ({ username, baseMs, incMs, colorPref }) => {
-    const socketInfo = onlineUsers.get(socket.id) || {};
-    const actualUsername = (socketInfo.username || username || '').toString().trim();
-    if (!actualUsername) return;
-
-    // If already in match, ignore.
-    if (socketToMatchRoom.has(socket.id)) return;
-
-    // Normalize inputs (keep strict equality matching)
-    const b = Number(baseMs);
-    const inc = Number(incMs);
-    // Updated limits: 60–120 minutes, increment up to 90 seconds
-    const safeBase = Number.isFinite(b) ? Math.max(60 * 60 * 1000, Math.min(120 * 60 * 1000, Math.floor(b))) : 60 * 60 * 1000;
-    const safeInc = Number.isFinite(inc) ? Math.max(0, Math.min(90 * 1000, Math.floor(inc))) : 0;
-    const pref = normalizeColorPref(colorPref);
-
-    // Ensure not duplicated in queue
-    removeFromQueue(socket.id);
-
-    const entry = { socketId: socket.id, username: actualUsername, baseMs: safeBase, incMs: safeInc, colorPref: pref, requestedAt: Date.now() };
-    const matched = findAndCreateMatch(entry);
-    if (!matched) {
-      matchQueue.push(entry);
-      socket.emit('matchQueued');
-      return;
-    }
-
-    const room = createRoomId();
-    const otherSocketId = matched.other.socketId;
-    const otherSock = io.sockets.sockets.get ? io.sockets.sockets.get(otherSocketId) : io.sockets.sockets[otherSocketId];
-    if (!otherSock) {
-      // Opponent disappeared; re-queue current
-      matchQueue.push(entry);
-      socket.emit('matchQueued');
-      return;
-    }
-
-    // Join both sockets to room
-    socket.join(room);
-    otherSock.join(room);
-
-    // Determine who is white/black
-    const entryIsWhite = matched.entryColor === 'white';
-    const whiteSocketId = entryIsWhite ? socket.id : otherSocketId;
-    const blackSocketId = entryIsWhite ? otherSocketId : socket.id;
-    const whiteUsername = entryIsWhite ? entry.username : matched.other.username;
-    const blackUsername = entryIsWhite ? matched.other.username : entry.username;
-
-    socketToMatchRoom.set(socket.id, room);
-    socketToMatchRoom.set(otherSocketId, room);
-    roomToMatch.set(room, { whiteSocketId, blackSocketId, whiteUsername, blackUsername, baseMs: safeBase, incMs: safeInc });
-
-    // Optional persistence (best-effort)
-    try {
-      const db = await connectDB();
-      await db.collection('games').updateOne(
-        { room },
-        { $setOnInsert: { room, createdAt: new Date(), baseMs: safeBase, incMs: safeInc, players: { white: whiteUsername, black: blackUsername }, fen: 'start', moves: [] } },
-        { upsert: true }
-      );
-    } catch (e) {
-      // ignore persistence errors
-    }
-
-    // Notify both
-    socket.emit('matchFound', { room, opponent: matched.other.username, color: matched.entryColor, baseMs: safeBase, incMs: safeInc });
-    otherSock.emit('matchFound', { room, opponent: entry.username, color: matched.otherColor, baseMs: safeBase, incMs: safeInc });
-  });
-
-  // Direct request: send an invite to a specific online player
-  socket.on('matchDirectRequest', ({ from, to, baseMs, incMs, colorPref }) => {
-    const socketInfo = onlineUsers.get(socket.id) || {};
-    const fromUsername = (socketInfo.username || from || '').toString().trim();
-    const toUsername = (to || '').toString().trim();
-    if (!fromUsername || !toUsername) return;
-    if (fromUsername === toUsername) return;
-    if (socketToMatchRoom.has(socket.id)) return;
-
-    const b = Number(baseMs);
-    const inc = Number(incMs);
-    const safeBase = Number.isFinite(b) ? Math.max(60 * 60 * 1000, Math.min(120 * 60 * 1000, Math.floor(b))) : 60 * 60 * 1000;
-    const safeInc = Number.isFinite(inc) ? Math.max(0, Math.min(90 * 1000, Math.floor(inc))) : 0;
-    const pref = normalizeColorPref(colorPref);
-
-    const receiverSet = usernameToSockets.get(toUsername);
-    if (!receiverSet || receiverSet.size === 0) {
-      socket.emit('matchInviteCancelled', { reason: 'offline' });
-      return;
-    }
-
-    // Choose one active socket for receiver
-    const toSocketId = Array.from(receiverSet)[0];
-    const toSock = io.sockets.sockets.get ? io.sockets.sockets.get(toSocketId) : io.sockets.sockets[toSocketId];
-    if (!toSock) {
-      socket.emit('matchInviteCancelled', { reason: 'offline' });
-      return;
-    }
-
-    // Receiver already in match -> can't invite
-    if (socketToMatchRoom.has(toSocketId)) {
-      socket.emit('matchInviteCancelled', { reason: 'busy' });
-      return;
-    }
-
-    const inviteId = createInviteId();
-    matchInvites.set(inviteId, { fromSocketId: socket.id, toSocketId, fromUsername, toUsername, baseMs: safeBase, incMs: safeInc, colorPref: pref, createdAt: Date.now() });
-
-    // Notify sender + receiver
-    socket.emit('matchRequestSent', { inviteId });
-    toSock.emit('matchInvite', { inviteId, from: fromUsername, baseMs: safeBase, incMs: safeInc, colorPref: pref });
-  });
-
-  socket.on('matchInviteDecline', ({ inviteId }) => {
-    if (!inviteId) return;
-    const inv = matchInvites.get(inviteId);
-    if (!inv) return;
-    // Only receiver can decline
-    if (inv.toSocketId !== socket.id) return;
-    matchInvites.delete(inviteId);
-    const fromSock = io.sockets.sockets.get ? io.sockets.sockets.get(inv.fromSocketId) : io.sockets.sockets[inv.fromSocketId];
-    if (fromSock) fromSock.emit('matchInviteCancelled', { inviteId, reason: 'declined' });
-  });
-
-  socket.on('matchInviteAccept', async ({ inviteId }) => {
-    if (!inviteId) return;
-    const inv = matchInvites.get(inviteId);
-    if (!inv) return;
-    // Only receiver can accept
-    if (inv.toSocketId !== socket.id) return;
-
-    // Both must still be online and not already in match
-    const fromSock = io.sockets.sockets.get ? io.sockets.sockets.get(inv.fromSocketId) : io.sockets.sockets[inv.fromSocketId];
-    const toSock = io.sockets.sockets.get ? io.sockets.sockets.get(inv.toSocketId) : io.sockets.sockets[inv.toSocketId];
-    if (!fromSock || !toSock) {
-      matchInvites.delete(inviteId);
-      return;
-    }
-    if (socketToMatchRoom.has(inv.fromSocketId) || socketToMatchRoom.has(inv.toSocketId)) {
-      matchInvites.delete(inviteId);
-      try { toSock.emit('matchInviteCancelled', { inviteId, reason: 'busy' }); } catch (_) {}
-      try { fromSock.emit('matchInviteCancelled', { inviteId, reason: 'busy' }); } catch (_) {}
-      return;
-    }
-
-    matchInvites.delete(inviteId);
-
-    // Resolve colors
-    const aPref = normalizeColorPref(inv.colorPref);
-    let fromColor = 'white';
-    let toColor = 'black';
-    if (aPref === 'white') { fromColor = 'white'; toColor = 'black'; }
-    else if (aPref === 'black') { fromColor = 'black'; toColor = 'white'; }
-    else {
-      fromColor = (Math.random() < 0.5) ? 'white' : 'black';
-      toColor = fromColor === 'white' ? 'black' : 'white';
-    }
-
-    const room = createRoomId();
-    fromSock.join(room);
-    toSock.join(room);
-    socketToMatchRoom.set(inv.fromSocketId, room);
-    socketToMatchRoom.set(inv.toSocketId, room);
-
-    const whiteSocketId = fromColor === 'white' ? inv.fromSocketId : inv.toSocketId;
-    const blackSocketId = fromColor === 'white' ? inv.toSocketId : inv.fromSocketId;
-    const whiteUsername = fromColor === 'white' ? inv.fromUsername : inv.toUsername;
-    const blackUsername = fromColor === 'white' ? inv.toUsername : inv.fromUsername;
-    roomToMatch.set(room, { whiteSocketId, blackSocketId, whiteUsername, blackUsername, baseMs: inv.baseMs, incMs: inv.incMs });
-
-    // Optional persistence
-    try {
-      const db = await connectDB();
-      await db.collection('games').updateOne(
-        { room },
-        { $setOnInsert: { room, createdAt: new Date(), baseMs: inv.baseMs, incMs: inv.incMs, players: { white: whiteUsername, black: blackUsername }, fen: 'start', moves: [] } },
-        { upsert: true }
-      );
-    } catch (e) {
-      // ignore
-    }
-
-    // Notify both
-    fromSock.emit('matchFound', { room, opponent: inv.toUsername, color: fromColor, baseMs: inv.baseMs, incMs: inv.incMs });
-    toSock.emit('matchFound', { room, opponent: inv.fromUsername, color: toColor, baseMs: inv.baseMs, incMs: inv.incMs });
-  });
-
-  // Direct invite flow: request a specific opponent
-  socket.on('matchDirectRequest', ({ username, targetUsername, baseMs, incMs, colorPref }) => {
-    const socketInfo = onlineUsers.get(socket.id) || {};
-    const actualUsername = (socketInfo.username || username || '').toString().trim();
-    const target = (targetUsername || '').toString().trim();
-    if (!actualUsername || !target) return;
-    if (actualUsername === target) return;
-    if (socketToMatchRoom.has(socket.id)) return;
-
-    const b = Number(baseMs);
-    const inc = Number(incMs);
-    const safeBase = Number.isFinite(b) ? Math.max(60 * 60 * 1000, Math.min(120 * 60 * 1000, Math.floor(b))) : 60 * 60 * 1000;
-    const safeInc = Number.isFinite(inc) ? Math.max(0, Math.min(90 * 1000, Math.floor(inc))) : 0;
-    const pref = normalizeColorPref(colorPref);
-
-    // inviter should not be queued (direct request is separate)
-    removeFromQueue(socket.id);
-
-    const targetSocketId = getAvailableSocketForUsername(target);
-    if (!targetSocketId) {
-      socket.emit('matchInviteResult', { ok: false, reason: 'Player not available' });
-      return;
-    }
-
-    // Store invite for target socket
-    pendingInvites.set(targetSocketId, {
-      fromSocketId: socket.id,
-      fromUsername: actualUsername,
-      baseMs: safeBase,
-      incMs: safeInc,
-      colorPref: pref,
-      createdAt: Date.now()
-    });
-
-    const targetSock = io.sockets.sockets.get ? io.sockets.sockets.get(targetSocketId) : io.sockets.sockets[targetSocketId];
-    if (targetSock && targetSock.emit) {
-      targetSock.emit('matchInvite', { from: actualUsername, baseMs: safeBase, incMs: safeInc, colorPref: pref });
-      socket.emit('matchInviteResult', { ok: true });
-    } else {
-      pendingInvites.delete(targetSocketId);
-      socket.emit('matchInviteResult', { ok: false, reason: 'Player not available' });
-    }
-  });
-
-  socket.on('matchInviteAccept', async ({ fromUsername }) => {
-    const inv = pendingInvites.get(socket.id);
-    if (!inv) return;
-    const fromInfo = onlineUsers.get(inv.fromSocketId);
-    const expectedFromName = (inv.fromUsername || (fromInfo && fromInfo.username) || '').toString();
-    if (fromUsername && expectedFromName && fromUsername.toString() !== expectedFromName) return;
-
-    // Ensure both are still available
-    if (socketToMatchRoom.has(socket.id) || socketToMatchRoom.has(inv.fromSocketId)) {
-      pendingInvites.delete(socket.id);
-      return;
-    }
-
-    const inviterSock = io.sockets.sockets.get ? io.sockets.sockets.get(inv.fromSocketId) : io.sockets.sockets[inv.fromSocketId];
-    if (!inviterSock) {
-      pendingInvites.delete(socket.id);
-      return;
-    }
-
-    const room = createRoomId();
-    const colors = resolveColors(inv.colorPref);
-
-    // Join both sockets to room
-    socket.join(room);
-    inviterSock.join(room);
-
-    // Determine who is white/black
-    const inviterIsWhite = colors.requester === 'white';
-    const whiteSocketId = inviterIsWhite ? inv.fromSocketId : socket.id;
-    const blackSocketId = inviterIsWhite ? socket.id : inv.fromSocketId;
-    const whiteUsername = inviterIsWhite ? inv.fromUsername : (onlineUsers.get(socket.id)?.username || '');
-    const blackUsername = inviterIsWhite ? (onlineUsers.get(socket.id)?.username || '') : inv.fromUsername;
-
-    socketToMatchRoom.set(socket.id, room);
-    socketToMatchRoom.set(inv.fromSocketId, room);
-    roomToMatch.set(room, { whiteSocketId, blackSocketId, whiteUsername, blackUsername, baseMs: inv.baseMs, incMs: inv.incMs });
-
-    pendingInvites.delete(socket.id);
-
-    // Optional persistence
-    try {
-      const db = await connectDB();
-      await db.collection('games').updateOne(
-        { room },
-        { $setOnInsert: { room, createdAt: new Date(), baseMs: inv.baseMs, incMs: inv.incMs, players: { white: whiteUsername, black: blackUsername }, fen: 'start', moves: [] } },
-        { upsert: true }
-      );
-    } catch (e) {
-      // ignore
-    }
-
-    // Notify both
-    inviterSock.emit('matchFound', { room, opponent: onlineUsers.get(socket.id)?.username || 'Opponent', color: colors.requester, baseMs: inv.baseMs, incMs: inv.incMs });
-    socket.emit('matchFound', { room, opponent: inv.fromUsername, color: colors.opponent, baseMs: inv.baseMs, incMs: inv.incMs });
-  });
-
-  socket.on('matchInviteDecline', ({ fromUsername }) => {
-    const inv = pendingInvites.get(socket.id);
-    if (!inv) return;
-    pendingInvites.delete(socket.id);
-    const inviterSock = io.sockets.sockets.get ? io.sockets.sockets.get(inv.fromSocketId) : io.sockets.sockets[inv.fromSocketId];
-    if (inviterSock && inviterSock.emit) inviterSock.emit('matchInviteDeclined', { by: onlineUsers.get(socket.id)?.username || 'Opponent', from: fromUsername || inv.fromUsername });
-  });
-
-  socket.on('matchCancel', () => {
-    removeFromQueue(socket.id);
-    socket.emit('matchCancelled');
-  });
-
-  socket.on('matchLeave', () => {
-    const room = socketToMatchRoom.get(socket.id);
-    if (!room) return;
-    try {
-      socket.to(room).emit('matchOpponentLeft');
-    } catch (e) {
-      // ignore
-    }
-    const info = roomToMatch.get(room);
-    if (info) {
-      socketToMatchRoom.delete(info.whiteSocketId);
-      socketToMatchRoom.delete(info.blackSocketId);
-    }
-    socketToMatchRoom.delete(socket.id);
-    roomToMatch.delete(room);
-    try { socket.leave(room); } catch (_) {}
   });
 
   // Chat messaging

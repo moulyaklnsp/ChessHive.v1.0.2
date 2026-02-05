@@ -5,6 +5,9 @@ const { connectDB } = require('./routes/databasecongi');
 const utils = require('./utils');
 const { uploadImageBuffer, destroyImage } = require('./utils/cloudinary');
 const { ObjectId } = require('mongodb');
+const bcrypt = require('bcryptjs');
+
+const isBcryptHash = (value) => typeof value === 'string' && /^\$2[aby]\$/.test(value);
 let multer;
 try { multer = require('multer'); } catch (e) { multer = null; }
 router.use(express.json()); // Parses JSON
@@ -872,13 +875,22 @@ router.post('/players/restore/:id', async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'Player account not found.' });
 
-    if (user.isDeleted === 0) {
-      return res.status(400).json({ message: 'Account is already active.' });
-    }
+  if (user.isDeleted === 0) {
+    return res.status(400).json({ message: 'Account is already active.' });
+  }
 
-    if (user.email !== email || user.password !== password) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
-    }
+  if (user.email !== email) {
+    return res.status(401).json({ message: 'Invalid credentials.' });
+  }
+
+  if (!isBcryptHash(user.password)) {
+    return res.status(401).json({ message: 'Password not migrated. Please contact support.' });
+  }
+
+  const passwordOk = await bcrypt.compare(password, user.password);
+  if (!passwordOk) {
+    return res.status(401).json({ message: 'Invalid credentials.' });
+  }
 
     // 🔹 Restore by setting isDeleted back to 0
     await db.collection('users').updateOne(
